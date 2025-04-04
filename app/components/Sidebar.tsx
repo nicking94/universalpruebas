@@ -1,0 +1,97 @@
+"use client";
+import {
+  MenuIcon,
+  XIcon,
+  Package,
+  ShoppingCart,
+  // DollarSign,
+  // Truck,
+} from "lucide-react";
+import Button from "./Button";
+import { useRouter, usePathname } from "next/navigation";
+import { useSidebar } from "../context/SidebarContext";
+import { MenuItemProps, SidebarProps } from "../lib/types/types";
+import { useEffect, useState } from "react";
+
+const menuItems = [
+  { label: "Ventas", href: "/ventas", icon: <ShoppingCart /> },
+  { label: "Productos", href: "/productos", icon: <Package /> },
+  // { label: "Gastos", href: "/gastos", icon: <DollarSign /> },
+  // { label: "Proovedores", href: "/proovedores", icon: <Truck /> },
+];
+
+const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
+  const { isSidebarOpen, toggleSidebar } = useSidebar();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [activeItem, setActiveItem] = useState<string>("");
+
+  const handleItemClick = (label: string, href?: string) => {
+    setActiveItem((prev) => (prev === label ? "" : label));
+
+    if (href) router.push(href);
+  };
+
+  useEffect(() => {
+    const findActiveItem = (items: MenuItemProps[]): string => {
+      for (const item of items) {
+        if (item.href === pathname) return item.label;
+      }
+      return "";
+    };
+
+    setActiveItem(findActiveItem(items));
+  }, [pathname]);
+
+  return (
+    <aside
+      className={`fixed top-0 left-0 w-${
+        isSidebarOpen ? "64" : "20"
+      } flex flex-col  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-200  ${
+        isSidebarOpen ? "w-64" : "w-30"
+      }`}
+    >
+      <div className="bg-blue_b dark:bg-gray_b text-white  flex items-center justify-between p-2 shadow-sm shadow-gray_xl dark:shadow-gray_b">
+        <span>Menú</span>
+        <Button
+          colorText="text-white"
+          colorBg="bg-transparent "
+          colorBgHover="hover:bg-transparent "
+          colorTextHover="text-gray_b"
+          minwidth="min-w-0"
+          px="px-1"
+          py="py-1"
+          height="h-full"
+          icon={isSidebarOpen ? <XIcon /> : <MenuIcon />}
+          onClick={toggleSidebar}
+        />
+      </div>
+      <nav className=" space-y-4 py-6 ">
+        {items.map((item) => (
+          <div key={item.label} className="w-full">
+            <button
+              onClick={() => handleItemClick(item.label, item.href)}
+              className={` ${
+                activeItem === item.label
+                  ? " shadow-md shadow-gray_xl dark:shadow-gray_m bg-gray_xl dark:bg-gray_b"
+                  : ""
+              } ${
+                isSidebarOpen ? "justify-start" : "justify-center"
+              } cursor-pointer flex items-center px-2 py-4 w-full  hover:bg-gray_xl dark:hover:bg-gray_b transition-all duration-200`}
+            >
+              {item.icon}
+              {isSidebarOpen && <span className="ml-3">{item.label}</span>}
+            </button>
+          </div>
+        ))}
+      </nav>
+      <div
+        className={`absolute bottom-4 left-0 right-0 flex justify-center p-2 ${
+          !isSidebarOpen ? "hidden" : ""
+        }`}
+      ></div>
+    </aside>
+  );
+};
+
+export default Sidebar;
