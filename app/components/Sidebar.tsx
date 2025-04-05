@@ -4,6 +4,7 @@ import {
   XIcon,
   Package,
   ShoppingCart,
+  Repeat,
   // DollarSign,
   // Truck,
 } from "lucide-react";
@@ -47,49 +48,66 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
     <aside
       className={`fixed top-0 left-0 w-${
         isSidebarOpen ? "64" : "20"
-      } flex flex-col  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-200  ${
+      } flex flex-col justify-between  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-200  ${
         isSidebarOpen ? "w-64" : "w-30"
       }`}
     >
-      <div className="bg-blue_b dark:bg-gray_b text-white  flex items-center justify-between p-2 shadow-sm shadow-gray_xl dark:shadow-gray_b">
-        <span>Menú</span>
-        <Button
-          colorText="text-white"
-          colorBg="bg-transparent "
-          colorBgHover="hover:bg-transparent "
-          colorTextHover="text-gray_b"
-          minwidth="min-w-0"
-          px="px-1"
-          py="py-1"
-          height="h-full"
-          icon={isSidebarOpen ? <XIcon /> : <MenuIcon />}
-          onClick={toggleSidebar}
-        />
+      <div>
+        <div className="bg-blue_b dark:bg-gray_b text-white  flex items-center justify-between p-2 shadow-sm shadow-gray_xl dark:shadow-gray_b">
+          <span>Menú</span>
+          <Button
+            colorText="text-white"
+            colorBg="bg-transparent "
+            colorBgHover="hover:bg-transparent "
+            colorTextHover="text-gray_b"
+            minwidth="min-w-0"
+            px="px-1"
+            py="py-1"
+            height="h-full"
+            icon={isSidebarOpen ? <XIcon /> : <MenuIcon />}
+            onClick={toggleSidebar}
+          />
+        </div>
+        <nav className=" space-y-4 py-6 ">
+          {items.map((item) => (
+            <div key={item.label} className="w-full">
+              <button
+                onClick={() => handleItemClick(item.label, item.href)}
+                className={` ${
+                  activeItem === item.label
+                    ? " shadow-md shadow-gray_xl dark:shadow-gray_m bg-gray_xl dark:bg-gray_b"
+                    : ""
+                } ${
+                  isSidebarOpen ? "justify-start" : "justify-center"
+                } cursor-pointer flex items-center px-2 py-4 w-full  hover:bg-gray_xl dark:hover:bg-gray_b transition-all duration-200`}
+              >
+                {item.icon}
+                {isSidebarOpen && <span className="ml-3">{item.label}</span>}
+              </button>
+            </div>
+          ))}
+        </nav>
+        <div
+          className={`absolute bottom-4 left-0 right-0 flex justify-center p-2 ${
+            !isSidebarOpen ? "hidden" : ""
+          }`}
+        ></div>
       </div>
-      <nav className=" space-y-4 py-6 ">
-        {items.map((item) => (
-          <div key={item.label} className="w-full">
-            <button
-              onClick={() => handleItemClick(item.label, item.href)}
-              className={` ${
-                activeItem === item.label
-                  ? " shadow-md shadow-gray_xl dark:shadow-gray_m bg-gray_xl dark:bg-gray_b"
-                  : ""
-              } ${
-                isSidebarOpen ? "justify-start" : "justify-center"
-              } cursor-pointer flex items-center px-2 py-4 w-full  hover:bg-gray_xl dark:hover:bg-gray_b transition-all duration-200`}
-            >
-              {item.icon}
-              {isSidebarOpen && <span className="ml-3">{item.label}</span>}
-            </button>
-          </div>
-        ))}
-      </nav>
       <div
-        className={`absolute bottom-4 left-0 right-0 flex justify-center p-2 ${
+        className={`absolute bottom-4 left-0 right-0 flex justify-center px-4 ${
           !isSidebarOpen ? "hidden" : ""
         }`}
-      ></div>
+      >
+        <button
+          onClick={() => router.push("/import-export")}
+          className="cursor-pointer flex justify-center items-center gap-2 w-full py-2 px-4 rounded-md bg-blue_b text-white hover:bg-blue_m transition-all"
+        >
+          <Repeat size={18} />
+          <span className="text-sm font-semibold">
+            Importar / Exportar Datos
+          </span>
+        </button>
+      </div>
     </aside>
   );
 };

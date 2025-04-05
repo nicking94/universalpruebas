@@ -13,7 +13,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   };
 
   return (
-    <div className="h-[2rem] 2xl:h-auto max-w-[26rem] flex items-center w-full bg-white p-2 rounded-md placeholder:text-gray_l  outline-none text-gray_b">
+    <div className="h-[2rem] 2xl:h-auto max-w-[26rem] flex items-center w-full bg-white p-2 rounded-sm placeholder:text-gray_l  outline-none text-gray_b">
       {/* Icono de búsqueda */}
       <Search className="text-gray-500 dark:text-gray-400 mr-2" />
 

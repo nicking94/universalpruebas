@@ -47,7 +47,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
       {isMenuOpen && (
         <div
           ref={menuRef}
-          className="absolute right-0 w-48 bg-white dark:bg-black shadow-lg rounded-md shadow-gray_m mt-2 z-50"
+          className="absolute right-0 w-48 bg-white dark:bg-black shadow-lg rounded-sm shadow-gray_m mt-2 z-50"
         >
           <button
             onClick={() => {

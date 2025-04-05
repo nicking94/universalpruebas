@@ -51,7 +51,7 @@ const CustomDatePicker: React.FC<Props> = ({ value, onChange }) => {
           dateFormat="dd-MM-yyyy"
           locale={es}
           placeholderText="Seleccionar fecha de vencimiento..."
-          className="pl-10 border border-gray_xl focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-md placeholder:text-gray_l  outline-none text-gray_b"
+          className="pl-10 border border-gray_xl focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l  outline-none text-gray_b"
           wrapperClassName="w-full"
         />
         <Calendar

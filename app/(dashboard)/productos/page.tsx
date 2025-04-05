@@ -270,7 +270,7 @@ const ProductsPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className="px-10 py-3 2xlp-10 text-gray_m dark:text-white h-[calc(100vh-80px)] min-h-[calc(100vh-80px)]">
+      <div className=" px-10 py-3 2xlp-10 text-gray_m dark:text-white h-[calc(100vh-80px)] min-h-[calc(100vh-80px)]">
         <h1 className="text-2xl font-semibold mb-2">Productos</h1>
 
         <div className="flex justify-between mb-2">
@@ -288,7 +288,7 @@ const ProductsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-220px)]">
+        <div className="flex flex-col justify-between h-[calc(100vh-200px)] 2xl:h-[calc(100vh-220px)">
           <table className=" table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
@@ -373,8 +373,8 @@ const ProductsPage = () => {
                             !isNaN(Number(product.stock)) &&
                             Number(product.stock) > 0
                               ? ""
-                              : "text-red-600"
-                          } font-medium px-4 py-2 border border-gray_l`}
+                              : "text-red-900"
+                          } font-normal px-4 py-2 border border-gray_l`}
                         >
                           {!isNaN(Number(product.stock)) &&
                           Number(product.stock) > 0

@@ -362,7 +362,7 @@ const VentasPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-220px)]">
+        <div className="flex flex-col justify-between h-[calc(100vh-200px)] 2xl:h-[calc(100vh-220px)">
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
@@ -594,7 +594,7 @@ const VentasPage = () => {
                         <td className=" px-4 py-2 text-center">
                           <button
                             onClick={() => handleRemoveProduct(product.id)}
-                            className="cursor-pointer text-gray_b bg-gray_xl dark:bg-white p-1 rounded-md"
+                            className="cursor-pointer text-gray_b bg-gray_xl dark:bg-white p-1 rounded-sm"
                           >
                             <Trash size={20} />
                           </button>

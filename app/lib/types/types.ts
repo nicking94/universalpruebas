@@ -83,13 +83,14 @@ export type PersonalData = {
 export type InputProps = {
   label?: string;
   type: string;
-  name: string;
-  value: string;
+  name?: string;
+  value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   border?: string;
   readOnly?: boolean;
   className?: string;
+  accept?: string;
 };
 export type UserMenuProps = {
   theme: string;

@@ -10,6 +10,7 @@ const Input: React.FC<InputProps> = ({
   onChange = () => {},
   placeholder,
   border = "border-1 border-gray_xl",
+  accept,
 }) => {
   return (
     <div>
@@ -27,7 +28,8 @@ const Input: React.FC<InputProps> = ({
           onChange={readOnly ? undefined : onChange}
           readOnly={readOnly}
           placeholder={placeholder}
-          className={` focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-md placeholder:text-gray_l  outline-none text-gray_b ${border}`}
+          accept={accept}
+          className={` focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l  outline-none text-gray_b ${border}`}
         />
       </div>
     </div>
