@@ -647,10 +647,10 @@ const VentasPage = () => {
 
             <Input
               label="Total"
-              type="number"
+              type="text"
               name="totalPrice"
               placeholder="Precio total..."
-              value={newSale.total.toString()}
+              value={`$ ${newSale.total}`}
               readOnly
             />
           </form>

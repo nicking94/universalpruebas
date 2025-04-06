@@ -497,7 +497,7 @@ const ProductsPage = () => {
               type="text"
               name="costPrice"
               placeholder="Precio de costo..."
-              value={newProduct.costPrice.toString()}
+              value={"$ " + newProduct.costPrice.toString()}
               onChange={handleInputChange}
             />
 
@@ -506,7 +506,7 @@ const ProductsPage = () => {
               type="text"
               name="price"
               placeholder="Precio de venta..."
-              value={newProduct.price.toString()}
+              value={"$ " + newProduct.price.toString()}
               onChange={handlePriceChange}
             />
 
