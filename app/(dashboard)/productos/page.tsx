@@ -32,6 +32,7 @@ const ProductsPage = () => {
     costPrice: 0,
     price: 0,
     expiration: "",
+    quantity: 0,
   });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -154,10 +155,11 @@ const ProductsPage = () => {
     setNewProduct({
       id: Date.now(),
       name: "",
-      stock: "",
+      stock: 0,
       costPrice: 0,
       price: 0,
       expiration: "",
+      quantity: 0,
     });
     setIsOpenModal(false);
   };
@@ -177,10 +179,11 @@ const ProductsPage = () => {
     setNewProduct({
       id: Date.now(),
       name: "",
-      stock: "",
+      stock: 0,
       costPrice: 0,
       price: 0,
       expiration: "",
+      quantity: 0,
     });
     setEditingProduct(null);
   };

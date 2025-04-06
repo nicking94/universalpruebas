@@ -108,10 +108,11 @@ export type ProductTableProps = {
 export type Product = {
   id: number;
   name: string;
-  stock: number | string;
+  stock: number;
   costPrice: number;
   price: number;
   expiration: string;
+  quantity: number;
 };
 
 export type ProductCardProps = {
@@ -132,9 +133,9 @@ export type Sale = {
   products: {
     id: number;
     name: string;
-    price: string | number;
+    price: number;
     quantity: number;
-    stock: number | string;
+    stock: number;
   }[];
   paymentMethod: "Efectivo" | "Transferencia";
   total: number;
@@ -162,5 +163,5 @@ export type Option = {
 export type ProductOption = {
   value: number;
   label: string;
-  isDisabled: boolean;
+  isDisabled?: boolean;
 };

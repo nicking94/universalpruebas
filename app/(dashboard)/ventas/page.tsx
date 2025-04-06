@@ -3,7 +3,7 @@ import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Modal from "@/app/components/Modal";
 import Notification from "@/app/components/Notification";
-import { Product, Sale } from "@/app/lib/types/types";
+import { Product, ProductOption, Sale } from "@/app/lib/types/types";
 import { Info, Plus, ShoppingCart, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
@@ -182,7 +182,7 @@ const VentasPage = () => {
         }
 
         await db.products.update(product.id, {
-          stock: (Number(dbProduct.stock) - product.quantity).toString(),
+          stock: Number(dbProduct.stock) - product.quantity,
         });
       }
 
@@ -255,31 +255,48 @@ const VentasPage = () => {
   }, []);
 
   const handleProductSelect = (
-    selectedOptions: { value: number; label: string }[]
+    selectedOptions: ProductOption | ProductOption[]
   ) => {
     setNewSale((prevState) => {
-      const selectedProducts = selectedOptions
-        .map((option) => {
+      // Mantener los productos existentes en el estado
+      const existingProducts = prevState.products;
+
+      // Normalizar selectedOptions a un array
+      const optionsArray = Array.isArray(selectedOptions)
+        ? selectedOptions
+        : [selectedOptions];
+
+      // Crear una lista actualizada con los nuevos productos seleccionados
+      const updatedProducts = optionsArray
+        .map((option: ProductOption) => {
           const product = products.find((p) => p.id === option.value);
-          return product
-            ? {
+          if (!product) return null;
+
+          // Verificar si el producto ya existe en el estado actual
+          const existingProduct = existingProducts.find(
+            (p) => p.id === product.id
+          );
+
+          return existingProduct
+            ? existingProduct // Mantener cantidad existente si ya está seleccionado
+            : {
                 ...product,
                 quantity: 1,
                 stock: Number(product.stock),
                 price: Number(product.price),
-              }
-            : null;
+              };
         })
-        .filter(Boolean) as Sale["products"];
+        .filter(Boolean) as Product[];
 
-      const newTotal = selectedProducts.reduce(
+      const newTotal = updatedProducts.reduce(
         (sum, p) => sum + Number(p.price) * p.quantity,
         0
       );
 
-      return { ...prevState, products: selectedProducts, total: newTotal };
+      return { ...prevState, products: updatedProducts, total: newTotal };
     });
   };
+
   const handleQuantityChange = (productId: number, quantity: number) => {
     setNewSale((prevState) => {
       const updatedProducts = prevState.products.map((p) =>

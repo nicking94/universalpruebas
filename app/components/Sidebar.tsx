@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
     };
 
     setActiveItem(findActiveItem(items));
-  }, [pathname]);
+  }, [pathname, items]);
 
   return (
     <aside
