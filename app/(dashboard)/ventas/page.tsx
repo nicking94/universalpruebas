@@ -33,7 +33,7 @@ const VentasPage = () => {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [salesPerPage, setSalesPerPage] = useState(10);
+  const [salesPerPage, setSalesPerPage] = useState(5);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -338,8 +338,8 @@ const VentasPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className="px-10 py-3 2xlp-10 text-gray_m dark:text-white h-[calc(100vh-80px)] min-h-[calc(100vh-80px)]">
-        <h1 className="text-2xl font-semibold mb-2">Ventas</h1>
+      <div className=" px-10 2xl:px-10 text-gray_l dark:text-white h-[calc(100vh-80px)]">
+        <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Ventas</h1>
 
         <div className="flex justify-between mb-2">
           <div className="flex w-full max-w-[20rem] gap-4">
@@ -379,7 +379,7 @@ const VentasPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-200px)] 2xl:h-[calc(100vh-220px)">
+        <div className="flex flex-col justify-between h-[calc(100vh-170px)] 2xl:h-[calc(100vh-220px)">
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
@@ -391,7 +391,7 @@ const VentasPage = () => {
                 <th className="px-4 py-2 w-[12rem] ">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray_l">
+            <tbody className="divide-y divide-gray_l ">
               {currentSales.length > 0 ? (
                 currentSales.map((sale) => (
                   <tr
@@ -399,7 +399,7 @@ const VentasPage = () => {
                     className={` text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_l`}
                   >
                     <td
-                      className="font-semibold px-4 py-2 text-start uppercase border border-gray_l truncate max-w-[200px]"
+                      className="font-semibold px-2 text-start uppercase border border-gray_l truncate max-w-[200px]"
                       title={sale.products.map((p) => p.name).join(", ")}
                     >
                       {sale.products.map((p) => p.name).join(", ").length > 60
@@ -428,7 +428,7 @@ const VentasPage = () => {
                     </td>
                     <td className="flex justify-center items-center gap-2 p-2">
                       <Button
-                        icon={<Info />}
+                        icon={<Info size={20} />}
                         colorText="text-gray_b"
                         colorTextHover="hover:text-white"
                         colorBg="bg-transparent"
@@ -438,7 +438,7 @@ const VentasPage = () => {
                         onClick={() => handleOpenInfoModal(sale)}
                       />
                       <Button
-                        icon={<Trash />}
+                        icon={<Trash size={20} />}
                         colorText="text-gray_b"
                         colorTextHover="hover:text-white"
                         colorBg="bg-transparent"
@@ -452,7 +452,7 @@ const VentasPage = () => {
                   </tr>
                 ))
               ) : (
-                <tr className="h-[calc(63vh-2px)]">
+                <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
                   <td colSpan={6} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                       <ShoppingCart size={64} className="mb-4" />

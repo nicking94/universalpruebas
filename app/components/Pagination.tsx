@@ -17,7 +17,7 @@ const Pagination: React.FC<PaginationProps> = ({
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   return (
-    <div className="flex items-center justify-between mt-4">
+    <div className="flex items-center justify-between py-4">
       {/* Selección de productos por página */}
       <div className="flex items-center">
         <p className="text-gray_m dark:text-white mr-2">{text}</p>
@@ -26,6 +26,7 @@ const Pagination: React.FC<PaginationProps> = ({
           value={itemsPerPage}
           onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
         >
+          <option value="5">5</option>
           <option value="10">10</option>
           <option value="20">20</option>
           <option value="30">30</option>

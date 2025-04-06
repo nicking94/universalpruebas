@@ -35,7 +35,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
       <div className="flex justify-center">
         <Image src={logo} alt="logo" width={100} height={100} />
       </div>
-      <h2 className="font-semibold text-4xl text-center">
+      <h2 className="font-semibold text-3xl 2xl:text-4xl text-center">
         {type === "login" ? "Iniciar Sesión" : "Registrarse"}
       </h2>
       <div className="flex flex-col  ">

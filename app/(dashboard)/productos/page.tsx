@@ -46,7 +46,7 @@ const ProductsPage = () => {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage, setProductsPerPage] = useState(10);
+  const [productsPerPage, setProductsPerPage] = useState(5);
 
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -273,8 +273,8 @@ const ProductsPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className=" px-10 py-3 2xlp-10 text-gray_m dark:text-white h-[calc(100vh-80px)] min-h-[calc(100vh-80px)]">
-        <h1 className="text-2xl font-semibold mb-2">Productos</h1>
+      <div className=" px-10 2xl:px-10 text-gray_l dark:text-white h-[calc(100vh-80px)]">
+        <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Productos</h1>
 
         <div className="flex justify-between mb-2">
           <div className="w-full">
@@ -291,8 +291,8 @@ const ProductsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-200px)] 2xl:h-[calc(100vh-220px)">
-          <table className=" table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
+        <div className="flex flex-col justify-between h-[calc(100vh-170px)] 2xl:h-[calc(100vh-220px)">
+          <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
                 <th className="px-4 py-2 text-start ">Producto</th>
@@ -321,7 +321,7 @@ const ProductsPage = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray_l">
+            <tbody className=" divide-y divide-gray_l ">
               {sortedProducts.length > 0 ? (
                 sortedProducts
                   .slice(indexOfFirstProduct, indexOfLastProduct)
@@ -350,7 +350,7 @@ const ProductsPage = () => {
                     return (
                       <tr
                         key={index}
-                        className={`text-xs 2xl:text-[.9rem] border-b border-gray_l ${
+                        className={` text-xs 2xl:text-[.9rem] border-b border-gray_l ${
                           isExpired
                             ? "border-l-2 border-l-red-500 text-gray_b bg-gray_xl"
                             : expiredToday
@@ -360,7 +360,7 @@ const ProductsPage = () => {
                             : "text-gray_b bg-white"
                         }`}
                       >
-                        <td className="font-semibold px-4 py-2 text-start uppercase  flex items-center gap-2 ">
+                        <td className="font-semibold px-2 text-start uppercase flex items-center ">
                           {expiredToday && (
                             <AlertTriangle
                               className="text-yellow-300 dark:text-yellow-500"
@@ -419,7 +419,7 @@ const ProductsPage = () => {
                         </td>
                         <td className="px-4 py-2 flex justify-center gap-4">
                           <Button
-                            icon={<Edit />}
+                            icon={<Edit size={20} />}
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
                             colorBg="bg-transparent"
@@ -429,7 +429,7 @@ const ProductsPage = () => {
                             onClick={() => handleEditProduct(product)}
                           />
                           <Button
-                            icon={<Trash />}
+                            icon={<Trash size={20} />}
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
                             colorBg="bg-transparent"
@@ -444,7 +444,7 @@ const ProductsPage = () => {
                     );
                   })
               ) : (
-                <tr className="h-[calc(63vh-2px)]">
+                <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
                   <td colSpan={6} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                       <PackageX size={64} className="mb-4" />

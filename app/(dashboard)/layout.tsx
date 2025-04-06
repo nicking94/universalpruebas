@@ -64,7 +64,7 @@ export default function AppLayout({
           <main
             className={`${
               isSidebarOpen ? "ml-64" : "ml-30"
-            } flex-1 flex-grow min-h-[calc(100vh-80px)] bg-gray_xl dark:bg-gray_b transition-all duration-200 overflow-y-auto`}
+            } flex-1 flex-grow h-[calc(100vh-80px)]  bg-gray_xl dark:bg-gray_b transition-all duration-200 overflow-y-auto`}
           >
             {children}
           </main>

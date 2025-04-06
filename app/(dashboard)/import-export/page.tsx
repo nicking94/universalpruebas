@@ -85,11 +85,11 @@ export default function ImportExportPage() {
 
   return (
     <ProtectedRoute>
-      <div className=" px-10 py-3 2xlp-10 text-gray_m dark:text-white  min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)]">
-        <h1 className="text-2xl font-semibold mb-2">
+      <div className=" px-10 py-3 2xl:p-10 text-gray_l dark:text-white h-[calc(100vh-80px)] ">
+        <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">
           Importar o Exportar Datos
         </h1>
-        <div className=" h-[80vh] 2xl:h-[83vh] flex items-center justify-center gap-10  ">
+        <div className=" h-[calc(100vh-160px)] 2xl:h-[83vh] flex items-center justify-center gap-10  ">
           <ImportFileButton onImport={importData} />
           <Button
             onClick={exportData}
