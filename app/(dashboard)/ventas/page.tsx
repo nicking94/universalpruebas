@@ -333,7 +333,7 @@ const VentasPage = () => {
               onChange={handleMonthChange}
               options={monthOptions}
               placeholder="Mes"
-              className="w-full "
+              className="w-full h-[2rem] 2xl:h-auto text-black"
               classNamePrefix="react-select"
             />
             <Select
@@ -347,7 +347,7 @@ const VentasPage = () => {
               onInputChange={handleYearInputChange}
               options={yearOptions}
               isClearable
-              className="w-full h-[2rem] 2xl:h-auto"
+              className="w-full h-[2rem] 2xl:h-auto text-black"
               classNamePrefix="react-select"
             />
           </div>
