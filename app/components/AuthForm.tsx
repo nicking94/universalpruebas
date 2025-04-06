@@ -30,7 +30,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col justify-center w-[25%] p-10 space-y-10 shadow-2xl shadow-blue_b bg-white"
+      className="flex flex-col justify-center w-[35%] xl:w-[25%] p-10 space-y-10 shadow-2xl shadow-blue_b bg-white"
     >
       <div className="flex justify-center">
         <Image src={logo} alt="logo" width={100} height={100} />
@@ -39,7 +39,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
         {type === "login" ? "Iniciar Sesión" : "Registrarse"}
       </h2>
       <div className="flex flex-col  ">
-        <label htmlFor="username">Nombre de usuario</label>
+        <label htmlFor="username">Usuario</label>
 
         <input
           type="text"

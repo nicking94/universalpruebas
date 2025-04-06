@@ -103,11 +103,14 @@ export default function ImportExportPage() {
             colorBgHover="hover:bg-blue_l dark:hover:bg-gray_l"
           />
         </div>
-        <p className="text-xs text-center font-light text-gray_l">
+        <p className="text-xs text-center font-light text-gray_l dark:text-gray_l">
           Universal App
-          <span className=" text-gray_m"> le recuerda</span> no olvidar en donde
-          se guardan los archivos de recuperación, ya que sin ellos, no podrá
-          recuperar sus datos.
+          <span className=" text-gray_m dark:text-gray_xl">
+            {" "}
+            le recuerda
+          </span>{" "}
+          no olvidar en donde se guardan los archivos de recuperación, ya que
+          sin ellos, no podrá recuperar sus datos.
         </p>
         {loading && <p className="mt-2">Procesando...</p>}
       </div>

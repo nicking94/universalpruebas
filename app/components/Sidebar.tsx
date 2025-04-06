@@ -100,11 +100,11 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
       >
         <button
           onClick={() => router.push("/import-export")}
-          className="cursor-pointer flex justify-center items-center gap-2 w-full py-2 px-4 rounded-md bg-blue_b text-white hover:bg-blue_m transition-all"
+          className="cursor-pointer flex justify-center items-center gap-2 w-full py-2 px-4 rounded-sm bg-blue_b text-white hover:bg-blue_m transition-all"
         >
-          <Repeat size={18} />
-          <span className="text-sm font-semibold">
-            Importar / Exportar Datos
+          <Repeat size={14} />
+          <span className="text-xs 2xl:text-sm font-semibold">
+            Importar / Exportar
           </span>
         </button>
       </div>

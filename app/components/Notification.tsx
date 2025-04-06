@@ -11,9 +11,9 @@ const Notification: React.FC<NotificationProps> = ({
   const [animateOut, setAnimateOut] = useState(false);
 
   const typeClasses = {
-    success: "bg-green-700/90 text-white font-semibold",
-    error: "bg-red-500/90 text-white font-semibold",
-    info: "bg-blue-500/90 text-white font-semibold",
+    success: "bg-green-700 text-white font-semibold",
+    error: "bg-red-500 text-white font-semibold",
+    info: "bg-blue-500 text-white font-semibold",
   };
 
   useEffect(() => {

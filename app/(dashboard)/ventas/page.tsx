@@ -325,14 +325,14 @@ const VentasPage = () => {
         <h1 className="text-2xl font-semibold mb-2">Ventas</h1>
 
         <div className="flex justify-between mb-2">
-          <div className="flex w-full max-w-[20rem]  gap-4">
+          <div className="flex w-full max-w-[20rem] gap-4">
             <Select
               value={monthOptions.find(
                 (option) => option.value === selectedMonth
               )}
               onChange={handleMonthChange}
               options={monthOptions}
-              placeholder="MES"
+              placeholder="Mes"
               className="w-full "
               classNamePrefix="react-select"
             />
@@ -480,7 +480,7 @@ const VentasPage = () => {
                   <ul className="list-disc pl-5">
                     {selectedSale.products.map((product, index) => (
                       <li
-                        className="flex justify-between uppercase px-10 border-b-1 border-gray_xl"
+                        className="flex justify-between uppercase px-10 border-b-1 border-gray_xl text-md xl:text-lg"
                         key={index}
                       >
                         <span className="font-semibold">{product.name}</span>
@@ -544,8 +544,8 @@ const VentasPage = () => {
               />
             </div>
             {newSale.products.length > 0 && (
-              <table className="table-auto w-full">
-                <thead>
+              <table className="table-auto w-full ">
+                <thead className="border border-gray_xl">
                   <tr>
                     <th className="px-4 py-2">Producto</th>
                     <th className="px-4 py-2 text-center">Cantidad</th>
@@ -560,11 +560,11 @@ const VentasPage = () => {
                       dbProduct && product.quantity > Number(dbProduct.stock);
 
                     return (
-                      <tr key={product.id}>
+                      <tr className="border-b border-gray-xl" key={product.id}>
                         <td className=" px-4 py-2">
                           {product.name.toUpperCase()}
                         </td>
-                        <td className="w-50 px-4 py-2 text-center">
+                        <td className="w-20 px-4 py-2 text-center">
                           <Input
                             placeholder="Cantidad"
                             name="quantity"
@@ -594,7 +594,7 @@ const VentasPage = () => {
                         <td className=" px-4 py-2 text-center">
                           <button
                             onClick={() => handleRemoveProduct(product.id)}
-                            className="cursor-pointer text-gray_b bg-gray_xl dark:bg-white p-1 rounded-sm"
+                            className="cursor-pointer text-gray_b bg-gray_xl  p-1 rounded-sm"
                           >
                             <Trash size={20} />
                           </button>

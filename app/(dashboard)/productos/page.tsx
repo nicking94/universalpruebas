@@ -295,17 +295,27 @@ const ProductsPage = () => {
                 <th className="px-4 py-2 text-start ">Producto</th>
                 <th
                   onClick={toggleSortOrder}
-                  className="cursor-pointer flex justify-center items-center px-4 py-2"
+                  className=" cursor-pointer flex justify-center items-center px-4 py-2"
                 >
                   Stock
                   <button className="ml-2 cursor-pointer">
-                    {sortOrder === "asc" ? <SortAsc /> : <SortDesc />}
+                    {sortOrder === "asc" ? (
+                      <SortAsc size={20} />
+                    ) : (
+                      <SortDesc size={20} />
+                    )}
                   </button>
                 </th>
-                <th className="px-4 py-2 ">Precio de costo</th>
-                <th className="px-4 py-2 ">Precio de venta</th>
-                <th className="px-4 py-2 ">Vencimiento</th>
-                <th className="px-4 py-2 w-[12rem] ">Acciones</th>
+                <th className="text-sm xl:text-lg px-4 py-2 ">
+                  Precio de costo
+                </th>
+                <th className="text-sm xl:text-lg px-4 py-2 ">
+                  Precio de venta
+                </th>
+                <th className="text-sm xl:text-lg px-4 py-2 ">Vencimiento</th>
+                <th className="text-sm xl:text-lg px-4 py-2 xl:w-[12rem] ">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray_l">
