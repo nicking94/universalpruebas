@@ -570,12 +570,9 @@ const VentasPage = () => {
           </table>
           {selectedSale && (
             <Modal
-              btnHidden={true}
               isOpen={isInfoModalOpen}
               onClose={handleCloseInfoModal}
               title="Detalles de la venta"
-              btnlText="Cerrar"
-              btnrText="Cerrar"
               bgColor="bg-blue_b text-white dark:bg-gray_b"
             >
               <div className=" space-y-2 p-2">
@@ -615,6 +612,16 @@ const VentasPage = () => {
                   </ul>
                 </div>
               </div>
+              <div className="flex justify-end">
+                <Button
+                  text="Cerrar"
+                  colorText="text-gray_b dark:text-white"
+                  colorTextHover="hover:text-white hover:dark:text-white"
+                  colorBg="bg-gray_xl dark:bg-gray_m"
+                  colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                  onClick={() => handleCloseInfoModal()}
+                />
+              </div>
             </Modal>
           )}
 
@@ -635,10 +642,12 @@ const VentasPage = () => {
         <Modal
           isOpen={isOpenModal}
           onClose={handleCloseModal}
-          onConfirm={handleConfirmAddSale}
           title="Nueva Venta"
         >
-          <form className="flex flex-col gap-4 pb-6">
+          <form
+            onSubmit={handleConfirmAddSale}
+            className="flex flex-col gap-4 pb-6"
+          >
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="productSelect"
@@ -764,17 +773,47 @@ const VentasPage = () => {
               readOnly
             />
           </form>
+
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button
+              text={"Guardar"}
+              colorText="text-white"
+              colorTextHover="text-white"
+              onClick={handleConfirmAddSale}
+            />
+            <Button
+              text="Cancelar"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={handleCloseModal}
+            />
+          </div>
         </Modal>
 
         <Modal
           isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDeleteSale}
           title="Eliminar Venta"
-          btnrText="No"
-          btnlText="Si"
+          onClose={() => setIsConfirmModalOpen(false)}
         >
           <p>¿Está seguro de que desea eliminar esta venta?</p>
+          <div className="flex justify-end space-x-2">
+            <Button
+              text="Si"
+              colorText="text-white"
+              colorTextHover="text-white"
+              onClick={handleDeleteSale}
+            />
+            <Button
+              text="No"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={() => setIsConfirmModalOpen(false)}
+            />
+          </div>
         </Modal>
 
         <Notification

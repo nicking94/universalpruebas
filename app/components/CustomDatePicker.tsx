@@ -8,9 +8,10 @@ import { Calendar } from "lucide-react";
 interface Props {
   value: string;
   onChange: (value: string) => void;
+  error?: string;
 }
 
-const CustomDatePicker: React.FC<Props> = ({ value, onChange }) => {
+const CustomDatePicker: React.FC<Props> = ({ value, onChange, error }) => {
   const [startDate, setStartDate] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -67,6 +68,10 @@ const CustomDatePicker: React.FC<Props> = ({ value, onChange }) => {
             }
           }}
         />
+      </div>
+      <div>
+        {/* Tu implementación actual */}
+        {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
     </div>
   );

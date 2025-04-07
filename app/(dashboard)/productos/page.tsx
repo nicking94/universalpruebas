@@ -499,9 +499,8 @@ const ProductsPage = () => {
         <Modal
           isOpen={isOpenModal}
           onClose={handleCloseModal}
-          onConfirm={handleConfirmAddProduct}
           title={editingProduct ? "Editar Producto" : "Añadir Producto"}
-          disabled={editingProduct ? isSaveDisabled : false}
+          bgColor="bg-white dark:bg-gray_b"
         >
           <form className="flex flex-col gap-4">
             <Input
@@ -570,16 +569,47 @@ const ProductsPage = () => {
               }}
             />
           </form>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button
+              text={editingProduct ? "Actualizar" : "Guardar"}
+              colorText="text-white"
+              colorTextHover="text-white"
+              onClick={handleConfirmAddProduct}
+              disabled={editingProduct ? isSaveDisabled : false}
+            />
+            <Button
+              text="Cancelar"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={handleCloseModal}
+            />
+          </div>
         </Modal>
         <Modal
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleConfirmDelete}
           title="Eliminar Producto"
-          btnlText="Si"
-          btnrText="No"
+          bgColor="bg-white dark:bg-gray_b"
         >
           <p>¿Desea eliminar el producto {productToDelete?.name}?</p>
+          <div className="flex justify-end space-x-2">
+            <Button
+              text="Si"
+              colorText="text-white"
+              colorTextHover="text-white"
+              onClick={handleConfirmDelete}
+            />
+            <Button
+              text="No"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={() => setIsConfirmModalOpen(false)}
+            />
+          </div>
         </Modal>
 
         <Notification

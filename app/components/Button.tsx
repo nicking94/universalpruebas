@@ -17,16 +17,13 @@ const Button: React.FC<ButtonProps> = ({
   colorBg = "bg-blue_b",
   colorBgHover = "hover:bg-blue_m",
   disabled = false,
-  isHidden,
 }) => {
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={` ${colorText} ${colorTextHover} ${width} ${minwidth} ${height} ${px} ${py} ${colorBg} ${colorBgHover} ${
-        isHidden ? "hidden" : ""
-      } cursor-pointer flex items-center justify-center gap-2 rounded transition-all duration-200`}
+      className={` ${colorText} ${colorTextHover} ${width} ${minwidth} ${height} ${px} ${py} ${colorBg} ${colorBgHover} cursor-pointer flex items-center justify-center gap-2 rounded transition-all duration-200`}
     >
       {icon && iconPosition === "left" && <span>{icon}</span>}
       {text && <span>{text}</span>}

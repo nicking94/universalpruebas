@@ -25,7 +25,6 @@ export type ButtonProps = {
   colorBgHover?: string;
   colorTextHover?: string;
   disabled?: boolean;
-  isHidden?: boolean;
 };
 
 export type NavbarProps = {
@@ -56,16 +55,10 @@ export type NotificationProps = {
 };
 
 export type ModalProps = {
-  isOpen: boolean;
   onClose: () => void;
-  onConfirm?: () => void;
+  isOpen: boolean;
   title?: string;
-  message?: string | React.ReactNode;
   children?: React.ReactNode;
-  disabled?: boolean;
-  btnlText?: string;
-  btnrText?: string;
-  btnHidden?: boolean;
   bgColor?: string;
 };
 
@@ -87,6 +80,7 @@ export type InputProps = {
   readOnly?: boolean;
   className?: string;
   accept?: string;
+  error?: string;
 };
 export type UserMenuProps = {
   theme: string;
@@ -109,7 +103,7 @@ export type Product = {
   price: number;
   expiration: string;
   quantity: number;
-  unit: string | "Unid." | "gr" | "Kg" | "ml" | "L";
+  unit: "Unid." | "gr" | "Kg" | "ml" | "L";
 };
 
 export type UnitOption = {
