@@ -2,10 +2,6 @@ export type Theme = {
   id: number;
   value: string;
 };
-export type User = {
-  username: string;
-  password: string;
-};
 
 export type AuthData = {
   username: string;
@@ -113,6 +109,12 @@ export type Product = {
   price: number;
   expiration: string;
   quantity: number;
+  unit: string | "Unid." | "gr" | "Kg" | "ml" | "L";
+};
+
+export type UnitOption = {
+  value: Product["unit"];
+  label: string;
 };
 
 export type ProductCardProps = {
@@ -130,17 +132,12 @@ export type SearchBarProps = {
 
 export type Sale = {
   id: number;
-  products: {
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-    stock: number;
-  }[];
+  products: Product[];
   paymentMethod: "Efectivo" | "Transferencia";
   total: number;
   date: string;
 };
+
 export type SaleItem = {
   product: Product;
   quantity: number;
@@ -164,4 +161,9 @@ export type ProductOption = {
   value: number;
   label: string;
   isDisabled?: boolean;
+};
+
+export type paymentOption = {
+  value: string;
+  label: string;
 };

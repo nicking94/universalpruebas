@@ -3,7 +3,7 @@ import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Modal from "@/app/components/Modal";
 import Notification from "@/app/components/Notification";
-import { Product, ProductOption, Sale } from "@/app/lib/types/types";
+import { Product, Sale, UnitOption } from "@/app/lib/types/types";
 import { Info, Plus, ShoppingCart, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
@@ -39,6 +39,100 @@ const VentasPage = () => {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
 
+  const unitOptions: UnitOption[] = [
+    { value: "Unid.", label: "Unidad" },
+    { value: "Kg", label: "Kg" },
+    { value: "gr", label: "gr" },
+    { value: "L", label: "L" },
+    { value: "ml", label: "Ml" },
+  ];
+  const calculatePrice = (product: Product): number => {
+    const pricePerKg = product.price; // Precio por Kg
+    const quantity = product.quantity; // Cantidad que se está vendiendo
+    const unit = product.unit; // Unidad en la que se vende
+
+    // Convertir la cantidad a kilogramos
+    let quantityInKg: number;
+    switch (unit) {
+      case "gr":
+        quantityInKg = quantity / 1000; // Convertir gramos a kg
+        break;
+      case "Kg":
+        quantityInKg = quantity; // Ya está en kg
+        break;
+      case "L":
+        quantityInKg = quantity; // Suponiendo 1 L = 1 Kg (ajusta según sea necesario)
+        break;
+      case "ml":
+        quantityInKg = quantity / 1000; // Convertir ml a kg (ajusta según sea necesario)
+        break;
+      default:
+        quantityInKg = quantity; // Si es "Unid.", considerar cada unidad como 1 Kg (ajusta si es incorrecto)
+        break;
+    }
+
+    // Calcular el precio total
+    const totalPrice = pricePerKg * quantityInKg;
+    return totalPrice;
+  };
+  const updateStockAfterSale = (
+    productId: number,
+    soldQuantity: number,
+    unit: Product["unit"]
+  ) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) {
+      throw new Error(`Producto con ID ${productId} no encontrado`);
+    }
+
+    // Convertir el stock y la cantidad vendida a gramos
+    const stockInGrams = convertToGrams(product.stock, product.unit);
+    const soldQuantityInGrams = convertToGrams(soldQuantity, unit);
+
+    if (stockInGrams < soldQuantityInGrams) {
+      throw new Error(`Stock insuficiente para el producto ${product.name}`);
+    }
+
+    // Actualizar el stock en gramos
+    const newStockInGrams = stockInGrams - soldQuantityInGrams;
+
+    // Convertir el nuevo stock de vuelta a la unidad original del producto
+    const updatedStock = convertStockToUnit(newStockInGrams, product.unit);
+
+    return updatedStock;
+  };
+
+  const convertToGrams = (quantity: number, unit: string): number => {
+    switch (unit) {
+      case "Kg":
+        return quantity * 1000;
+      case "L":
+        return quantity * 1000; // Suponiendo 1L = 1000gr para simplificar
+      case "gr":
+        return quantity;
+      case "ml":
+        return quantity; // Suponiendo 1ml = 1gr para simplificar
+      default:
+        return quantity;
+    }
+  };
+  const convertStockToUnit = (
+    stock: number,
+    unit: string
+  ): { quantity: number; unit: string } => {
+    switch (unit) {
+      case "gr":
+        return { quantity: stock, unit: "gr" };
+      case "Kg":
+        return { quantity: stock / 1000, unit: "Kg" };
+      case "ml":
+        return { quantity: stock, unit: "ml" };
+      case "L":
+        return { quantity: stock / 1000, unit: "L" };
+      default:
+        return { quantity: stock, unit: "Unid." };
+    }
+  };
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
@@ -144,13 +238,14 @@ const VentasPage = () => {
     }
 
     try {
-      // Verificar stock de todos los productos
       for (const product of newSale.products) {
-        const dbProduct = products.find((p) => p.id === product.id);
-        if (!dbProduct || Number(dbProduct.stock) < product.quantity) {
-          showNotification(`Stock de ${product.name} insuficiente`, "error");
-          return;
-        }
+        const updatedStock = updateStockAfterSale(
+          product.id,
+          product.quantity,
+          product.unit
+        );
+
+        await db.products.update(product.id, { stock: updatedStock.quantity });
       }
 
       const saleToSave: Sale = {
@@ -163,28 +258,6 @@ const VentasPage = () => {
 
       await db.sales.add(saleToSave);
       setSales([...sales, saleToSave]);
-
-      // Actualizar stock
-      for (const product of newSale.products) {
-        const dbProduct = products.find((p) => p.id === product.id);
-
-        if (!dbProduct) {
-          showNotification(
-            `No se encontró el producto ${product.name}`,
-            "error"
-          );
-          return;
-        }
-
-        if (Number(dbProduct.stock) < product.quantity) {
-          showNotification(`Stock insuficiente para ${product.name}`, "error");
-          return;
-        }
-
-        await db.products.update(product.id, {
-          stock: Number(dbProduct.stock) - product.quantity,
-        });
-      }
 
       setNewSale({
         products: [],
@@ -255,20 +328,19 @@ const VentasPage = () => {
   }, []);
 
   const handleProductSelect = (
-    selectedOptions: ProductOption | ProductOption[]
+    selectedOptions: readonly {
+      value: number;
+      label: string;
+      isDisabled?: boolean | undefined;
+    }[]
   ) => {
     setNewSale((prevState) => {
       // Mantener los productos existentes en el estado
       const existingProducts = prevState.products;
 
-      // Normalizar selectedOptions a un array
-      const optionsArray = Array.isArray(selectedOptions)
-        ? selectedOptions
-        : [selectedOptions];
-
       // Crear una lista actualizada con los nuevos productos seleccionados
-      const updatedProducts = optionsArray
-        .map((option: ProductOption) => {
+      const updatedProducts = selectedOptions
+        .map((option) => {
           const product = products.find((p) => p.id === option.value);
           if (!product) return null;
 
@@ -282,6 +354,7 @@ const VentasPage = () => {
             : {
                 ...product,
                 quantity: 1,
+                unit: product.unit, // Establecer la unidad inicial del producto
                 stock: Number(product.stock),
                 price: Number(product.price),
               };
@@ -297,14 +370,45 @@ const VentasPage = () => {
     });
   };
 
-  const handleQuantityChange = (productId: number, quantity: number) => {
+  const handleQuantityChange = (
+    productId: number,
+    quantity: number,
+    unit: Product["unit"]
+  ) => {
     setNewSale((prevState) => {
-      const updatedProducts = prevState.products.map((p) =>
-        p.id === productId ? { ...p, quantity } : p
+      const updatedProducts = prevState.products.map((p) => {
+        if (p.id === productId) {
+          const updatedProduct = { ...p, quantity: quantity, unit: unit };
+          return updatedProduct;
+        }
+        return p;
+      });
+
+      // Calculate the new total using calculatePrice
+      const newTotal = updatedProducts.reduce(
+        (sum, p) => sum + calculatePrice(p),
+        0
       );
 
+      return { ...prevState, products: updatedProducts, total: newTotal };
+    });
+  };
+  const handleUnitChange = (
+    productId: number,
+    quantity: number,
+    unit: Product["unit"]
+  ) => {
+    setNewSale((prevState) => {
+      const updatedProducts = prevState.products.map((p) => {
+        if (p.id === productId) {
+          return { ...p, unit: unit, quantity: quantity };
+        }
+        return p;
+      });
+
+      // Calculate the new total using calculatePrice
       const newTotal = updatedProducts.reduce(
-        (sum, p) => sum + Number(p.price) * p.quantity,
+        (sum, p) => sum + calculatePrice(p),
         0
       );
 
@@ -317,8 +421,9 @@ const VentasPage = () => {
         (p) => p.id !== productId
       );
 
+      // Calculate the new total using calculatePrice
       const newTotal = updatedProducts.reduce(
-        (sum, p) => sum + Number(p.price) * p.quantity,
+        (sum, p) => sum + calculatePrice(p),
         0
       );
 
@@ -468,7 +573,7 @@ const VentasPage = () => {
               btnHidden={true}
               isOpen={isInfoModalOpen}
               onClose={handleCloseInfoModal}
-              title="Detalles de Venta"
+              title="Detalles de la venta"
               btnlText="Cerrar"
               btnrText="Cerrar"
               bgColor="bg-blue_b text-white dark:bg-gray_b"
@@ -503,7 +608,7 @@ const VentasPage = () => {
                         <span className="font-semibold">{product.name}</span>
                         <span className="lowercase">
                           <span className="text-sm font-light mr-1">x</span>
-                          {product.quantity}
+                          {product.quantity} {product.unit}
                         </span>
                       </li>
                     ))}
@@ -549,9 +654,7 @@ const VentasPage = () => {
                 isOptionDisabled={(option) => option.isDisabled ?? false}
                 options={productOptions}
                 isMulti
-                onChange={(selectedOptions) => {
-                  handleProductSelect([...selectedOptions]);
-                }}
+                onChange={handleProductSelect}
                 value={newSale.products.map((p) => ({
                   value: p.id,
                   label: p.name,
@@ -562,20 +665,17 @@ const VentasPage = () => {
             </div>
             {newSale.products.length > 0 && (
               <table className="table-auto w-full ">
-                <thead className="border border-gray_xl">
+                <thead className="border border-gray_xl bg-blue_b text-white ">
                   <tr>
                     <th className="px-4 py-2">Producto</th>
                     <th className="px-4 py-2 text-center">Cantidad</th>
+                    <th className="px-4 py-2 text-center">Unidad</th>
                     <th className="px-4 py-2 text-center">Total</th>
                     <th className="px-4 py-2 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {newSale.products.map((product) => {
-                    const dbProduct = products.find((p) => p.id === product.id);
-                    const isExceedingStock =
-                      dbProduct && product.quantity > Number(dbProduct.stock);
-
                     return (
                       <tr className="border-b border-gray-xl" key={product.id}>
                         <td className=" px-4 py-2">
@@ -583,30 +683,39 @@ const VentasPage = () => {
                         </td>
                         <td className="w-20 px-4 py-2 text-center">
                           <Input
-                            placeholder="Cantidad"
-                            name="quantity"
                             type="number"
                             value={product.quantity.toString()}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const quantity = Number(e.target.value);
                               handleQuantityChange(
                                 product.id,
-                                Number(e.target.value)
-                              )
-                            }
-                            className={`border ${
-                              isExceedingStock
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
+                                quantity,
+                                product.unit
+                              );
+                            }}
                           />
-                          {isExceedingStock && (
-                            <p className="text-red-500 text- font-semibold">
-                              Stock insuficiente
-                            </p>
-                          )}
+                        </td>
+                        <td>
+                          {" "}
+                          <Select
+                            placeholder="Unidad"
+                            options={unitOptions}
+                            value={unitOptions.find(
+                              (option) => option.value === product.unit
+                            )}
+                            onChange={(selectedOption) => {
+                              if (selectedOption) {
+                                handleUnitChange(
+                                  product.id,
+                                  product.quantity,
+                                  selectedOption.value as Product["unit"]
+                                );
+                              }
+                            }}
+                          />
                         </td>
                         <td className=" px-4 py-2 text-center">
-                          ${Number(product.price) * product.quantity}
+                          ${calculatePrice(product).toFixed(2)}
                         </td>
                         <td className=" px-4 py-2 text-center">
                           <button
@@ -616,6 +725,7 @@ const VentasPage = () => {
                             <Trash size={20} />
                           </button>
                         </td>
+                        <div></div>
                       </tr>
                     );
                   })}

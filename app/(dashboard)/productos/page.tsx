@@ -21,6 +21,12 @@ import { es } from "date-fns/locale";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
+import Select from "react-select";
+
+type UnitOption = {
+  value: Product["unit"];
+  label: string;
+};
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,6 +39,7 @@ const ProductsPage = () => {
     price: 0,
     expiration: "",
     quantity: 0,
+    unit: "Unid.",
   });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -47,6 +54,17 @@ const ProductsPage = () => {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage, setProductsPerPage] = useState(5);
+
+  const unitOptions: UnitOption[] = [
+    { value: "Unid.", label: "Unidad" },
+    { value: "Kg", label: "Kg" },
+    { value: "gr", label: "gr" },
+    { value: "L", label: "L" },
+    { value: "ml", label: "Ml" },
+  ];
+
+  const selectedUnit =
+    unitOptions.find((opt) => opt.value === newProduct.unit) ?? null;
 
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -100,7 +118,8 @@ const ProductsPage = () => {
       originalProduct.stock !== updatedProduct.stock ||
       originalProduct.costPrice !== updatedProduct.costPrice ||
       originalProduct.price !== updatedProduct.price ||
-      originalProduct.expiration !== updatedProduct.expiration
+      originalProduct.expiration !== updatedProduct.expiration ||
+      originalProduct.unit !== updatedProduct.unit
     );
   };
   const showNotification = (
@@ -125,7 +144,8 @@ const ProductsPage = () => {
       !newProduct.stock ||
       !newProduct.costPrice ||
       !newProduct.price ||
-      !newProduct.expiration
+      !newProduct.expiration ||
+      !newProduct.unit
     ) {
       showNotification("Por favor, complete todos los campos", "error");
       return;
@@ -160,6 +180,7 @@ const ProductsPage = () => {
       price: 0,
       expiration: "",
       quantity: 0,
+      unit: "Unid.",
     });
     setIsOpenModal(false);
   };
@@ -184,6 +205,7 @@ const ProductsPage = () => {
       price: 0,
       expiration: "",
       quantity: 0,
+      unit: "Unid.",
     });
     setEditingProduct(null);
   };
@@ -245,6 +267,7 @@ const ProductsPage = () => {
         }
       } catch (error) {
         console.error("Error fetching products:", error);
+        showNotification("Error al cargar los productos", "error"); // <-- Agrega esto
       }
     };
 
@@ -360,27 +383,32 @@ const ProductsPage = () => {
                             : "text-gray_b bg-white"
                         }`}
                       >
-                        <td className="font-semibold px-2 text-start uppercase flex items-center ">
-                          {expiredToday && (
-                            <AlertTriangle
-                              className="text-yellow-300 dark:text-yellow-500"
-                              size={18}
-                            />
-                          )}
-                          {isExpiringSoon && (
-                            <AlertTriangle
-                              className="text-yellow-800"
-                              size={18}
-                            />
-                          )}
-                          {isExpired && (
-                            <AlertTriangle
-                              className="text-red-400 dark:text-yellow-500"
-                              size={18}
-                            />
-                          )}
-                          {product.name}
+                        <td className="font-semibold px-2 text-start uppercase">
+                          <div className="flex items-center gap-1 h-full">
+                            {expiredToday && (
+                              <AlertTriangle
+                                className="text-yellow-300 dark:text-yellow-500"
+                                size={18}
+                              />
+                            )}
+                            {isExpiringSoon && (
+                              <AlertTriangle
+                                className="text-yellow-800"
+                                size={18}
+                              />
+                            )}
+                            {isExpired && (
+                              <AlertTriangle
+                                className="text-red-400 dark:text-yellow-500"
+                                size={18}
+                              />
+                            )}
+                            <span className="leading-tight">
+                              {product.name}
+                            </span>
+                          </div>
                         </td>
+
                         <td
                           className={`${
                             !isNaN(Number(product.stock)) &&
@@ -391,7 +419,7 @@ const ProductsPage = () => {
                         >
                           {!isNaN(Number(product.stock)) &&
                           Number(product.stock) > 0
-                            ? `${product.stock} unid.`
+                            ? `${product.stock} ${product.unit}`
                             : "Agotado"}
                         </td>
                         <td className="font-semibold px-4 py-2 border border-gray_l">
@@ -492,6 +520,31 @@ const ProductsPage = () => {
               value={newProduct.stock.toString()}
               onChange={handleInputChange}
             />
+            <div>
+              <label
+                htmlFor="unit"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Unidad
+              </label>
+              <Select
+                inputId="unit"
+                options={unitOptions}
+                value={selectedUnit}
+                onChange={(selectedOption) => {
+                  setNewProduct({
+                    ...newProduct,
+                    unit: selectedOption?.value as Product["unit"],
+                  });
+                }}
+                className="mt-1"
+                classNames={{
+                  control: () =>
+                    "text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500",
+                }}
+                isSearchable={false}
+              />
+            </div>
             <Input
               label="Precio de costo"
               type="number"
