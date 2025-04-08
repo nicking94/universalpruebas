@@ -49,16 +49,13 @@ const VentasPage = () => {
     { value: "ml", label: "Ml" },
   ];
   const calculatePrice = (product: Product): number => {
-    const pricePerUnit = product.price; // Precio por unidad
-    const quantity = product.quantity; // Cantidad que se está vendiendo
-    const unit = product.unit; // Unidad en la que se vende
-
-    // Si es por unidad, simplemente multiplicar precio por cantidad
+    const pricePerUnit = product.price;
+    const quantity = product.quantity;
+    const unit = product.unit;
     if (unit === "Unid.") {
       return pricePerUnit * quantity;
     }
 
-    // Para productos por peso/volumen, mantener la lógica existente
     let quantityInBaseUnit: number;
     switch (unit) {
       case "gr":
@@ -202,13 +199,11 @@ const VentasPage = () => {
   };
   const handleProductScan = (productId: number) => {
     setNewSale((prevState) => {
-      // Buscar si el producto ya está en la venta
       const existingProductIndex = prevState.products.findIndex(
         (p) => p.id === productId
       );
 
       if (existingProductIndex >= 0) {
-        // Si el producto ya existe, incrementar la cantidad
         const updatedProducts = [...prevState.products];
         const existingProduct = updatedProducts[existingProductIndex];
 
@@ -216,8 +211,6 @@ const VentasPage = () => {
           ...existingProduct,
           quantity: existingProduct.quantity + 1,
         };
-
-        // Calcular nuevo total
         const newTotal = updatedProducts.reduce(
           (sum, p) => sum + calculatePrice(p),
           0
@@ -229,7 +222,6 @@ const VentasPage = () => {
           total: newTotal,
         };
       } else {
-        // Si el producto no existe, agregarlo
         const productToAdd = products.find((p) => p.id === productId);
         if (!productToAdd) return prevState;
 
@@ -544,12 +536,16 @@ const VentasPage = () => {
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
-                <th className="px-4 py-2 text-start ">Producto</th>
+                <th className="text-xs xl:text-lg px-4 py-2 text-start ">
+                  Producto
+                </th>
 
-                <th className="px-4 py-2 ">Total</th>
-                <th className="px-4 py-2 ">Fecha</th>
-                <th className="px-4 py-2 ">Forma De Pago</th>
-                <th className="px-4 py-2 w-[12rem] ">Acciones</th>
+                <th className="text-xs xl:text-lg px-4 py-2 ">Total</th>
+                <th className=" text-xs xl:text-lg px-4 py-2 ">Fecha</th>
+                <th className="text-xs xl:text-lg px-4 py-2 ">Forma De Pago</th>
+                <th className="text-xs xl:text-lg px-4 py-2 w-[12rem] ">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray_l ">
@@ -655,10 +651,10 @@ const VentasPage = () => {
                   <ul className="list-disc pl-5">
                     {selectedSale.products.map((product, index) => (
                       <li
-                        className="flex justify-between uppercase px-10 border-b-1 border-gray_xl text-md xl:text-lg"
+                        className="flex justify-between uppercase px-10 border-b-1 border-gray_xl text-sm xl:text-md"
                         key={index}
                       >
-                        <span className="font-semibold">{product.name}</span>
+                        <span className=" font-semibold">{product.name}</span>
                         <span className="lowercase">
                           <span className="text-sm font-light mr-1">x</span>
                           {product.quantity} {product.unit}

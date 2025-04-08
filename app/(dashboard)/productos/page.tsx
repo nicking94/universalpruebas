@@ -323,10 +323,12 @@ const ProductsPage = () => {
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
-                <th className="px-4 py-2 text-start ">Producto</th>
+                <th className="px-4 py-2 text-start text-xs xl:text-lg ">
+                  Producto
+                </th>
                 <th
                   onClick={toggleSortOrder}
-                  className=" cursor-pointer flex justify-center items-center px-4 py-2"
+                  className="text-xs xl:text-lg cursor-pointer flex justify-center items-center px-4 py-2"
                 >
                   Stock
                   <button className="ml-2 cursor-pointer">
@@ -337,14 +339,14 @@ const ProductsPage = () => {
                     )}
                   </button>
                 </th>
-                <th className="text-sm xl:text-lg px-4 py-2 ">
+                <th className="text-xs xl:text-lg px-4 py-2 ">
                   Precio de costo
                 </th>
-                <th className="text-sm xl:text-lg px-4 py-2 ">
+                <th className="text-xs xl:text-lg px-4 py-2 ">
                   Precio de venta
                 </th>
-                <th className="text-sm xl:text-lg px-4 py-2 ">Vencimiento</th>
-                <th className="text-sm xl:text-lg px-4 py-2 xl:w-[12rem] ">
+                <th className="text-xs xl:text-lg px-4 py-2 ">Vencimiento</th>
+                <th className="text-xs xl:text-lg px-4 py-2 xl:w-[12rem] ">
                   Acciones
                 </th>
               </tr>
@@ -439,8 +441,13 @@ const ProductsPage = () => {
                                 locale: es,
                               })
                             : "Sin fecha"}
+                          {isExpiringSoon && (
+                            <span className="animate-pulse ml-2 text-red-500">
+                              (Por vencer)
+                            </span>
+                          )}
                           {expirationDate && expiredToday && (
-                            <span className="animate-pulse ml-2 text-white">
+                            <span className="animate-pulse ml-2 text-red-500">
                               (Vence Hoy)
                             </span>
                           )}
