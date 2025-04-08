@@ -51,6 +51,9 @@ const ProductsPage = () => {
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
+  const [barcodeInput, setBarcodeInput] = useState("");
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,6 +114,30 @@ const ProductsPage = () => {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query.toLowerCase());
+  };
+  const handleOpenPriceModal = () => {
+    setIsPriceModalOpen(true);
+    setScannedProduct(null);
+    setBarcodeInput("");
+    // Enfocar el input después de que el modal se abra
+    setTimeout(() => {
+      const input = document.getElementById("price-check-barcode");
+      if (input) input.focus();
+    }, 100);
+  };
+
+  const handleBarcodeScan = (code: string) => {
+    const product = products.find((p) => p.barcode === code);
+    if (product) {
+      setScannedProduct(product);
+      showNotification(
+        `Precio de ${product.name}: ${formatPrice(product.price)}`,
+        "success"
+      );
+    } else {
+      showNotification("Producto no encontrado", "error");
+    }
+    setBarcodeInput(""); // Limpiar después de escanear
   };
   const hasChanges = (originalProduct: Product, updatedProduct: Product) => {
     return (
@@ -306,7 +333,7 @@ const ProductsPage = () => {
               text="Ver Precio [F5]"
               colorText="text-white"
               colorTextHover="text-white"
-              onClick={handleAddProduct}
+              onClick={handleOpenPriceModal}
               hotkey="F5"
             />
             <Button
@@ -442,12 +469,12 @@ const ProductsPage = () => {
                               })
                             : "Sin fecha"}
                           {isExpiringSoon && (
-                            <span className="animate-pulse ml-2 text-red-500">
+                            <span className=" ml-2 text-red-500">
                               (Por vencer)
                             </span>
                           )}
                           {expirationDate && expiredToday && (
-                            <span className="animate-pulse ml-2 text-red-500">
+                            <span className="animate-pulse ml-2 text-white">
                               (Vence Hoy)
                             </span>
                           )}
@@ -647,6 +674,88 @@ const ProductsPage = () => {
               colorBg="bg-gray_xl dark:bg-gray_m"
               colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
               onClick={() => setIsConfirmModalOpen(false)}
+            />
+          </div>
+        </Modal>
+        <Modal
+          isOpen={isPriceModalOpen}
+          onClose={() => setIsPriceModalOpen(false)}
+          title="Consultar Precio de Producto"
+          bgColor="bg-white dark:bg-gray_b"
+        >
+          <div className="flex flex-col gap-4">
+            <Input
+              type="text"
+              value={barcodeInput}
+              onChange={(e) => {
+                setBarcodeInput(e.target.value);
+                if (e.target.value.length >= 8) {
+                  handleBarcodeScan(e.target.value);
+                }
+              }}
+              placeholder="Escanee el código de barras o ingréselo manualmente"
+              autoFocus
+            />
+
+            {scannedProduct && (
+              <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Producto
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {scannedProduct.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Precio
+                    </p>
+                    <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                      {formatPrice(scannedProduct.price)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Stock
+                    </p>
+                    <p
+                      className={`text-lg font-semibold ${
+                        scannedProduct.stock > 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {scannedProduct.stock} {scannedProduct.unit}
+                    </p>
+                  </div>
+                  {scannedProduct.expiration && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Vencimiento
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {format(
+                          parseISO(scannedProduct.expiration),
+                          "dd/MM/yyyy",
+                          { locale: es }
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button
+              text="Cerrar"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={() => setIsPriceModalOpen(false)}
             />
           </div>
         </Modal>
