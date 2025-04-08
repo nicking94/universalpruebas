@@ -12,6 +12,7 @@ import { es } from "date-fns/locale";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
 import Select, { SingleValue } from "react-select";
+import BarcodeScanner from "@/app/components/BarcodeScanner";
 
 const VentasPage = () => {
   const currentYear = new Date().getFullYear();
@@ -23,6 +24,7 @@ const VentasPage = () => {
     paymentMethod: "Efectivo",
     total: 0,
     date: new Date().toISOString(),
+    barcode: "",
   });
 
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
@@ -47,33 +49,36 @@ const VentasPage = () => {
     { value: "ml", label: "Ml" },
   ];
   const calculatePrice = (product: Product): number => {
-    const pricePerKg = product.price; // Precio por Kg
+    const pricePerUnit = product.price; // Precio por unidad
     const quantity = product.quantity; // Cantidad que se está vendiendo
     const unit = product.unit; // Unidad en la que se vende
 
-    // Convertir la cantidad a kilogramos
-    let quantityInKg: number;
+    // Si es por unidad, simplemente multiplicar precio por cantidad
+    if (unit === "Unid.") {
+      return pricePerUnit * quantity;
+    }
+
+    // Para productos por peso/volumen, mantener la lógica existente
+    let quantityInBaseUnit: number;
     switch (unit) {
       case "gr":
-        quantityInKg = quantity / 1000;
+        quantityInBaseUnit = quantity / 1000;
         break;
       case "Kg":
-        quantityInKg = quantity;
+        quantityInBaseUnit = quantity;
         break;
       case "L":
-        quantityInKg = quantity;
+        quantityInBaseUnit = quantity;
         break;
       case "ml":
-        quantityInKg = quantity / 1000;
+        quantityInBaseUnit = quantity / 1000;
         break;
       default:
-        quantityInKg = quantity;
+        quantityInBaseUnit = quantity;
         break;
     }
 
-    // Calcular el precio total
-    const totalPrice = pricePerKg * quantityInKg;
-    return totalPrice;
+    return pricePerUnit * quantityInBaseUnit;
   };
   const updateStockAfterSale = (
     productId: number,
@@ -195,6 +200,59 @@ const VentasPage = () => {
       setIsNotificationOpen(false);
     }, 2000);
   };
+  const handleProductScan = (productId: number) => {
+    setNewSale((prevState) => {
+      // Buscar si el producto ya está en la venta
+      const existingProductIndex = prevState.products.findIndex(
+        (p) => p.id === productId
+      );
+
+      if (existingProductIndex >= 0) {
+        // Si el producto ya existe, incrementar la cantidad
+        const updatedProducts = [...prevState.products];
+        const existingProduct = updatedProducts[existingProductIndex];
+
+        updatedProducts[existingProductIndex] = {
+          ...existingProduct,
+          quantity: existingProduct.quantity + 1,
+        };
+
+        // Calcular nuevo total
+        const newTotal = updatedProducts.reduce(
+          (sum, p) => sum + calculatePrice(p),
+          0
+        );
+
+        return {
+          ...prevState,
+          products: updatedProducts,
+          total: newTotal,
+        };
+      } else {
+        // Si el producto no existe, agregarlo
+        const productToAdd = products.find((p) => p.id === productId);
+        if (!productToAdd) return prevState;
+
+        const newProduct = {
+          ...productToAdd,
+          quantity: 1,
+          unit: productToAdd.unit,
+        };
+
+        const updatedProducts = [...prevState.products, newProduct];
+        const newTotal = updatedProducts.reduce(
+          (sum, p) => sum + calculatePrice(p),
+          0
+        );
+
+        return {
+          ...prevState,
+          products: updatedProducts,
+          total: newTotal,
+        };
+      }
+    });
+  };
   const handleMonthChange = (
     selectedOption: { value: string; label: string } | null
   ) => {
@@ -259,6 +317,7 @@ const VentasPage = () => {
         paymentMethod: "Efectivo",
         total: 0,
         date: new Date().toISOString(),
+        barcode: "",
       });
 
       setIsOpenModal(false);
@@ -280,6 +339,7 @@ const VentasPage = () => {
       paymentMethod: "Efectivo",
       total: 0,
       date: new Date().toISOString(),
+      barcode: "",
     });
     setIsOpenModal(false);
   };
@@ -349,7 +409,7 @@ const VentasPage = () => {
             : {
                 ...product,
                 quantity: 1,
-                unit: product.unit, // Establecer la unidad inicial del producto
+                unit: product.unit,
                 stock: Number(product.stock),
                 price: Number(product.price),
               };
@@ -357,7 +417,7 @@ const VentasPage = () => {
         .filter(Boolean) as Product[];
 
       const newTotal = updatedProducts.reduce(
-        (sum, p) => sum + Number(p.price) * p.quantity,
+        (sum, p) => sum + calculatePrice(p),
         0
       );
 
@@ -643,6 +703,23 @@ const VentasPage = () => {
             onSubmit={handleConfirmAddSale}
             className="flex flex-col gap-4 pb-6"
           >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Escanear código de barras
+              </label>
+              <BarcodeScanner
+                value={newSale.barcode || ""}
+                onChange={(value) => setNewSale({ ...newSale, barcode: value })}
+                onScanComplete={(code) => {
+                  const productToAdd = products.find((p) => p.barcode === code);
+                  if (productToAdd) {
+                    handleProductScan(productToAdd.id);
+                  } else {
+                    showNotification("Producto no encontrado", "error");
+                  }
+                }}
+              />
+            </div>
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="productSelect"

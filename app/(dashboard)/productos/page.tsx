@@ -22,6 +22,7 @@ import CustomDatePicker from "@/app/components/CustomDatePicker";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
 import Select from "react-select";
+import BarcodeScanner from "@/app/components/BarcodeScanner";
 
 type UnitOption = {
   value: Product["unit"];
@@ -40,6 +41,7 @@ const ProductsPage = () => {
     expiration: "",
     quantity: 0,
     unit: "Unid.",
+    barcode: "",
   });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -77,8 +79,10 @@ const ProductsPage = () => {
     setSortOrder((prevOrder) => (prevOrder === "asc" ? "desc" : "asc"));
   };
   const sortedProducts = useMemo(() => {
-    const filtered = products.filter((product) =>
-      product.name?.toLowerCase().includes(searchQuery)
+    const filtered = products.filter(
+      (product) =>
+        product.name?.toLowerCase().includes(searchQuery) ||
+        product.barcode?.includes(searchQuery)
     );
     return [...filtered].sort((a, b) => {
       const expirationA = a.expiration
@@ -88,8 +92,6 @@ const ProductsPage = () => {
         ? parseISO(b.expiration).getTime()
         : Infinity;
       const today = startOfDay(new Date()).getTime();
-
-      // Determine expiration status
       const isExpiredA = expirationA < today;
       const isExpiredB = expirationB < today;
       const isExpiringSoonA =
@@ -97,13 +99,11 @@ const ProductsPage = () => {
       const isExpiringSoonB =
         expirationB >= today && expirationB <= today + 7 * 24 * 60 * 60 * 1000;
 
-      // Prioritize expired or soon-to-expire products
       if (isExpiredA !== isExpiredB)
         return Number(isExpiredB) - Number(isExpiredA);
       if (isExpiringSoonA !== isExpiringSoonB)
         return Number(isExpiringSoonB) - Number(isExpiringSoonA);
 
-      // Sort by stock based on sortOrder (ascending or descending)
       return sortOrder === "asc"
         ? Number(a.stock) - Number(b.stock)
         : Number(b.stock) - Number(a.stock);
@@ -179,6 +179,7 @@ const ProductsPage = () => {
       expiration: "",
       quantity: 0,
       unit: "Unid.",
+      barcode: "",
     });
     setIsOpenModal(false);
   };
@@ -204,6 +205,7 @@ const ProductsPage = () => {
       expiration: "",
       quantity: 0,
       unit: "Unid.",
+      barcode: "",
     });
     setEditingProduct(null);
   };
@@ -215,7 +217,7 @@ const ProductsPage = () => {
       ...newProduct,
       [name]:
         name === "costPrice" || name === "price" || name === "stock"
-          ? Number(value) || 0 // Asegurar que sea número o 0
+          ? Number(value) || 0
           : value,
     });
   };
@@ -498,6 +500,33 @@ const ProductsPage = () => {
           bgColor="bg-white dark:bg-gray_b"
         >
           <form className="flex flex-col gap-4">
+            <div>
+              <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
+                Código de Barras
+              </label>
+              <BarcodeScanner
+                value={newProduct.barcode || ""}
+                onChange={(value) =>
+                  setNewProduct({ ...newProduct, barcode: value })
+                }
+                onScanComplete={(code) => {
+                  const existingProduct = products.find(
+                    (p) => p.barcode === code
+                  );
+                  if (existingProduct) {
+                    setNewProduct({
+                      ...existingProduct,
+                      id: editingProduct ? existingProduct.id : Date.now(),
+                    });
+                    setEditingProduct(existingProduct);
+                    showNotification(
+                      "Producto encontrado, puedes editar los datos",
+                      "success"
+                    );
+                  }
+                }}
+              />
+            </div>
             <Input
               label="Nombre del producto"
               type="text"

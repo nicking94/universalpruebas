@@ -80,6 +80,8 @@ export type InputProps = {
   readOnly?: boolean;
   className?: string;
   accept?: string;
+  ref?: React.Ref<HTMLInputElement>;
+  autoFocus?: boolean;
 };
 export type UserMenuProps = {
   theme: string;
@@ -103,6 +105,7 @@ export type Product = {
   expiration?: string;
   quantity: number;
   unit: "Unid." | "gr" | "Kg" | "ml" | "L";
+  barcode?: string;
 };
 
 export type UnitOption = {
@@ -129,6 +132,7 @@ export type Sale = {
   paymentMethod: "Efectivo" | "Transferencia";
   total: number;
   date: string;
+  barcode?: string;
 };
 
 export type SaleItem = {

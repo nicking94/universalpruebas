@@ -11,9 +11,10 @@ class MyDatabase extends Dexie {
     super("MyDatabase");
     this.version(1).stores({
       theme: "id",
-      products: "++id, name, stock, costPrice, price, expiration",
+      products:
+        "++id, name, stock, costPrice, price, expiration, quantity, unit, barcode",
       auth: "id,isAuthenticated",
-      sales: "++id, product, quantity, paymentMethod, total, date",
+      sales: "++id, product, quantity, paymentMethod, total, date, barcode",
     });
   }
 }
