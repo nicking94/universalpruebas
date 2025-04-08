@@ -101,7 +101,7 @@ export type Product = {
   stock: number;
   costPrice: number;
   price: number;
-  expiration: string;
+  expiration?: string;
   quantity: number;
   unit: "Unid." | "gr" | "Kg" | "ml" | "L";
 };

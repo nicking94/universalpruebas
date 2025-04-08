@@ -46,9 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
 
   return (
     <aside
-      className={`fixed top-0 left-0 w-${
-        isSidebarOpen ? "64" : "20"
-      } flex flex-col justify-between  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-200  ${
+      className={`fixed top-0 left-0  flex flex-col justify-between  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-200  ${
         isSidebarOpen ? "w-64" : "w-30"
       }`}
     >

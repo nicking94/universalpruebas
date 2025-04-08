@@ -6,12 +6,18 @@ import { es } from "date-fns/locale/es";
 import { Calendar } from "lucide-react";
 
 interface Props {
-  value: string;
-  onChange: (value: string) => void;
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
   error?: string;
+  isClearable?: boolean;
 }
 
-const CustomDatePicker: React.FC<Props> = ({ value, onChange, error }) => {
+const CustomDatePicker: React.FC<Props> = ({
+  value,
+  onChange,
+  error,
+  isClearable = false,
+}) => {
   const [startDate, setStartDate] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -29,10 +35,12 @@ const CustomDatePicker: React.FC<Props> = ({ value, onChange, error }) => {
   }, [value]);
 
   const handleDateChange = (date: Date | null) => {
+    setStartDate(date);
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
-      setStartDate(date);
       onChange(formattedDate);
+    } else {
+      onChange(undefined);
     }
   };
 
@@ -52,27 +60,28 @@ const CustomDatePicker: React.FC<Props> = ({ value, onChange, error }) => {
           dateFormat="dd-MM-yyyy"
           locale={es}
           placeholderText="Seleccionar fecha de vencimiento..."
-          className="pl-10 border border-gray_xl focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l  outline-none text-gray_b"
+          className="pl-10 border border-gray_xl focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l outline-none text-gray_b"
           wrapperClassName="w-full"
+          isClearable={isClearable} // Añade esta prop
+          clearButtonClassName="text-gray-500 hover:text-red-500"
         />
-        <Calendar
-          size={20}
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            const datepickerElement = document.querySelector("#datepicker");
-            if (datepickerElement instanceof HTMLInputElement) {
-              datepickerElement.focus();
-            } else if (datepickerElement instanceof HTMLElement) {
-              (datepickerElement as HTMLInputElement).focus();
-            }
-          }}
-        />
+        {!startDate && (
+          <Calendar
+            size={20}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              const datepickerElement = document.querySelector("#datepicker");
+              if (datepickerElement instanceof HTMLInputElement) {
+                datepickerElement.focus();
+              } else if (datepickerElement instanceof HTMLElement) {
+                (datepickerElement as HTMLInputElement).focus();
+              }
+            }}
+          />
+        )}
       </div>
-      <div>
-        {/* Tu implementación actual */}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 };

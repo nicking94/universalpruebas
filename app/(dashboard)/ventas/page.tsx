@@ -55,19 +55,19 @@ const VentasPage = () => {
     let quantityInKg: number;
     switch (unit) {
       case "gr":
-        quantityInKg = quantity / 1000; // Convertir gramos a kg
+        quantityInKg = quantity / 1000;
         break;
       case "Kg":
-        quantityInKg = quantity; // Ya está en kg
+        quantityInKg = quantity;
         break;
       case "L":
-        quantityInKg = quantity; // Suponiendo 1 L = 1 Kg (ajusta según sea necesario)
+        quantityInKg = quantity;
         break;
       case "ml":
-        quantityInKg = quantity / 1000; // Convertir ml a kg (ajusta según sea necesario)
+        quantityInKg = quantity / 1000;
         break;
       default:
-        quantityInKg = quantity; // Si es "Unid.", considerar cada unidad como 1 Kg (ajusta si es incorrecto)
+        quantityInKg = quantity;
         break;
     }
 
@@ -84,8 +84,6 @@ const VentasPage = () => {
     if (!product) {
       throw new Error(`Producto con ID ${productId} no encontrado`);
     }
-
-    // Convertir el stock y la cantidad vendida a gramos
     const stockInGrams = convertToGrams(product.stock, product.unit);
     const soldQuantityInGrams = convertToGrams(soldQuantity, unit);
 
@@ -93,10 +91,7 @@ const VentasPage = () => {
       throw new Error(`Stock insuficiente para el producto ${product.name}`);
     }
 
-    // Actualizar el stock en gramos
     const newStockInGrams = stockInGrams - soldQuantityInGrams;
-
-    // Convertir el nuevo stock de vuelta a la unidad original del producto
     const updatedStock = convertStockToUnit(newStockInGrams, product.unit);
 
     return updatedStock;
@@ -107,11 +102,11 @@ const VentasPage = () => {
       case "Kg":
         return quantity * 1000;
       case "L":
-        return quantity * 1000; // Suponiendo 1L = 1000gr para simplificar
+        return quantity * 1000;
       case "gr":
         return quantity;
       case "ml":
-        return quantity; // Suponiendo 1ml = 1gr para simplificar
+        return quantity;
       default:
         return quantity;
     }

@@ -77,15 +77,16 @@ const ProductsPage = () => {
     setSortOrder((prevOrder) => (prevOrder === "asc" ? "desc" : "asc"));
   };
   const sortedProducts = useMemo(() => {
-    // First filter the products
     const filtered = products.filter((product) =>
       product.name?.toLowerCase().includes(searchQuery)
     );
-
-    // Then sort the filtered products
     return [...filtered].sort((a, b) => {
-      const expirationA = parseISO(a.expiration).getTime();
-      const expirationB = parseISO(b.expiration).getTime();
+      const expirationA = a.expiration
+        ? parseISO(a.expiration).getTime()
+        : Infinity;
+      const expirationB = b.expiration
+        ? parseISO(b.expiration).getTime()
+        : Infinity;
       const today = startOfDay(new Date()).getTime();
 
       // Determine expiration status
@@ -144,16 +145,13 @@ const ProductsPage = () => {
       !newProduct.stock ||
       !newProduct.costPrice ||
       !newProduct.price ||
-      !newProduct.expiration ||
       !newProduct.unit
     ) {
       showNotification("Por favor, complete todos los campos", "error");
       return;
     }
-
     try {
       if (editingProduct) {
-        // Editar producto existente
         await db.products.update(editingProduct.id, newProduct);
         setProducts((prev) =>
           prev.map((p) => (p.id === editingProduct.id ? newProduct : p))
@@ -247,8 +245,7 @@ const ProductsPage = () => {
         !newProduct.name ||
           !newProduct.stock ||
           !newProduct.costPrice ||
-          !newProduct.price ||
-          !newProduct.expiration
+          !newProduct.price
       );
     }
   }, [newProduct, editingProduct]);
@@ -434,15 +431,13 @@ const ProductsPage = () => {
                                 locale: es,
                               })
                             : "Sin fecha"}
-                          {expiredToday && (
-                            <span className="animate-pulse ml-2 text-white ">
+                          {expirationDate && expiredToday && (
+                            <span className="animate-pulse ml-2 text-white">
                               (Vence Hoy)
                             </span>
                           )}
-                          {isExpired && (
-                            <span className="ml-2 text-red-500 ">
-                              (Vencido)
-                            </span>
+                          {expirationDate && isExpired && (
+                            <span className="ml-2 text-red-500">(Vencido)</span>
                           )}
                         </td>
                         <td className="px-4 py-2 flex justify-center gap-4">
@@ -567,6 +562,7 @@ const ProductsPage = () => {
               onChange={(newDate) => {
                 setNewProduct({ ...newProduct, expiration: newDate });
               }}
+              isClearable={true}
             />
           </form>
           <div className="flex justify-end space-x-2 mt-4">

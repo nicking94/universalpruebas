@@ -2,7 +2,7 @@
 
 import React from "react";
 import { PaginationProps } from "../lib/types/types";
-import { ChevronLeft, ChevronRight } from "lucide-react"; // Importar los íconos
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Pagination: React.FC<PaginationProps> = ({
   text = "Productos por página",
@@ -14,10 +14,37 @@ const Pagination: React.FC<PaginationProps> = ({
   onItemsPerPageChange,
 }) => {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  const getPageNumbers = () => {
+    const maxButtons = 5;
+    const pages: (number | "...")[] = [];
+
+    if (totalPages <= maxButtons) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      const left = Math.max(currentPage - 1, 2);
+      const right = Math.min(currentPage + 1, totalPages - 1);
+
+      pages.push(1); // Siempre mostrar la primera
+
+      if (left > 2) pages.push("...");
+
+      for (let i = left; i <= right; i++) {
+        pages.push(i);
+      }
+
+      if (right < totalPages - 1) pages.push("...");
+
+      pages.push(totalPages); // Siempre mostrar la última
+    }
+
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex items-center justify-between py-4">
+    <div className="flex items-center justify-between py-4 flex-wrap gap-4">
       {/* Selección de productos por página */}
       <div className="flex items-center">
         <p className="text-gray_m dark:text-white mr-2">{text}</p>
@@ -26,52 +53,59 @@ const Pagination: React.FC<PaginationProps> = ({
           value={itemsPerPage}
           onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
         >
-          <option value="5">5</option>
-          <option value="10">10</option>
-          <option value="20">20</option>
-          <option value="30">30</option>
+          {[5, 10, 20, 30].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* Navegación de páginas */}
+      {/* Paginación */}
       <nav className="flex justify-center">
-        <ul className="flex space-x-2">
-          {/* Botón para ir al principio */}
+        <ul className="flex items-center space-x-2">
+          {/* Botón anterior */}
           <li>
             <button
-              onClick={() => onPageChange(1)}
+              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className={`flex items-center justify-center  py-2 text-black dark:text-white  ${
-                currentPage === 1 ? " opacity-30" : " cursor-pointer"
+              className={`cursor-pointer p-2 text-black dark:text-white ${
+                currentPage === 1 ? "opacity-30" : "cursor-pointer"
               }`}
             >
               <ChevronLeft size={24} />
             </button>
           </li>
 
-          {/* Números de páginas */}
-          {pageNumbers.map((number) => (
-            <li key={number}>
-              <button
-                onClick={() => onPageChange(number)}
-                className={`cursor-pointer px-4 py-2 rounded-sm ${
-                  currentPage === number
-                    ? "bg-blue_m text-white font-bold"
-                    : "bg-white text-gray_l hover:bg-blue_xl font-semibold"
-                }`}
-              >
-                {number}
-              </button>
+          {/* Botones de páginas */}
+          {pageNumbers.map((number, index) => (
+            <li key={index}>
+              {number === "..." ? (
+                <span className="px-2 text-gray_l">...</span>
+              ) : (
+                <button
+                  onClick={() => onPageChange(number)}
+                  className={`cursor-pointer px-4 py-2 rounded-sm ${
+                    currentPage === number
+                      ? "bg-blue_m text-white font-bold"
+                      : "bg-white text-gray_l hover:bg-blue_xl font-semibold"
+                  }`}
+                >
+                  {number}
+                </button>
+              )}
             </li>
           ))}
 
-          {/* Botón para ir al final */}
+          {/* Botón siguiente */}
           <li>
             <button
-              onClick={() => onPageChange(totalPages)}
+              onClick={() =>
+                onPageChange(Math.min(totalPages, currentPage + 1))
+              }
               disabled={currentPage === totalPages}
-              className={`flex items-center justify-center  py-2 text-black dark:text-white ${
-                currentPage === totalPages ? " opacity-30" : " cursor-pointer "
+              className={`cursor-pointer p-2 text-black dark:text-white ${
+                currentPage === totalPages ? "opacity-30" : "cursor-pointer"
               }`}
             >
               <ChevronRight size={24} />
