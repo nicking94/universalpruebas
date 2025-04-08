@@ -51,9 +51,7 @@ export default function AppLayout({
 
   return (
     <AuthProvider>
-      <div
-        className={`max-h-[calc(100vh-80px)] bg-white dark:bg-black text-gray_b dark:text-white`}
-      >
+      <div className={`bg-white dark:bg-black text-gray_b dark:text-white`}>
         <Navbar
           theme={theme}
           handleTheme={handleTheme}
@@ -64,7 +62,7 @@ export default function AppLayout({
           <main
             className={`${
               isSidebarOpen ? "ml-64" : "ml-30"
-            } flex-1 flex-grow h-[calc(100vh-80px)]  bg-gray_xl dark:bg-gray_b transition-all duration-200 overflow-y-auto`}
+            }   h-[calc(100vh-80px)] bg-gray_xl dark:bg-gray_b transition-all duration-200 overflow-y-auto`}
           >
             {children}
           </main>

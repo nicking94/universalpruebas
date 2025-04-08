@@ -6,6 +6,7 @@ import { db } from "@/app/database/db";
 import { saveAs } from "file-saver";
 import { useState } from "react";
 import ImportFileButton from "@/app/components/ImportFileButton";
+import { format } from "date-fns";
 
 export default function ImportExportPage() {
   const [loading, setLoading] = useState(false);
@@ -20,14 +21,13 @@ export default function ImportExportPage() {
     const data = { theme, products, sales, auth };
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    const formattedDate = format(new Date(), "dd-MM-yyyy");
 
-    saveAs(blob, `backup-${new Date().toISOString()}.json`);
+    saveAs(blob, `backup-${formattedDate}.json`);
     setLoading(false);
   };
 
   const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("Importando archivo...");
-
     const file = event.target.files?.[0];
     if (!file) return;
 

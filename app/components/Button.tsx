@@ -1,4 +1,5 @@
-import React from "react";
+"use client";
+import React, { useEffect } from "react";
 import { ButtonProps } from "../lib/types/types";
 
 const Button: React.FC<ButtonProps> = ({
@@ -17,7 +18,24 @@ const Button: React.FC<ButtonProps> = ({
   colorBg = "bg-blue_b",
   colorBgHover = "hover:bg-blue_m",
   disabled = false,
+  hotkey,
 }) => {
+  useEffect(() => {
+    if (!hotkey) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === hotkey && !disabled) {
+        e.preventDefault();
+        onClick?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [hotkey, onClick, disabled]);
+
   return (
     <button
       type={type}

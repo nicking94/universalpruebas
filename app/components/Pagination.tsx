@@ -44,7 +44,7 @@ const Pagination: React.FC<PaginationProps> = ({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex items-center justify-between py-4 flex-wrap gap-4">
+    <div className="flex items-center justify-between  flex-wrap gap-4 ">
       {/* Selección de productos por página */}
       <div className="flex items-center">
         <p className="text-gray_m dark:text-white mr-2">{text}</p>

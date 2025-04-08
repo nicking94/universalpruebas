@@ -6,7 +6,6 @@ import Notification from "@/app/components/Notification";
 import { Product } from "@/app/lib/types/types";
 import {
   Edit,
-  Plus,
   Trash,
   PackageX,
   AlertTriangle,
@@ -295,25 +294,32 @@ const ProductsPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className=" px-10 2xl:px-10 text-gray_l dark:text-white h-[calc(100vh-80px)]">
+      <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
         <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Productos</h1>
 
         <div className="flex justify-between mb-2">
           <div className="w-full">
             <SearchBar onSearch={handleSearch} />
           </div>
-          <div className="w-full flex justify-end">
+          <div className="w-full flex justify-end gap-2 ">
             <Button
-              icon={<Plus />}
-              text="Añadir Producto"
+              text="Ver Precio [F5]"
               colorText="text-white"
               colorTextHover="text-white"
               onClick={handleAddProduct}
+              hotkey="F5"
+            />
+            <Button
+              text="Añadir Producto [F2]"
+              colorText="text-white"
+              colorTextHover="text-white"
+              onClick={handleAddProduct}
+              hotkey="F2"
             />
           </div>
         </div>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-170px)] 2xl:h-[calc(100vh-220px)">
+        <div className="flex flex-col justify-between h-[calc(100vh-200px)] ">
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
@@ -495,6 +501,7 @@ const ProductsPage = () => {
 
         <Modal
           isOpen={isOpenModal}
+          onConfirm={handleConfirmAddProduct}
           onClose={handleCloseModal}
           title={editingProduct ? "Editar Producto" : "Añadir Producto"}
           bgColor="bg-white dark:bg-gray_b"

@@ -7,12 +7,29 @@ const Modal: React.FC<ModalProps> = ({
   title = "Confirmación",
   children,
   bgColor = "bg-white dark:bg-gray_b",
+  onClose,
+  onConfirm,
 }) => {
   useEffect(() => {
-    if (isOpen) {
-      window.scrollTo({ top: 0 });
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+
+    window.scrollTo({ top: 0 });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onConfirm?.();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClose?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onConfirm, onClose]);
 
   if (!isOpen) return null;
 

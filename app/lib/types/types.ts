@@ -9,6 +9,7 @@ export type AuthData = {
 };
 
 export type ButtonProps = {
+  onClick?: () => void;
   children?: React.ReactNode;
   px?: string;
   py?: string;
@@ -18,13 +19,14 @@ export type ButtonProps = {
   text?: string;
   icon?: React.ReactNode;
   iconPosition?: "left" | "right";
-  onClick?: () => void;
+
   type?: "button" | "submit" | "reset";
   colorText?: string;
   colorBg?: string;
   colorBgHover?: string;
   colorTextHover?: string;
   disabled?: boolean;
+  hotkey?: string;
 };
 
 export type NavbarProps = {
@@ -55,6 +57,7 @@ export type NotificationProps = {
 };
 
 export type ModalProps = {
+  onConfirm?: () => void;
   onClose: () => void;
   isOpen: boolean;
   title?: string;

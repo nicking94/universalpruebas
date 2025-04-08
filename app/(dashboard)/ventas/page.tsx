@@ -498,7 +498,7 @@ const VentasPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className=" px-10 2xl:px-10 text-gray_l dark:text-white h-[calc(100vh-80px)]">
+      <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
         <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Ventas</h1>
 
         <div className="flex justify-between mb-2">
@@ -531,15 +531,16 @@ const VentasPage = () => {
           <div className="w-full  flex justify-end">
             <Button
               icon={<Plus />}
-              text="Nueva Venta"
+              text="Nueva Venta [F1]"
               colorText="text-white"
               colorTextHover="text-white"
               onClick={handleAddSale}
+              hotkey="F1"
             />
           </div>
         </div>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-170px)] 2xl:h-[calc(100vh-220px)">
+        <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
@@ -696,6 +697,7 @@ const VentasPage = () => {
 
         <Modal
           isOpen={isOpenModal}
+          onConfirm={handleConfirmAddSale}
           onClose={handleCloseModal}
           title="Nueva Venta"
         >
