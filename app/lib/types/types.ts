@@ -80,7 +80,6 @@ export type InputProps = {
   readOnly?: boolean;
   className?: string;
   accept?: string;
-  error?: string;
 };
 export type UserMenuProps = {
   theme: string;

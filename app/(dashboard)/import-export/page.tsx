@@ -89,7 +89,7 @@ export default function ImportExportPage() {
         <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">
           Importar o Exportar Datos
         </h1>
-        <div className=" h-[calc(100vh-160px)] 2xl:h-[83vh] flex items-center justify-center gap-10  ">
+        <div className=" h-[calc(100vh-160px)] 2xl:h-[80vh] flex items-center justify-center gap-10  ">
           <ImportFileButton onImport={importData} />
           <Button
             onClick={exportData}

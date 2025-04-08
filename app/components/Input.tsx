@@ -11,7 +11,6 @@ const Input: React.FC<InputProps> = ({
   placeholder,
   border = "border-1 border-gray_xl",
   accept,
-  error,
 }) => {
   return (
     <div>
@@ -23,7 +22,6 @@ const Input: React.FC<InputProps> = ({
       </label>
       <div className="flex gap-2">
         <input
-          error={error}
           type={type}
           name={name}
           value={value}
