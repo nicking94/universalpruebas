@@ -3,7 +3,12 @@ import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Modal from "@/app/components/Modal";
 import Notification from "@/app/components/Notification";
-import { Product, Sale, UnitOption } from "@/app/lib/types/types";
+import {
+  DailyCashMovement,
+  Product,
+  Sale,
+  UnitOption,
+} from "@/app/lib/types/types";
 import { Info, Plus, ShoppingCart, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
@@ -197,6 +202,62 @@ const VentasPage = () => {
       setIsNotificationOpen(false);
     }, 2000);
   };
+  const addIncomeToDailyCash = async (sale: Sale) => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      let dailyCash = await db.dailyCashes.get({ date: today });
+
+      const movements: DailyCashMovement[] = sale.products.map((product) => {
+        const profit = (product.price - product.costPrice) * product.quantity;
+
+        return {
+          id: Date.now(),
+          amount: product.price * product.quantity,
+          description: `Venta de ${product.name}`,
+          type: "INGRESO",
+          date: new Date().toISOString(),
+          paymentMethod:
+            sale.paymentMethod === "Efectivo" ? "EFECTIVO" : "TRANSFERENCIA",
+          productId: product.id,
+          productName: product.name,
+          costPrice: product.costPrice,
+          sellPrice: product.price,
+          quantity: product.quantity,
+          profit: profit,
+        };
+      });
+
+      if (!dailyCash) {
+        dailyCash = {
+          id: Date.now(),
+          date: today,
+          initialAmount: 0,
+          movements: movements,
+          closed: false,
+          totalIncome: movements.reduce((sum, m) => sum + m.amount, 0),
+          totalExpense: 0,
+          totalProfit: movements.reduce((sum, m) => sum + (m.profit || 0), 0),
+        };
+        await db.dailyCashes.add(dailyCash);
+      } else {
+        const updatedCash = {
+          ...dailyCash,
+          movements: [...dailyCash.movements, ...movements],
+          totalIncome:
+            (dailyCash.totalIncome || 0) +
+            movements.reduce((sum, m) => sum + m.amount, 0),
+          totalProfit:
+            (dailyCash.totalProfit || 0) +
+            movements.reduce((sum, m) => sum + (m.profit || 0), 0),
+        };
+        await db.dailyCashes.update(dailyCash.id, updatedCash);
+      }
+    } catch (error) {
+      console.error("Error al registrar ingreso en caja diaria:", error);
+      throw error;
+    }
+  };
+
   const handleProductScan = (productId: number) => {
     setNewSale((prevState) => {
       const existingProductIndex = prevState.products.findIndex(
@@ -220,6 +281,7 @@ const VentasPage = () => {
           ...prevState,
           products: updatedProducts,
           total: newTotal,
+          barcode: "",
         };
       } else {
         const productToAdd = products.find((p) => p.id === productId);
@@ -241,6 +303,7 @@ const VentasPage = () => {
           ...prevState,
           products: updatedProducts,
           total: newTotal,
+          barcode: "",
         };
       }
     });
@@ -264,7 +327,7 @@ const VentasPage = () => {
   };
   const handlePaymentChange = (
     selectedOption: SingleValue<{
-      value: "Efectivo" | "Transferencia";
+      value: "Efectivo" | "Transferencia" | "Tarjeta";
       label: string;
     }>
   ) => {
@@ -303,6 +366,7 @@ const VentasPage = () => {
 
       await db.sales.add(saleToSave);
       setSales([...sales, saleToSave]);
+      await addIncomeToDailyCash(saleToSave);
 
       setNewSale({
         products: [],

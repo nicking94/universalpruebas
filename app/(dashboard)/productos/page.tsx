@@ -684,18 +684,19 @@ const ProductsPage = () => {
           bgColor="bg-white dark:bg-gray_b"
         >
           <div className="flex flex-col gap-4">
-            <Input
-              type="text"
-              value={barcodeInput}
-              onChange={(e) => {
-                setBarcodeInput(e.target.value);
-                if (e.target.value.length >= 8) {
-                  handleBarcodeScan(e.target.value);
-                }
-              }}
-              placeholder="Escanee el código de barras o ingréselo manualmente"
-              autoFocus
-            />
+            <div>
+              <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
+                Código de Barras
+              </label>
+              <BarcodeScanner
+                value={barcodeInput}
+                onChange={(value) => setBarcodeInput(value)}
+                onScanComplete={(code) => {
+                  handleBarcodeScan(code);
+                }}
+                placeholder="Escanee el código de barras"
+              />
+            </div>
 
             {scannedProduct && (
               <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
@@ -730,7 +731,7 @@ const ProductsPage = () => {
                       {scannedProduct.stock} {scannedProduct.unit}
                     </p>
                   </div>
-                  {scannedProduct.expiration && (
+                  {scannedProduct.expiration ? (
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                         Vencimiento
@@ -743,6 +744,10 @@ const ProductsPage = () => {
                         )}
                       </p>
                     </div>
+                  ) : (
+                    <p className="text-xs text-gray_l">
+                      Sin fecha de vencimiento
+                    </p>
                   )}
                 </div>
               </div>

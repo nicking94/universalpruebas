@@ -132,7 +132,7 @@ export type SearchBarProps = {
 export type Sale = {
   id: number;
   products: Product[];
-  paymentMethod: "Efectivo" | "Transferencia";
+  paymentMethod: "Efectivo" | "Transferencia" | "Tarjeta";
   total: number;
   date: string;
   barcode?: string;
@@ -163,7 +163,38 @@ export type ProductOption = {
   isDisabled?: boolean;
 };
 
-export type paymentOption = {
-  value: string;
-  label: string;
+export type PaymentMethod = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA";
+
+export type MovementType = "INGRESO" | "EGRESO";
+
+export type DailyCashMovement = {
+  id: number;
+  amount: number;
+  description: string;
+  type: "INGRESO" | "EGRESO";
+  date: string;
+  paymentMethod?: "EFECTIVO" | "TRANSFERENCIA" | "TARJETA";
+  productId?: number;
+  productName?: string;
+  costPrice?: number;
+  sellPrice?: number;
+  quantity?: number;
+  profit?: number;
+  unit?: "Unid." | "gr" | "Kg" | "ml" | "L";
+};
+export type DailyCash = {
+  id: number;
+  date: string;
+  initialAmount: number;
+  movements: DailyCashMovement[];
+  closed: boolean;
+  closingAmount?: number;
+  closingDate?: string;
+  closingDifference?: number;
+  totalIncome?: number;
+  totalExpense?: number;
+  totalProfit?: number;
+  comments?: string;
+  openedBy?: string;
+  closedBy?: string;
 };

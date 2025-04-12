@@ -18,27 +18,42 @@ export default function BarcodeScanner({
 }: BarcodeScannerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastInputTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (inputRef.current) inputRef.current.focus();
   }, []);
 
+  // En BarcodeScanner.tsx
+  // En BarcodeScanner.tsx
   const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    const now = Date.now();
+
+    onChange(newValue);
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    const newValue = e.target.value;
-    onChange(newValue);
+    // Detectar si es un escáner (entrada rápida)
+    const isScannerInput = now - lastInputTimeRef.current < 30;
 
-    timeoutRef.current = setTimeout(() => {
-      if (newValue.length > 0) {
-        if (onScanComplete) {
+    timeoutRef.current = setTimeout(
+      () => {
+        if (newValue.length >= 8 && onScanComplete) {
           onScanComplete(newValue);
+          // Enfocar el input después del escaneo
+          if (inputRef.current) {
+            inputRef.current.focus();
+            // No limpiamos el valor aquí, lo hará el componente padre
+          }
         }
-        onChange("");
-      }
-    }, 300);
+      },
+      isScannerInput ? 50 : 500 // Tiempos más ajustados
+    );
+
+    lastInputTimeRef.current = now;
   };
 
   return (

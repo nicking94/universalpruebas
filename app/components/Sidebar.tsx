@@ -14,9 +14,16 @@ import { useSidebar } from "../context/SidebarContext";
 import { MenuItemProps, SidebarProps } from "../lib/types/types";
 import { useEffect, useState } from "react";
 
+import { TbCashRegister } from "react-icons/tb";
+
 const menuItems = [
   { label: "Ventas", href: "/ventas", icon: <ShoppingCart /> },
   { label: "Productos", href: "/productos", icon: <Package /> },
+  {
+    label: "Caja diaria",
+    href: "/caja-diaria",
+    icon: <TbCashRegister className="w-6 h-6" />,
+  },
   // { label: "Gastos", href: "/gastos", icon: <DollarSign /> },
   // { label: "Proovedores", href: "/proovedores", icon: <Truck /> },
 ];
