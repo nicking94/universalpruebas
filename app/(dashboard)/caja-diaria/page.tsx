@@ -863,7 +863,13 @@ const CajaDiariaPage = () => {
             }}
           />
         </div>
-        <div className="flex flex-col justify-between h-[calc(63vh-80px)]">
+        <div
+          className={`flex flex-col justify-between ${
+            currentDailyCash?.closed
+              ? "h-[calc(47vh-80px)]"
+              : "h-[calc(53vh-40px)]"
+          }`}
+        >
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
@@ -913,7 +919,7 @@ const CajaDiariaPage = () => {
                         colorText="text-gray_b"
                         colorTextHover="hover:text-white"
                         colorBg="bg-transparent"
-                        colorBgHover="hover:bg-blue-500"
+                        colorBgHover="hover:bg-blue_m"
                         onClick={() => openDetailModal(day.movements)}
                       />
                       <Button
@@ -936,7 +942,7 @@ const CajaDiariaPage = () => {
                   </tr>
                 ))
               ) : (
-                <tr className="h-[55vh] 2xl:h-[calc(55vh-80px)]">
+                <tr className="h-[55vh] 2xl:h-[calc(54vh-80px)]">
                   <td colSpan={6} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                       <Info size={64} className="mb-4" />

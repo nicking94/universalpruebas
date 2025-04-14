@@ -92,11 +92,6 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
             </div>
           ))}
         </nav>
-        <div
-          className={`absolute bottom-4 left-0 right-0 flex justify-center p-2 ${
-            !isSidebarOpen ? "hidden" : ""
-          }`}
-        ></div>
       </div>
       <div className={`w-full px-4 pb-4 ${!isSidebarOpen ? "hidden" : ""}`}>
         <button
