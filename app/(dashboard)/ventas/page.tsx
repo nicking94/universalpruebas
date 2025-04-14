@@ -435,7 +435,7 @@ const VentasPage = () => {
       showNotification("Venta agregada correctamente", "success");
     } catch (error) {
       console.error("Error al agregar venta:", error);
-      showNotification("Error al agregar venta", "error");
+      showNotification("Error al agregar venta | stock", "error");
     }
   };
 
