@@ -85,6 +85,8 @@ export type InputProps = {
   accept?: string;
   ref?: React.Ref<HTMLInputElement>;
   autoFocus?: boolean;
+  step?: string;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 };
 export type UserMenuProps = {
   theme: string;

@@ -659,7 +659,7 @@ const CajaDiariaPage = () => {
                     <td className=" px-4 py-2 text-sm text-gray-500">
                       {movement.description || "-"}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm">
+                    <td className=" px-4 py-2 whitespace-nowrap text-sm">
                       <Button
                         text="Eliminar"
                         colorText="text-white"

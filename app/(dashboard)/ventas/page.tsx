@@ -55,33 +55,35 @@ const VentasPage = () => {
     { value: "ml", label: "Ml" },
   ];
   const calculatePrice = (product: Product): number => {
-    const pricePerUnit = product.price;
+    const pricePerKg = product.price; // Precio por kilogramo
     const quantity = product.quantity;
     const unit = product.unit;
+
+    // Si es por unidad, cálculo directo
     if (unit === "Unid.") {
-      return pricePerUnit * quantity;
+      return pricePerKg * quantity;
     }
 
-    let quantityInBaseUnit: number;
+    // Convertir todo a kilogramos para cálculo
+    let quantityInKg: number;
+
     switch (unit) {
       case "gr":
-        quantityInBaseUnit = quantity / 1000;
+        quantityInKg = quantity / 1000; // Convertir gramos a kg
         break;
       case "Kg":
-        quantityInBaseUnit = quantity;
+        quantityInKg = quantity;
         break;
       case "L":
-        quantityInBaseUnit = quantity;
-        break;
       case "ml":
-        quantityInBaseUnit = quantity / 1000;
+        // Para líquidos, manejamos igual que sólidos por simplicidad
+        quantityInKg = unit === "L" ? quantity : quantity / 1000;
         break;
       default:
-        quantityInBaseUnit = quantity;
-        break;
+        return pricePerKg * quantity;
     }
 
-    return pricePerUnit * quantityInBaseUnit;
+    return parseFloat((pricePerKg * quantityInKg).toFixed(2));
   };
   const calculateCombinedTotal = (
     products: Product[],
@@ -227,10 +229,15 @@ const VentasPage = () => {
       if (sale.products.length > 0) {
         sale.products.forEach((product) => {
           const profit = (product.price - product.costPrice) * product.quantity;
+          // En la función addIncomeToDailyCash
           movements.push({
             id: Date.now(),
-            amount: product.price * product.quantity,
-            description: `Venta de ${product.name}`,
+            amount:
+              product.price *
+              (product.unit === "gr"
+                ? product.quantity / 1000
+                : product.quantity),
+            description: `Venta de ${product.name} - ${product.quantity} ${product.unit}`,
             type: "INGRESO",
             date: new Date().toISOString(),
             paymentMethod:
@@ -241,11 +248,9 @@ const VentasPage = () => {
                 : "TRANSFERENCIA",
             productId: product.id,
             productName: product.name,
-            costPrice: product.costPrice,
-            sellPrice: product.price,
             quantity: product.quantity,
-            profit: profit,
             unit: product.unit,
+            profit: profit,
           });
         });
       }
@@ -536,7 +541,7 @@ const VentasPage = () => {
     setNewSale((prevState) => {
       const updatedProducts = prevState.products.map((p) => {
         if (p.id === productId) {
-          return { ...p, quantity: quantity, unit: unit };
+          return { ...p, quantity, unit };
         }
         return p;
       });
@@ -553,13 +558,38 @@ const VentasPage = () => {
   };
   const handleUnitChange = (
     productId: number,
-    quantity: number,
-    unit: Product["unit"]
+    selectedOption: SingleValue<UnitOption>,
+    currentQuantity: number // Cambiar a number en lugar de string
   ) => {
+    if (!selectedOption) return;
+
     setNewSale((prevState) => {
       const updatedProducts = prevState.products.map((p) => {
         if (p.id === productId) {
-          return { ...p, unit: unit, quantity: quantity };
+          const newUnit = selectedOption.value as Product["unit"];
+          let newQuantity = currentQuantity;
+
+          // Solo convertir si el valor actual es un número válido
+          if (!isNaN(currentQuantity)) {
+            if (p.unit === "Kg" && newUnit === "gr") {
+              newQuantity = currentQuantity * 1000;
+            } else if (p.unit === "gr" && newUnit === "Kg") {
+              newQuantity = currentQuantity / 1000;
+            } else if (p.unit === "L" && newUnit === "ml") {
+              newQuantity = currentQuantity * 1000;
+            } else if (p.unit === "ml" && newUnit === "L") {
+              newQuantity = currentQuantity / 1000;
+            }
+
+            // Redondear a 3 decimales para evitar números largos
+            newQuantity = parseFloat(newQuantity.toFixed(3));
+          }
+
+          return {
+            ...p,
+            unit: newUnit,
+            quantity: newQuantity,
+          };
         }
         return p;
       });
@@ -677,7 +707,7 @@ const VentasPage = () => {
                             .join(", ")
                             .slice(0, 30) + "..."
                         : sale.products
-                            .map((p) => p.name + " x" + p.quantity)
+                            .map((p) => p.name + " x " + p.quantity + p.unit)
                             .join(" | ")}
                     </td>
                     <td className="font-semibold px-4 py-2 border border-gray_l">
@@ -875,17 +905,36 @@ const VentasPage = () => {
                         <td className="w-20 px-4 py-2 text-center">
                           <Input
                             type="number"
-                            value={product.quantity.toString()}
+                            value={product.quantity.toString() || ""} // Mostrar vacío si es 0
                             onChange={(e) => {
-                              const quantity = Number(e.target.value);
-                              handleQuantityChange(
-                                product.id,
-                                quantity,
-                                product.unit
-                              );
+                              const value = e.target.value;
+                              // Permitir vacío o número válido
+                              if (value === "" || !isNaN(Number(value))) {
+                                handleQuantityChange(
+                                  product.id,
+                                  value === "" ? 0 : Number(value),
+                                  product.unit
+                                );
+                              }
+                            }}
+                            step={
+                              product.unit === "Kg" || product.unit === "L"
+                                ? "0.001"
+                                : "1"
+                            }
+                            onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                              // Asegurar que siempre haya un valor válido al salir del campo
+                              if (e.target.value === "") {
+                                handleQuantityChange(
+                                  product.id,
+                                  0,
+                                  product.unit
+                                );
+                              }
                             }}
                           />
                         </td>
+
                         <td>
                           {" "}
                           <Select
@@ -895,18 +944,22 @@ const VentasPage = () => {
                               (option) => option.value === product.unit
                             )}
                             onChange={(selectedOption) => {
-                              if (selectedOption) {
-                                handleUnitChange(
-                                  product.id,
-                                  product.quantity,
-                                  selectedOption.value as Product["unit"]
-                                );
-                              }
+                              handleUnitChange(
+                                product.id,
+                                selectedOption,
+                                product.quantity
+                              );
                             }}
                           />
                         </td>
-                        <td className=" px-4 py-2 text-center">
-                          ${calculatePrice(product).toFixed(2)}
+                        <td className="px-4 py-2 text-center">
+                          $
+                          {(
+                            product.price *
+                            (product.unit === "gr"
+                              ? product.quantity / 1000
+                              : product.quantity)
+                          ).toFixed(2)}
                         </td>
                         <td className=" px-4 py-2 text-center">
                           <button
