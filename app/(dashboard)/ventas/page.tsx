@@ -889,8 +889,8 @@ const VentasPage = () => {
                 <thead className="border border-gray_xl bg-blue_b text-white ">
                   <tr>
                     <th className="px-4 py-2">Producto</th>
-                    <th className="px-4 py-2 text-center">Cantidad</th>
                     <th className="px-4 py-2 text-center">Unidad</th>
+                    <th className="px-4 py-2 text-center">Cantidad</th>
                     <th className="px-4 py-2 text-center">Total</th>
                     <th className="px-4 py-2 text-center">Acciones</th>
                   </tr>
@@ -901,6 +901,23 @@ const VentasPage = () => {
                       <tr className="border-b border-gray-xl" key={product.id}>
                         <td className=" px-4 py-2">
                           {product.name.toUpperCase()}
+                        </td>
+                        <td>
+                          {" "}
+                          <Select
+                            placeholder="Unidad"
+                            options={unitOptions}
+                            value={unitOptions.find(
+                              (option) => option.value === product.unit
+                            )}
+                            onChange={(selectedOption) => {
+                              handleUnitChange(
+                                product.id,
+                                selectedOption,
+                                product.quantity
+                              );
+                            }}
+                          />
                         </td>
                         <td className="w-20 px-4 py-2 text-center">
                           <Input
@@ -935,23 +952,6 @@ const VentasPage = () => {
                           />
                         </td>
 
-                        <td>
-                          {" "}
-                          <Select
-                            placeholder="Unidad"
-                            options={unitOptions}
-                            value={unitOptions.find(
-                              (option) => option.value === product.unit
-                            )}
-                            onChange={(selectedOption) => {
-                              handleUnitChange(
-                                product.id,
-                                selectedOption,
-                                product.quantity
-                              );
-                            }}
-                          />
-                        </td>
                         <td className="px-4 py-2 text-center">
                           $
                           {(
@@ -978,13 +978,20 @@ const VentasPage = () => {
             )}
             <div className="flex flex-col gap-2">
               <label className="block text-gray_m dark:text-white text-sm font-semibold">
-                Monto Manual Adicional
+                Monto manual
               </label>
               <Input
-                type="number"
-                placeholder="Ingrese monto adicional..."
-                value={(newSale.manualAmount || 0).toString()}
-                onChange={handleManualAmountChange}
+                type="text"
+                placeholder="Ingrese monto manual..."
+                value={newSale.manualAmount ? `$${newSale.manualAmount}` : ""}
+                onChange={(e) => {
+                  const numericValue = e.target.value.replace(/[^0-9]/g, "");
+                  handleManualAmountChange({
+                    target: {
+                      value: numericValue,
+                    },
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
               />
               <p className="text-xs text-gray-500">
                 Este monto se sumará al total de productos seleccionados
