@@ -233,30 +233,38 @@ const CajaDiariaPage = () => {
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       if (dailyCash) {
-        const totalIncome = dailyCash.movements
-          .filter((m) => m.type === "INGRESO")
+        // Calcular solo ingresos en efectivo
+        const cashIncome = dailyCash.movements
+          .filter((m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO")
           .reduce((sum, m) => sum + m.amount, 0);
 
-        const totalExpense = dailyCash.movements
+        // Calcular todos los egresos (asumimos que siempre son en efectivo)
+        const cashExpense = dailyCash.movements
           .filter((m) => m.type === "EGRESO")
           .reduce((sum, m) => sum + m.amount, 0);
 
         const expectedAmount =
-          dailyCash.initialAmount + totalIncome - totalExpense;
+          dailyCash.initialAmount + cashIncome - cashExpense;
         const difference = actualCashCountNumber - expectedAmount;
 
         const updatedCash = {
           ...dailyCash,
           closed: true,
           closingAmount: actualCashCountNumber,
-          totalIncome,
-          totalExpense,
+          cashIncome, // Solo ingresos en efectivo
+          cashExpense, // Egresos en efectivo
+          otherIncome: dailyCash.movements
+            .filter(
+              (m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO"
+            )
+            .reduce((sum, m) => sum + m.amount, 0), // Ingresos no en efectivo
           closingDifference: difference,
           closingDate: new Date().toISOString(),
         };
 
         await db.dailyCashes.update(dailyCash.id, updatedCash);
 
+        // Actualizar estados
         setDailyCashes((prev) =>
           prev.map((dc) => (dc.id === dailyCash.id ? updatedCash : dc))
         );
@@ -604,7 +612,7 @@ const CajaDiariaPage = () => {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Descripción
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -652,13 +660,14 @@ const CajaDiariaPage = () => {
                       {movement.description || "-"}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm">
-                      <button
+                      <Button
+                        text="Eliminar"
+                        colorText="text-white"
+                        colorTextHover="hover:text-white"
+                        colorBg="bg-red-500"
+                        colorBgHover="hover:bg-red-700"
                         onClick={() => handleDeleteClick(movement)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Eliminar movimiento"
-                      >
-                        <X size={16} />
-                      </button>
+                      ></Button>
                     </td>
                   </tr>
                 ))
@@ -713,26 +722,59 @@ const CajaDiariaPage = () => {
                   Monto inicial:{" "}
                   {formatCurrency(currentDailyCash.initialAmount)}
                 </p>
-                {currentDailyCash.closed && (
+
+                {/* Mostrar ingresos separados por tipo de pago */}
+                {!currentDailyCash.closed ? (
                   <>
                     <p>
-                      Total ingresos:{" "}
-                      {formatCurrency(currentDailyCash.totalIncome || 0)}
-                    </p>
-                    <p>
-                      Total egresos:{" "}
-                      {formatCurrency(currentDailyCash.totalExpense || 0)}
-                    </p>
-                    <p>
-                      Monto esperado:{" "}
+                      Ingresos en efectivo:{" "}
                       {formatCurrency(
-                        currentDailyCash.initialAmount +
-                          (currentDailyCash.totalIncome || 0) -
-                          (currentDailyCash.totalExpense || 0)
+                        currentDailyCash.movements
+                          .filter(
+                            (m) =>
+                              m.type === "INGRESO" &&
+                              m.paymentMethod === "EFECTIVO"
+                          )
+                          .reduce((sum, m) => sum + m.amount, 0)
                       )}
                     </p>
                     <p>
-                      Monto contado:{" "}
+                      Otros ingresos:{" "}
+                      {formatCurrency(
+                        currentDailyCash.movements
+                          .filter(
+                            (m) =>
+                              m.type === "INGRESO" &&
+                              m.paymentMethod !== "EFECTIVO"
+                          )
+                          .reduce((sum, m) => sum + m.amount, 0)
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Ingresos en efectivo:{" "}
+                      {formatCurrency(currentDailyCash.cashIncome || 0)}
+                    </p>
+                    <p>
+                      Otros ingresos:{" "}
+                      {formatCurrency(currentDailyCash.otherIncome || 0)}
+                    </p>
+                    <p>
+                      Egresos:{" "}
+                      {formatCurrency(currentDailyCash.cashExpense || 0)}
+                    </p>
+                    <p className="font-semibold">
+                      Monto esperado (solo efectivo):{" "}
+                      {formatCurrency(
+                        currentDailyCash.initialAmount +
+                          (currentDailyCash.cashIncome || 0) -
+                          (currentDailyCash.cashExpense || 0)
+                      )}
+                    </p>
+                    <p>
+                      Efectivo contado:{" "}
                       {formatCurrency(currentDailyCash.closingAmount || 0)}
                     </p>
                     <p
@@ -1035,11 +1077,73 @@ const CajaDiariaPage = () => {
           title="Cierre de Caja"
         >
           <div className="flex flex-col gap-4 pb-6">
-            <p className="text-gray_m dark:text-white">
-              Ingrese el monto real contado en caja para realizar el cierre.
-            </p>
+            <div className="bg-green-50 p-3 rounded-lg">
+              <h4 className="font-semibold">Resumen de Efectivo</h4>
+              <p>
+                Ingresos en efectivo:{" "}
+                {formatCurrency(
+                  currentDailyCash?.movements
+                    .filter(
+                      (m) =>
+                        m.type === "INGRESO" && m.paymentMethod === "EFECTIVO"
+                    )
+                    .reduce((sum, m) => sum + m.amount, 0) || 0
+                )}
+              </p>
+              <p>
+                Egresos:{" "}
+                {formatCurrency(
+                  currentDailyCash?.movements
+                    .filter((m) => m.type === "EGRESO")
+                    .reduce((sum, m) => sum + m.amount, 0) || 0
+                )}
+              </p>
+              <p className="font-semibold">
+                Monto esperado:{" "}
+                {formatCurrency(
+                  (currentDailyCash?.initialAmount || 0) +
+                    (currentDailyCash?.movements
+                      .filter(
+                        (m) =>
+                          m.type === "INGRESO" && m.paymentMethod === "EFECTIVO"
+                      )
+                      .reduce((sum, m) => sum + m.amount, 0) || 0) -
+                    (currentDailyCash?.movements
+                      .filter((m) => m.type === "EGRESO")
+                      .reduce((sum, m) => sum + m.amount, 0) || 0)
+                )}
+              </p>
+            </div>
+
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <h4 className="font-semibold">Otros Ingresos</h4>
+              <p>
+                Transferencias:{" "}
+                {formatCurrency(
+                  currentDailyCash?.movements
+                    .filter(
+                      (m) =>
+                        m.type === "INGRESO" &&
+                        m.paymentMethod === "TRANSFERENCIA"
+                    )
+                    .reduce((sum, m) => sum + m.amount, 0) || 0
+                )}
+              </p>
+              <p>
+                Tarjetas:{" "}
+                {formatCurrency(
+                  currentDailyCash?.movements
+                    .filter(
+                      (m) =>
+                        m.type === "INGRESO" && m.paymentMethod === "TARJETA"
+                    )
+                    .reduce((sum, m) => sum + m.amount, 0) || 0
+                )}
+              </p>
+            </div>
+
             <Input
-              label="Monto Contado"
+              label="Monto Contado en Efectivo"
               type="number"
               name="actualCashCount"
               placeholder="Ingrese el monto contado..."

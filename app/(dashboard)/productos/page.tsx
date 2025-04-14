@@ -587,7 +587,7 @@ const ProductsPage = () => {
             <div>
               <label
                 htmlFor="unit"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray_m dark:text-white"
               >
                 Unidad
               </label>
@@ -601,10 +601,9 @@ const ProductsPage = () => {
                     unit: selectedOption?.value as Product["unit"],
                   });
                 }}
-                className="mt-1"
+                className="mt-1 text-black"
                 classNames={{
-                  control: () =>
-                    "text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500",
+                  control: () => "text-sm  border-gray-300 rounded-md ",
                 }}
                 isSearchable={false}
               />

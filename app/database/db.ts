@@ -15,7 +15,8 @@ class MyDatabase extends Dexie {
       products:
         "++id, name, stock, costPrice, price, expiration, quantity, unit, barcode",
       auth: "id,isAuthenticated",
-      sales: "++id, product, quantity, paymentMethod, total, date, barcode",
+      sales:
+        "++id, product, quantity, paymentMethod, total, date, barcode, manualAmount",
       dailyCashes: "++id, &date, closed, [date+closed], initialAmount",
       dailyCashMovements: "++id, dailyCashId, amount, type, date, description",
     });

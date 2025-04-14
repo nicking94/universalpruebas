@@ -136,6 +136,7 @@ export type Sale = {
   total: number;
   date: string;
   barcode?: string;
+  manualAmount?: number;
 };
 
 export type SaleItem = {
@@ -191,7 +192,11 @@ export type DailyCash = {
   closingAmount?: number;
   closingDate?: string;
   closingDifference?: number;
+  cashIncome?: number;
+  cashExpense?: number;
+  otherIncome?: number;
   totalIncome?: number;
+  totalCashIncome?: number;
   totalExpense?: number;
   totalProfit?: number;
   comments?: string;

@@ -9,7 +9,7 @@ import {
   Sale,
   UnitOption,
 } from "@/app/lib/types/types";
-import { Info, Plus, ShoppingCart, Trash } from "lucide-react";
+import { Info, ShoppingCart, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import { parseISO, format } from "date-fns";
@@ -30,6 +30,7 @@ const VentasPage = () => {
     total: 0,
     date: new Date().toISOString(),
     barcode: "",
+    manualAmount: 0,
   });
 
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
@@ -81,6 +82,16 @@ const VentasPage = () => {
     }
 
     return pricePerUnit * quantityInBaseUnit;
+  };
+  const calculateCombinedTotal = (
+    products: Product[],
+    manualAmount: number
+  ) => {
+    const productsTotal = products.reduce(
+      (sum, p) => sum + calculatePrice(p),
+      0
+    );
+    return productsTotal + manualAmount;
   };
   const updateStockAfterSale = (
     productId: number,
@@ -169,11 +180,12 @@ const VentasPage = () => {
     return { value: year, label: String(year) };
   });
   const paymentOptions: {
-    value: "Efectivo" | "Transferencia";
+    value: "Efectivo" | "Transferencia" | "Tarjeta";
     label: string;
   }[] = [
     { value: "Efectivo", label: "Efectivo" },
     { value: "Transferencia", label: "Transferencia" },
+    { value: "Tarjeta", label: "Tarjeta" },
   ];
 
   const filteredSales = sales
@@ -202,30 +214,58 @@ const VentasPage = () => {
       setIsNotificationOpen(false);
     }, 2000);
   };
-  const addIncomeToDailyCash = async (sale: Sale) => {
+  const addIncomeToDailyCash = async (
+    sale: Sale & { manualAmount?: number }
+  ) => {
     try {
       const today = new Date().toISOString().split("T")[0];
       let dailyCash = await db.dailyCashes.get({ date: today });
 
-      const movements: DailyCashMovement[] = sale.products.map((product) => {
-        const profit = (product.price - product.costPrice) * product.quantity;
+      const movements: DailyCashMovement[] = [];
 
-        return {
+      // Agregar movimientos de productos
+      if (sale.products.length > 0) {
+        sale.products.forEach((product) => {
+          const profit = (product.price - product.costPrice) * product.quantity;
+          movements.push({
+            id: Date.now(),
+            amount: product.price * product.quantity,
+            description: `Venta de ${product.name}`,
+            type: "INGRESO",
+            date: new Date().toISOString(),
+            paymentMethod:
+              sale.paymentMethod === "Efectivo"
+                ? "EFECTIVO"
+                : sale.paymentMethod === "Tarjeta"
+                ? "TARJETA"
+                : "TRANSFERENCIA",
+            productId: product.id,
+            productName: product.name,
+            costPrice: product.costPrice,
+            sellPrice: product.price,
+            quantity: product.quantity,
+            profit: profit,
+            unit: product.unit,
+          });
+        });
+      }
+
+      // Agregar movimiento manual si existe
+      if (sale.manualAmount && sale.manualAmount > 0) {
+        movements.push({
           id: Date.now(),
-          amount: product.price * product.quantity,
-          description: `Venta de ${product.name}`,
+          amount: sale.manualAmount,
+          description: "Monto manual adicional",
           type: "INGRESO",
           date: new Date().toISOString(),
           paymentMethod:
-            sale.paymentMethod === "Efectivo" ? "EFECTIVO" : "TRANSFERENCIA",
-          productId: product.id,
-          productName: product.name,
-          costPrice: product.costPrice,
-          sellPrice: product.price,
-          quantity: product.quantity,
-          profit: profit,
-        };
-      });
+            sale.paymentMethod === "Efectivo"
+              ? "EFECTIVO"
+              : sale.paymentMethod === "Tarjeta"
+              ? "TARJETA"
+              : "TRANSFERENCIA",
+        });
+      }
 
       if (!dailyCash) {
         dailyCash = {
@@ -308,6 +348,14 @@ const VentasPage = () => {
       }
     });
   };
+  const handleManualAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value) || 0;
+    setNewSale((prev) => ({
+      ...prev,
+      manualAmount: value,
+      total: calculateCombinedTotal(prev.products, value),
+    }));
+  };
   const handleMonthChange = (
     selectedOption: { value: string; label: string } | null
   ) => {
@@ -340,28 +388,29 @@ const VentasPage = () => {
   };
 
   const handleConfirmAddSale = async () => {
-    if (newSale.products.length === 0) {
-      showNotification("Debe agregar al menos un producto", "error");
+    if (newSale.products.length === 0 && newSale.manualAmount === 0) {
+      showNotification("Debe agregar productos o un monto manual", "error");
       return;
     }
 
     try {
+      // Actualizar stock solo para productos
       for (const product of newSale.products) {
         const updatedStock = updateStockAfterSale(
           product.id,
           product.quantity,
           product.unit
         );
-
         await db.products.update(product.id, { stock: updatedStock.quantity });
       }
 
-      const saleToSave: Sale = {
+      const saleToSave: Sale & { manualAmount?: number } = {
         id: Date.now(),
         products: newSale.products,
         paymentMethod: newSale.paymentMethod,
         total: newSale.total,
         date: new Date().toISOString(),
+        manualAmount: newSale.manualAmount,
       };
 
       await db.sales.add(saleToSave);
@@ -374,6 +423,7 @@ const VentasPage = () => {
         total: 0,
         date: new Date().toISOString(),
         barcode: "",
+        manualAmount: 0,
       });
 
       setIsOpenModal(false);
@@ -446,22 +496,17 @@ const VentasPage = () => {
     }[]
   ) => {
     setNewSale((prevState) => {
-      // Mantener los productos existentes en el estado
-      const existingProducts = prevState.products;
-
-      // Crear una lista actualizada con los nuevos productos seleccionados
       const updatedProducts = selectedOptions
         .map((option) => {
           const product = products.find((p) => p.id === option.value);
           if (!product) return null;
 
-          // Verificar si el producto ya existe en el estado actual
-          const existingProduct = existingProducts.find(
+          const existingProduct = prevState.products.find(
             (p) => p.id === product.id
           );
 
           return existingProduct
-            ? existingProduct // Mantener cantidad existente si ya está seleccionado
+            ? existingProduct
             : {
                 ...product,
                 quantity: 1,
@@ -472,12 +517,14 @@ const VentasPage = () => {
         })
         .filter(Boolean) as Product[];
 
-      const newTotal = updatedProducts.reduce(
-        (sum, p) => sum + calculatePrice(p),
-        0
-      );
-
-      return { ...prevState, products: updatedProducts, total: newTotal };
+      return {
+        ...prevState,
+        products: updatedProducts,
+        total: calculateCombinedTotal(
+          updatedProducts,
+          prevState.manualAmount || 0
+        ),
+      };
     });
   };
 
@@ -489,19 +536,19 @@ const VentasPage = () => {
     setNewSale((prevState) => {
       const updatedProducts = prevState.products.map((p) => {
         if (p.id === productId) {
-          const updatedProduct = { ...p, quantity: quantity, unit: unit };
-          return updatedProduct;
+          return { ...p, quantity: quantity, unit: unit };
         }
         return p;
       });
 
-      // Calculate the new total using calculatePrice
-      const newTotal = updatedProducts.reduce(
-        (sum, p) => sum + calculatePrice(p),
-        0
-      );
-
-      return { ...prevState, products: updatedProducts, total: newTotal };
+      return {
+        ...prevState,
+        products: updatedProducts,
+        total: calculateCombinedTotal(
+          updatedProducts,
+          prevState.manualAmount || 0
+        ),
+      };
     });
   };
   const handleUnitChange = (
@@ -517,13 +564,14 @@ const VentasPage = () => {
         return p;
       });
 
-      // Calculate the new total using calculatePrice
-      const newTotal = updatedProducts.reduce(
-        (sum, p) => sum + calculatePrice(p),
-        0
-      );
-
-      return { ...prevState, products: updatedProducts, total: newTotal };
+      return {
+        ...prevState,
+        products: updatedProducts,
+        total: calculateCombinedTotal(
+          updatedProducts,
+          prevState.manualAmount || 0
+        ),
+      };
     });
   };
   const handleRemoveProduct = (productId: number) => {
@@ -532,13 +580,14 @@ const VentasPage = () => {
         (p) => p.id !== productId
       );
 
-      // Calculate the new total using calculatePrice
-      const newTotal = updatedProducts.reduce(
-        (sum, p) => sum + calculatePrice(p),
-        0
-      );
-
-      return { ...prevState, products: updatedProducts, total: newTotal };
+      return {
+        ...prevState,
+        products: updatedProducts,
+        total: calculateCombinedTotal(
+          updatedProducts,
+          prevState.manualAmount || 0
+        ),
+      };
     });
   };
 
@@ -586,7 +635,6 @@ const VentasPage = () => {
           </div>
           <div className="w-full  flex justify-end">
             <Button
-              icon={<Plus />}
               text="Nueva Venta [F1]"
               colorText="text-white"
               colorTextHover="text-white"
@@ -875,6 +923,20 @@ const VentasPage = () => {
                 </tbody>
               </table>
             )}
+            <div className="flex flex-col gap-2">
+              <label className="block text-gray_m dark:text-white text-sm font-semibold">
+                Monto Manual Adicional
+              </label>
+              <Input
+                type="number"
+                placeholder="Ingrese monto adicional..."
+                value={(newSale.manualAmount || 0).toString()}
+                onChange={handleManualAmountChange}
+              />
+              <p className="text-xs text-gray-500">
+                Este monto se sumará al total de productos seleccionados
+              </p>
+            </div>
 
             <div className="flex flex-col gap-2">
               <label
@@ -903,7 +965,7 @@ const VentasPage = () => {
               type="text"
               name="totalPrice"
               placeholder="Precio total..."
-              value={`$ ${newSale.total}`}
+              value={`$ ${newSale.total.toFixed(2)}`}
               readOnly
             />
           </form>
