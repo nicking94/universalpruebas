@@ -378,8 +378,8 @@ const CajaDiariaPage = () => {
 
   // Agregar movimiento a la caja diaria
   const addMovement = async () => {
-    if (!amount || !description) {
-      showNotification("Debe completar todos los campos", "error");
+    if (!amount) {
+      showNotification("Debe haber un monto", "error");
       return;
     }
 
@@ -534,18 +534,22 @@ const CajaDiariaPage = () => {
         <div className="mb-4 grid grid-cols-2 gap-4">
           <div className="bg-green-100 p-3 rounded-lg">
             <h3 className="font-semibold text-green-800">Total Ingresos</h3>
-            <p className="text-xl font-bold">{formatCurrency(totalIngresos)}</p>
+            <p className="text-xl font-bold text-green-800">
+              {formatCurrency(totalIngresos)}
+            </p>
           </div>
           <div className="bg-red-100 p-3 rounded-lg">
             <h3 className="font-semibold text-red-800">Total Egresos</h3>
-            <p className="text-xl font-bold">{formatCurrency(totalEgresos)}</p>
+            <p className="text-xl font-bold text-red-800">
+              {formatCurrency(totalEgresos)}
+            </p>
           </div>
         </div>
 
         {/* Filtros */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
               Tipo
             </label>
             <Select
@@ -571,7 +575,7 @@ const CajaDiariaPage = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
               Método de Pago
             </label>
             <Select
@@ -659,7 +663,7 @@ const CajaDiariaPage = () => {
                     <td className=" px-4 py-2 text-sm text-gray-500">
                       {movement.description || "-"}
                     </td>
-                    <td className=" px-4 py-2 whitespace-nowrap text-sm">
+                    <td className="flex justify-center px-4 py-2 whitespace-nowrap text-sm">
                       <Button
                         text="Eliminar"
                         colorText="text-white"
@@ -673,7 +677,7 @@ const CajaDiariaPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-4 text-center text-gray-500">
+                  <td colSpan={7} className="py-4 text-center text-gray_m">
                     No hay movimientos que coincidan con los filtros
                   </td>
                 </tr>
@@ -805,7 +809,7 @@ const CajaDiariaPage = () => {
           </div>
         ) : (
           <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-2">
-            <p>No hay caja abierta para hoy</p>
+            <p className="text-gray_m">No hay caja abierta para hoy</p>
             <Button
               text="Abrir Caja"
               colorText="text-white"
@@ -883,7 +887,7 @@ const CajaDiariaPage = () => {
                 <th className="text-xs xl:text-lg px-4 py-2">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray_l">
+            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
               {currentItems.length > 0 ? (
                 currentItems.map((day, index) => (
                   <tr
@@ -945,8 +949,10 @@ const CajaDiariaPage = () => {
                 <tr className="h-[55vh] 2xl:h-[calc(54vh-80px)]">
                   <td colSpan={6} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                      <Info size={64} className="mb-4" />
-                      <p>No hay registros para el período seleccionado.</p>
+                      <Info size={64} className="mb-4 text-gray_m" />
+                      <p className="text-gray_m">
+                        No hay registros para el período seleccionado.
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -984,7 +990,7 @@ const CajaDiariaPage = () => {
                 onChange={(option) =>
                   option && setMovementType(option.value as MovementType)
                 }
-                className="w-full"
+                className="w-full text-black"
               />
             </div>
 
@@ -1005,7 +1011,7 @@ const CajaDiariaPage = () => {
                     setPaymentMethod(option.value as PaymentMethod);
                   }
                 }}
-                className="w-full"
+                className="w-full text-black"
               />
             </div>
 

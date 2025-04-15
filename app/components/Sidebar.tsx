@@ -5,7 +5,8 @@ import {
   Package,
   ShoppingCart,
   Repeat,
-  // DollarSign,
+  Wallet,
+  Headphones,
   // Truck,
 } from "lucide-react";
 import Button from "./Button";
@@ -19,12 +20,17 @@ import { TbCashRegister } from "react-icons/tb";
 const menuItems = [
   { label: "Ventas", href: "/ventas", icon: <ShoppingCart /> },
   { label: "Productos", href: "/productos", icon: <Package /> },
+  { label: "Fiados", href: "/fiados", icon: <Wallet /> },
   {
     label: "Caja diaria",
     href: "/caja-diaria",
     icon: <TbCashRegister className="w-6 h-6" />,
   },
-  // { label: "Gastos", href: "/gastos", icon: <DollarSign /> },
+  {
+    label: "Soporte técnico",
+    href: "https://wa.me/5492613077147",
+    icon: <Headphones />,
+  },
   // { label: "Proovedores", href: "/proovedores", icon: <Truck /> },
 ];
 

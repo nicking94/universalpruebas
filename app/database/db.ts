@@ -1,5 +1,5 @@
 import Dexie, { Table } from "dexie";
-import { Product, Sale, Theme, DailyCash } from "../lib/types/types";
+import { Product, Sale, Theme, DailyCash, Customer } from "../lib/types/types";
 
 class MyDatabase extends Dexie {
   theme!: Table<Theme, number>;
@@ -7,18 +7,24 @@ class MyDatabase extends Dexie {
   auth!: Table<{ id: number; isAuthenticated: boolean }, number>;
   sales!: Table<Sale, number>;
   dailyCashes!: Table<DailyCash, number>;
+  dailyCashMovements!: Table<{ id: number; dailyCashId: number }, number>;
+  payments!: Table<
+    { id: number; saleId: number; amount: number; date: string },
+    number
+  >;
+  customers!: Table<Customer, string>;
 
   constructor() {
     super("MyDatabase");
-    this.version(2).stores({
+    this.version(3).stores({
       theme: "id",
-      products:
-        "++id, name, stock, costPrice, price, expiration, quantity, unit, barcode",
-      auth: "id,isAuthenticated",
-      sales:
-        "++id, product, quantity, paymentMethod, total, date, barcode, manualAmount",
-      dailyCashes: "++id, &date, closed, [date+closed], initialAmount",
-      dailyCashMovements: "++id, dailyCashId, amount, type, date, description",
+      products: "++id, name, barcode, stock",
+      auth: "id",
+      sales: "++id, date, credit, paymentMethod, customerName, customerId",
+      dailyCashes: "++id, &date, closed",
+      dailyCashMovements: "++id, dailyCashId, date, type",
+      payments: "++id, saleId, date",
+      customers: "&id, name",
     });
   }
 }

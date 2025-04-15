@@ -4,6 +4,8 @@ import Input from "@/app/components/Input";
 import Modal from "@/app/components/Modal";
 import Notification from "@/app/components/Notification";
 import {
+  CreditSale,
+  Customer,
   DailyCashMovement,
   Product,
   Sale,
@@ -38,14 +40,23 @@ const VentasPage = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [type, setType] = useState<"success" | "error" | "info">("success");
-
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [salesPerPage, setSalesPerPage] = useState(5);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [isCredit, setIsCredit] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerOptions, setCustomerOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<{
+    value: string;
+    label: string;
+  } | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
 
   const unitOptions: UnitOption[] = [
     { value: "Unid.", label: "Unidad" },
@@ -55,21 +66,17 @@ const VentasPage = () => {
     { value: "ml", label: "Ml" },
   ];
   const calculatePrice = (product: Product): number => {
-    const pricePerKg = product.price; // Precio por kilogramo
+    const pricePerKg = product.price;
     const quantity = product.quantity;
     const unit = product.unit;
-
-    // Si es por unidad, cálculo directo
     if (unit === "Unid.") {
       return pricePerKg * quantity;
     }
-
-    // Convertir todo a kilogramos para cálculo
     let quantityInKg: number;
 
     switch (unit) {
       case "gr":
-        quantityInKg = quantity / 1000; // Convertir gramos a kg
+        quantityInKg = quantity / 1000;
         break;
       case "Kg":
         quantityInKg = quantity;
@@ -216,9 +223,15 @@ const VentasPage = () => {
       setIsNotificationOpen(false);
     }, 2000);
   };
+  // En addIncomeToDailyCash (debería estar en VentasPage), modificar para manejar fiados
   const addIncomeToDailyCash = async (
-    sale: Sale & { manualAmount?: number }
+    sale: Sale & { manualAmount?: number; credit?: boolean; paid?: boolean }
   ) => {
+    // No registrar si es un fiado no pagado
+    if (sale.credit && !sale.paid) {
+      return;
+    }
+
     try {
       const today = new Date().toISOString().split("T")[0];
       let dailyCash = await db.dailyCashes.get({ date: today });
@@ -229,7 +242,6 @@ const VentasPage = () => {
       if (sale.products.length > 0) {
         sale.products.forEach((product) => {
           const profit = (product.price - product.costPrice) * product.quantity;
-          // En la función addIncomeToDailyCash
           movements.push({
             id: Date.now(),
             amount:
@@ -251,6 +263,8 @@ const VentasPage = () => {
             quantity: product.quantity,
             unit: product.unit,
             profit: profit,
+            isCreditPayment: sale.credit, // Marcar si es pago de fiado
+            originalSaleId: sale.id, // ID de la venta original
           });
         });
       }
@@ -269,6 +283,8 @@ const VentasPage = () => {
               : sale.paymentMethod === "Tarjeta"
               ? "TARJETA"
               : "TRANSFERENCIA",
+          isCreditPayment: sale.credit,
+          originalSaleId: sale.id,
         });
       }
 
@@ -398,8 +414,31 @@ const VentasPage = () => {
       return;
     }
 
+    if (isCredit) {
+      const normalizedName = customerName.toUpperCase().trim();
+
+      if (!normalizedName) {
+        showNotification("Debe ingresar un nombre de cliente", "error");
+        return;
+      }
+
+      const nameExists = customers.some(
+        (customer) =>
+          customer.name.toUpperCase() === normalizedName &&
+          (!selectedCustomer || customer.id !== selectedCustomer.value)
+      );
+
+      if (nameExists) {
+        showNotification(
+          "Este cliente ya existe. Seleccionalo de la lista",
+          "error"
+        );
+        return;
+      }
+    }
+
     try {
-      // Actualizar stock solo para productos
+      // Actualizar stock
       for (const product of newSale.products) {
         const updatedStock = updateStockAfterSale(
           product.id,
@@ -409,19 +448,61 @@ const VentasPage = () => {
         await db.products.update(product.id, { stock: updatedStock.quantity });
       }
 
-      const saleToSave: Sale & { manualAmount?: number } = {
+      let customerId = selectedCustomer?.value;
+      const generateCustomerId = (name: string): string => {
+        // Elimina caracteres especiales y reemplaza espacios con guiones
+        const cleanName = name
+          .toUpperCase()
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-zA-Z0-9-]/g, "");
+
+        // Añade un timestamp para asegurar unicidad
+        const timestamp = Date.now().toString().slice(-5);
+
+        return `${cleanName}-${timestamp}`;
+      };
+
+      if (isCredit && !customerId && customerName) {
+        const newCustomer: Customer = {
+          id: generateCustomerId(customerName),
+          name: customerName.toUpperCase().trim(),
+          phone: customerPhone,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await db.customers.add(newCustomer);
+        customerId = newCustomer.id;
+        setCustomers([...customers, newCustomer]);
+        setCustomerOptions([
+          ...customerOptions,
+          { value: newCustomer.id, label: newCustomer.name },
+        ]);
+      }
+
+      const saleToSave: CreditSale = {
         id: Date.now(),
         products: newSale.products,
         paymentMethod: newSale.paymentMethod,
         total: newSale.total,
         date: new Date().toISOString(),
+        barcode: newSale.barcode,
         manualAmount: newSale.manualAmount,
+        credit: isCredit,
+        customerName: isCredit
+          ? customerName.toUpperCase().trim()
+          : "CLIENTE OCASIONAL",
+        customerPhone: isCredit ? customerPhone : undefined,
+        customerId: isCredit ? customerId : undefined,
+        paid: false,
       };
 
       await db.sales.add(saleToSave);
       setSales([...sales, saleToSave]);
-      await addIncomeToDailyCash(saleToSave);
 
+      if (!isCredit) {
+        await addIncomeToDailyCash(saleToSave);
+      }
       setNewSale({
         products: [],
         paymentMethod: "Efectivo",
@@ -430,6 +511,10 @@ const VentasPage = () => {
         barcode: "",
         manualAmount: 0,
       });
+      setIsCredit(false);
+      setCustomerName("");
+      setCustomerPhone("");
+      setSelectedCustomer(null);
 
       setIsOpenModal(false);
       showNotification("Venta agregada correctamente", "success");
@@ -473,6 +558,21 @@ const VentasPage = () => {
     setSaleToDelete(sale);
     setIsConfirmModalOpen(true);
   };
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      const allCustomers = await db.customers.toArray();
+      setCustomers(allCustomers);
+
+      setCustomerOptions(
+        allCustomers.map((customer) => ({
+          value: customer.id,
+          label: customer.name,
+        }))
+      );
+    };
+
+    fetchCustomers();
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -690,7 +790,7 @@ const VentasPage = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray_l ">
+            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
               {currentSales.length > 0 ? (
                 currentSales.map((sale) => (
                   <tr
@@ -711,10 +811,18 @@ const VentasPage = () => {
                             .join(" | ")}
                     </td>
                     <td className="font-semibold px-4 py-2 border border-gray_l">
-                      $
-                      {sale.total.toLocaleString("es-AR", {
-                        minimumFractionDigits: 2,
-                      })}
+                      {sale.credit ? (
+                        <span className="text-orange-500">
+                          FIADO - $
+                          {sale.total.toLocaleString("es-AR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      ) : (
+                        `$${sale.total.toLocaleString("es-AR", {
+                          minimumFractionDigits: 2,
+                        })}`
+                      )}
                     </td>
 
                     <td className="font-semibold px-4 py-2 border border-gray_l">
@@ -754,8 +862,8 @@ const VentasPage = () => {
                 <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
                   <td colSpan={6} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                      <ShoppingCart size={64} className="mb-4" />
-                      <p>Todavía no hay ventas.</p>
+                      <ShoppingCart size={64} className="mb-4 text-gray_m" />
+                      <p className="text-gray_m">Todavía no hay ventas.</p>
                     </div>
                   </td>
                 </tr>
@@ -767,9 +875,9 @@ const VentasPage = () => {
               isOpen={isInfoModalOpen}
               onClose={handleCloseInfoModal}
               title="Detalles de la venta"
-              bgColor="bg-blue_b text-white dark:bg-gray_b"
+              bgColor="bg-white dark:bg-gray_b text-gray_m dark:text-white "
             >
-              <div className=" space-y-2 p-2">
+              <div className="space-y-2 p-2">
                 <p className="flex text-lg justify-between">
                   <strong>Total:</strong>
                   {formatPrice(selectedSale.total)}
@@ -844,7 +952,7 @@ const VentasPage = () => {
             className="flex flex-col gap-4 pb-6"
           >
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
                 Escanear código de barras
               </label>
               <BarcodeScanner
@@ -886,7 +994,7 @@ const VentasPage = () => {
             </div>
             {newSale.products.length > 0 && (
               <table className="table-auto w-full ">
-                <thead className="border border-gray_xl bg-blue_b text-white ">
+                <thead className=" bg-blue_b text-white ">
                   <tr>
                     <th className="px-4 py-2">Producto</th>
                     <th className="px-4 py-2 text-center">Unidad</th>
@@ -917,12 +1025,13 @@ const VentasPage = () => {
                                 product.quantity
                               );
                             }}
+                            className="text-black"
                           />
                         </td>
                         <td className="w-20 px-4 py-2 text-center">
                           <Input
                             type="number"
-                            value={product.quantity.toString() || ""} // Mostrar vacío si es 0
+                            value={product.quantity.toString() || ""}
                             onChange={(e) => {
                               const value = e.target.value;
                               // Permitir vacío o número válido
@@ -940,7 +1049,6 @@ const VentasPage = () => {
                                 : "1"
                             }
                             onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
-                              // Asegurar que siempre haya un valor válido al salir del campo
                               if (e.target.value === "") {
                                 handleQuantityChange(
                                   product.id,
@@ -978,7 +1086,7 @@ const VentasPage = () => {
             )}
             <div className="flex flex-col gap-2">
               <label className="block text-gray_m dark:text-white text-sm font-semibold">
-                Monto manual
+                Monto manual (opcional)
               </label>
               <Input
                 type="text"
@@ -993,9 +1101,6 @@ const VentasPage = () => {
                   } as React.ChangeEvent<HTMLInputElement>);
                 }}
               />
-              <p className="text-xs text-gray-500">
-                Este monto se sumará al total de productos seleccionados
-              </p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -1019,6 +1124,59 @@ const VentasPage = () => {
                 classNamePrefix="react-select"
               />
             </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="creditCheckbox"
+                checked={isCredit}
+                onChange={(e) => setIsCredit(e.target.checked)}
+              />
+              <label htmlFor="creditCheckbox">Registrar Fiado</label>
+            </div>
+
+            {isCredit && (
+              <div className="space-y-2">
+                <label className="block text-gray_m dark:text-white text-sm font-semibold">
+                  Cliente existente
+                </label>
+                <Select
+                  options={customerOptions}
+                  value={selectedCustomer}
+                  onChange={(selected) => {
+                    setSelectedCustomer(selected);
+                    if (selected) {
+                      const customer = customers.find(
+                        (c) => c.id === selected.value
+                      );
+                      setCustomerName(customer?.name || "");
+                      setCustomerPhone(customer?.phone || "");
+                    }
+                  }}
+                  placeholder="Buscar cliente..."
+                  isClearable
+                  className="text-black"
+                />
+
+                <Input
+                  label="Nombre del cliente (nuevo)"
+                  value={customerName}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value.toUpperCase());
+                    setSelectedCustomer(null);
+                  }}
+                  disabled={!!selectedCustomer}
+                  onBlur={(e) => {
+                    setCustomerName(e.target.value.trim());
+                  }}
+                />
+
+                <Input
+                  label="Teléfono del cliente"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                />
+              </div>
+            )}
 
             <Input
               label="Total"

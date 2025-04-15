@@ -87,6 +87,8 @@ export type InputProps = {
   autoFocus?: boolean;
   step?: string;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  required?: boolean;
+  disabled?: boolean;
 };
 export type UserMenuProps = {
   theme: string;
@@ -111,6 +113,7 @@ export type Product = {
   quantity: number;
   unit: "Unid." | "gr" | "Kg" | "ml" | "L";
   barcode?: string;
+  description?: string;
 };
 
 export type UnitOption = {
@@ -139,6 +142,8 @@ export type Sale = {
   date: string;
   barcode?: string;
   manualAmount?: number;
+  credit?: boolean;
+  paid?: boolean;
 };
 
 export type SaleItem = {
@@ -184,6 +189,8 @@ export type DailyCashMovement = {
   quantity?: number;
   profit?: number;
   unit?: "Unid." | "gr" | "Kg" | "ml" | "L";
+  isCreditPayment?: boolean;
+  originalSaleId?: number;
 };
 export type DailyCash = {
   id: number;
@@ -204,4 +211,27 @@ export type DailyCash = {
   comments?: string;
   openedBy?: string;
   closedBy?: string;
+};
+
+export interface CreditSale extends Sale {
+  credit: boolean;
+  customerName: string;
+  customerPhone?: string;
+  customerId?: string;
+  paid?: boolean;
+  products: Product[];
+}
+
+export interface Payment {
+  id: number;
+  saleId: number;
+  amount: number;
+  date: string;
+}
+export type Customer = {
+  id: string;
+  name: string;
+  phone?: string;
+  createdAt: string;
+  updatedAt: string;
 };

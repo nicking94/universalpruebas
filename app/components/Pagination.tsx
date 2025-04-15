@@ -66,15 +66,15 @@ const Pagination: React.FC<PaginationProps> = ({
         </select>
       </div>
       <nav aria-label="Paginación">
-        <ul className="flex items-center gap-1">
+        <ul className="flex items-center gap-2">
           <li>
             <button
               onClick={handlePrevious}
               disabled={currentPage === 1}
               aria-label="Página anterior"
-              className={`p-2 rounded-md ${
+              className={`cursor-pointer p-2 rounded-md ${
                 currentPage === 1
-                  ? "text-gray-400 cursor-not-allowed"
+                  ? "text-gray-400 "
                   : "text-gray-700 hover:bg-gray-100"
               }`}
             >
@@ -155,9 +155,9 @@ const Pagination: React.FC<PaginationProps> = ({
               onClick={handleNext}
               disabled={currentPage === totalPages}
               aria-label="Página siguiente"
-              className={`p-2 rounded-md ${
+              className={`cursor-pointer p-2 rounded-md ${
                 currentPage === totalPages
-                  ? "text-gray-400 cursor-not-allowed"
+                  ? "text-gray-400 "
                   : "text-gray-700 hover:bg-gray-100"
               }`}
             >

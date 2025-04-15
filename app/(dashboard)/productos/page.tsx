@@ -303,11 +303,9 @@ const ProductsPage = () => {
     };
   }, []);
 
-  // Get current products
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
 
-  // Change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const pageNumbers = [];
@@ -378,7 +376,7 @@ const ProductsPage = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className=" divide-y divide-gray_l ">
+            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
               {sortedProducts.length > 0 ? (
                 sortedProducts
                   .slice(indexOfFirstProduct, indexOfLastProduct)
@@ -409,11 +407,11 @@ const ProductsPage = () => {
                         key={index}
                         className={` text-xs 2xl:text-[.9rem] border-b border-gray_l ${
                           isExpired
-                            ? "border-l-2 border-l-red-500 text-gray_b bg-gray_xl"
+                            ? "border-l-2 border-l-red-500 text-gray_b bg-white"
                             : expiredToday
                             ? "border-l-2 border-l-red-500 text-white bg-red-500"
                             : isExpiringSoon
-                            ? "border-l-2 border-l-red-500 text-gray_b bg-red-200 "
+                            ? "border-l-2 border-l-red-500 text-gray_b bg-red-100 "
                             : "text-gray_b bg-white"
                         }`}
                       >
@@ -479,7 +477,7 @@ const ProductsPage = () => {
                             </span>
                           )}
                           {expirationDate && isExpired && (
-                            <span className="ml-2 text-red-500">(Vencido)</span>
+                            <span className="ml-2 text-red-800">(Vencido)</span>
                           )}
                         </td>
                         <td className="px-4 py-2 flex justify-center gap-4">
@@ -512,8 +510,8 @@ const ProductsPage = () => {
                 <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
                   <td colSpan={6} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                      <PackageX size={64} className="mb-4" />
-                      <p>Todavía no hay productos.</p>
+                      <PackageX size={64} className="mb-4 text-gray_m" />
+                      <p className="text-gray_m">Todavía no hay productos.</p>
                     </div>
                   </td>
                 </tr>
