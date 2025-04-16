@@ -114,7 +114,7 @@ const ClientesPage = () => {
 
       if (customerSales.length > 0) {
         showNotification(
-          "No se puede eliminar el cliente porque tiene ventas asociadas",
+          "No se puede eliminar el cliente porque tiene fiados pendientes de pago",
           "error"
         );
         return;
@@ -222,23 +222,25 @@ const ClientesPage = () => {
           title="Nuevo Cliente"
         >
           <div className="space-y-4">
-            <Input
-              label="Nombre del cliente"
-              value={newCustomer.name}
-              onChange={(e) =>
-                setNewCustomer({ ...newCustomer, name: e.target.value })
-              }
-              placeholder="Ingrese el nombre completo..."
-            />
-            <Input
-              label="Teléfono (opcional)"
-              value={newCustomer.phone || ""}
-              onChange={(e) =>
-                setNewCustomer({ ...newCustomer, phone: e.target.value })
-              }
-              placeholder="Ingrese el número de teléfono..."
-            />
-            <div className="flex justify-end space-x-2">
+            <div className="flex items-center space-x-4">
+              <Input
+                label="Nombre del cliente"
+                value={newCustomer.name}
+                onChange={(e) =>
+                  setNewCustomer({ ...newCustomer, name: e.target.value })
+                }
+                placeholder="Ingrese el nombre completo..."
+              />
+              <Input
+                label="Teléfono (opcional)"
+                value={newCustomer.phone || ""}
+                onChange={(e) =>
+                  setNewCustomer({ ...newCustomer, phone: e.target.value })
+                }
+                placeholder="Ingrese el número de teléfono..."
+              />
+            </div>
+            <div className="flex justify-end space-x-2 mt-10">
               <Button
                 text="Guardar"
                 colorText="text-white"

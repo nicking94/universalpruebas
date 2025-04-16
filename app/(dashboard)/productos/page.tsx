@@ -534,91 +534,96 @@ const ProductsPage = () => {
           bgColor="bg-white dark:bg-gray_b"
         >
           <form className="flex flex-col gap-4">
-            <div>
-              <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
-                Código de Barras
-              </label>
-              <BarcodeScanner
-                value={newProduct.barcode || ""}
-                onChange={(value) =>
-                  setNewProduct({ ...newProduct, barcode: value })
-                }
-                onScanComplete={(code) => {
-                  const existingProduct = products.find(
-                    (p) => p.barcode === code
-                  );
-                  if (existingProduct) {
-                    setNewProduct({
-                      ...existingProduct,
-                      id: editingProduct ? existingProduct.id : Date.now(),
-                    });
-                    setEditingProduct(existingProduct);
-                    showNotification(
-                      "Producto encontrado, puedes editar los datos",
-                      "success"
-                    );
+            <div className="w-full flex items-center space-x-4">
+              <div className="w-full">
+                <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
+                  Código de Barras
+                </label>
+                <BarcodeScanner
+                  value={newProduct.barcode || ""}
+                  onChange={(value) =>
+                    setNewProduct({ ...newProduct, barcode: value })
                   }
-                }}
+                  onScanComplete={(code) => {
+                    const existingProduct = products.find(
+                      (p) => p.barcode === code
+                    );
+                    if (existingProduct) {
+                      setNewProduct({
+                        ...existingProduct,
+                        id: editingProduct ? existingProduct.id : Date.now(),
+                      });
+                      setEditingProduct(existingProduct);
+                      showNotification(
+                        "Producto encontrado, puedes editar los datos",
+                        "success"
+                      );
+                    }
+                  }}
+                />
+              </div>
+              <Input
+                label="Nombre del producto"
+                type="text"
+                name="name"
+                placeholder="Nombre del producto..."
+                value={newProduct.name}
+                onChange={handleInputChange}
               />
             </div>
-            <Input
-              label="Nombre del producto"
-              type="text"
-              name="name"
-              placeholder="Nombre del producto..."
-              value={newProduct.name}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="Stock"
-              type="number"
-              name="stock"
-              placeholder="Stock..."
-              value={newProduct.stock.toString()}
-              onChange={handleInputChange}
-            />
-            <div>
-              <label
-                htmlFor="unit"
-                className="block text-sm font-medium text-gray_m dark:text-white"
-              >
-                Unidad
-              </label>
-              <Select
-                inputId="unit"
-                options={unitOptions}
-                value={selectedUnit}
-                onChange={(selectedOption) => {
-                  setNewProduct({
-                    ...newProduct,
-                    unit: selectedOption?.value as Product["unit"],
-                  });
-                }}
-                className="mt-1 text-black"
-                classNames={{
-                  control: () => "text-sm  border-gray-300 rounded-md ",
-                }}
-                isSearchable={false}
+            <div className="w-full flex items-center space-x-4">
+              <div className="w-full">
+                <label
+                  htmlFor="unit"
+                  className="block text-sm font-medium text-gray_m dark:text-white"
+                >
+                  Unidad
+                </label>
+                <Select
+                  inputId="unit"
+                  options={unitOptions}
+                  value={selectedUnit}
+                  onChange={(selectedOption) => {
+                    setNewProduct({
+                      ...newProduct,
+                      unit: selectedOption?.value as Product["unit"],
+                    });
+                  }}
+                  className="mt-2 text-black"
+                  classNames={{
+                    control: () => "text-sm  border-gray-300 rounded-md ",
+                  }}
+                  isSearchable={false}
+                />
+              </div>
+              <Input
+                label="Stock"
+                type="number"
+                name="stock"
+                placeholder="Stock..."
+                value={newProduct.stock.toString()}
+                onChange={handleInputChange}
               />
             </div>
-            <Input
-              label="Precio de costo"
-              type="number"
-              name="costPrice"
-              placeholder="Precio de costo..."
-              value={newProduct.costPrice.toString()}
-              onChange={handleInputChange}
-            />
+            <div className="flex items-center space-x-4">
+              <Input
+                label="Precio de costo"
+                type="number"
+                name="costPrice"
+                placeholder="Precio de costo..."
+                value={newProduct.costPrice.toString()}
+                onChange={handleInputChange}
+              />
 
-            <Input
-              label="Precio de venta"
-              type="number"
-              name="price"
-              placeholder="Precio de venta..."
-              value={newProduct.price.toString()}
-              onChange={handlePriceChange}
-            />
-
+              <Input
+                label="Precio de venta"
+                type="number"
+                name="price"
+                placeholder="Precio de venta..."
+                value={newProduct.price.toString()}
+                onChange={handlePriceChange}
+              />
+            </div>
             <CustomDatePicker
               value={newProduct.expiration}
               onChange={(newDate) => {

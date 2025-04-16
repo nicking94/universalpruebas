@@ -24,7 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({
           <h1 className="text-lg italic">Universal App</h1>
         </div>
 
-        <div className="flex items-center gap-10">
+        <div className="flex flex-col justify-center items-center">
           <UserMenu
             theme={theme}
             handleTheme={handleTheme}

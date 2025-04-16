@@ -42,7 +42,9 @@ const VentasPage = () => {
   const [type, setType] = useState<"success" | "error" | "info">("success");
   const [currentPage, setCurrentPage] = useState(1);
   const [salesPerPage, setSalesPerPage] = useState(5);
-  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    (new Date().getMonth() + 1).toString().padStart(2, "0")
+  );
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -933,46 +935,52 @@ const VentasPage = () => {
             onSubmit={handleConfirmAddSale}
             className="flex flex-col gap-4 pb-6"
           >
-            <div>
-              <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
-                Escanear código de barras
-              </label>
-              <BarcodeScanner
-                value={newSale.barcode || ""}
-                onChange={(value) => setNewSale({ ...newSale, barcode: value })}
-                onScanComplete={(code) => {
-                  const productToAdd = products.find((p) => p.barcode === code);
-                  if (productToAdd) {
-                    handleProductScan(productToAdd.id);
-                  } else {
-                    showNotification("Producto no encontrado", "error");
+            <div className="w-full flex items-center space-x-4">
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
+                  Escanear código de barras
+                </label>
+                <BarcodeScanner
+                  value={newSale.barcode || ""}
+                  onChange={(value) =>
+                    setNewSale({ ...newSale, barcode: value })
                   }
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="productSelect"
-                className="block text-gray_m dark:text-white text-sm font-semibold"
-              >
-                Productos
-              </label>
-              <Select<
-                { value: number; label: string; isDisabled?: boolean },
-                true
-              >
-                id="productSelect"
-                isOptionDisabled={(option) => option.isDisabled ?? false}
-                options={productOptions}
-                isMulti
-                onChange={handleProductSelect}
-                value={newSale.products.map((p) => ({
-                  value: p.id,
-                  label: p.name,
-                }))}
-                placeholder="Seleccione productos"
-                className="text-black"
-              />
+                  onScanComplete={(code) => {
+                    const productToAdd = products.find(
+                      (p) => p.barcode === code
+                    );
+                    if (productToAdd) {
+                      handleProductScan(productToAdd.id);
+                    } else {
+                      showNotification("Producto no encontrado", "error");
+                    }
+                  }}
+                />
+              </div>
+              <div className="w-full flex flex-col gap-2">
+                <label
+                  htmlFor="productSelect"
+                  className="block text-gray_m dark:text-white text-sm font-semibold"
+                >
+                  Productos
+                </label>
+                <Select<
+                  { value: number; label: string; isDisabled?: boolean },
+                  true
+                >
+                  id="productSelect"
+                  isOptionDisabled={(option) => option.isDisabled ?? false}
+                  options={productOptions}
+                  isMulti
+                  onChange={handleProductSelect}
+                  value={newSale.products.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  }))}
+                  placeholder="Seleccione productos"
+                  className="text-black"
+                />
+              </div>
             </div>
             {newSale.products.length > 0 && (
               <table className="table-auto w-full ">
@@ -1065,45 +1073,47 @@ const VentasPage = () => {
                 </tbody>
               </table>
             )}
-            <div className="flex flex-col gap-2">
-              <label className="block text-gray_m dark:text-white text-sm font-semibold">
-                Monto manual (opcional)
-              </label>
-              <Input
-                type="text"
-                placeholder="Ingrese monto manual..."
-                value={newSale.manualAmount ? `$${newSale.manualAmount}` : ""}
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^0-9]/g, "");
-                  handleManualAmountChange({
-                    target: {
-                      value: numericValue,
-                    },
-                  } as React.ChangeEvent<HTMLInputElement>);
-                }}
-              />
-            </div>
+            <div className="flex items-center space-x-4">
+              <div className="w-full flex flex-col ">
+                <label className="block text-gray_m dark:text-white text-sm font-semibold">
+                  Monto manual (opcional)
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Ingrese monto manual..."
+                  value={newSale.manualAmount ? `$${newSale.manualAmount}` : ""}
+                  onChange={(e) => {
+                    const numericValue = e.target.value.replace(/[^0-9]/g, "");
+                    handleManualAmountChange({
+                      target: {
+                        value: numericValue,
+                      },
+                    } as React.ChangeEvent<HTMLInputElement>);
+                  }}
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="paymentMethod"
-                className="block text-gray_m dark:text-white text-sm font-semibold"
-              >
-                Método de Pago
-              </label>
-              <Select
-                id="paymentMethod"
-                value={
-                  paymentOptions.find(
-                    (option) => option.value === newSale.paymentMethod
-                  ) || null
-                }
-                onChange={handlePaymentChange}
-                options={paymentOptions}
-                placeholder="Seleccionar método de pago"
-                className="w-full text-gray_b"
-                classNamePrefix="react-select"
-              />
+              <div className="w-full flex flex-col gap-2">
+                <label
+                  htmlFor="paymentMethod"
+                  className="block text-gray_m dark:text-white text-sm font-semibold"
+                >
+                  Método de Pago
+                </label>
+                <Select
+                  id="paymentMethod"
+                  value={
+                    paymentOptions.find(
+                      (option) => option.value === newSale.paymentMethod
+                    ) || null
+                  }
+                  onChange={handlePaymentChange}
+                  options={paymentOptions}
+                  placeholder="Seleccionar método de pago"
+                  className="w-full text-gray_b"
+                  classNamePrefix="react-select"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -1137,25 +1147,28 @@ const VentasPage = () => {
                   isClearable
                   className="text-black"
                 />
+                <div className="flex items-center space-x-4 mt-4">
+                  <Input
+                    label="Nuevo cliente"
+                    placeholder="Nombre del cliente..."
+                    value={customerName}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value.toUpperCase());
+                      setSelectedCustomer(null);
+                    }}
+                    disabled={!!selectedCustomer}
+                    onBlur={(e) => {
+                      setCustomerName(e.target.value.trim());
+                    }}
+                  />
 
-                <Input
-                  label="Nombre del cliente (nuevo)"
-                  value={customerName}
-                  onChange={(e) => {
-                    setCustomerName(e.target.value.toUpperCase());
-                    setSelectedCustomer(null);
-                  }}
-                  disabled={!!selectedCustomer}
-                  onBlur={(e) => {
-                    setCustomerName(e.target.value.trim());
-                  }}
-                />
-
-                <Input
-                  label="Teléfono del cliente"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                />
+                  <Input
+                    label="Teléfono del cliente"
+                    placeholder="Teléfono del cliente..."
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                  />
+                </div>
               </div>
             )}
 

@@ -664,7 +664,7 @@ const CajaDiariaPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-4 text-center text-gray_m">
+                  <td colSpan={7} className="py-4 text-center text-gray_l">
                     No hay movimientos que coincidan con los filtros
                   </td>
                 </tr>
@@ -701,7 +701,11 @@ const CajaDiariaPage = () => {
           >
             <div className="flex justify-between items-center">
               <div className="text-gray_m font-semibold">
-                <h3>
+                <h3
+                  className={`text-gray_b font-bold ${
+                    currentDailyCash.closed ? "text-red-600" : "text-green-600"
+                  }`}
+                >
                   {currentDailyCash.closed ? "Caja Cerrada" : "Caja Abierta"}
                 </h3>
                 <p>
@@ -836,7 +840,7 @@ const CajaDiariaPage = () => {
             />
           </div>
           <Button
-            icon={<Plus />}
+            icon={<Plus className="w-4 h-4" />}
             text="Nuevo Movimiento"
             colorText="text-white"
             colorTextHover="text-white"
@@ -848,10 +852,10 @@ const CajaDiariaPage = () => {
         </div>
         <div
           className={`flex flex-col justify-between ${
-            currentDailyCash?.closed
-              ? "h-[calc(47vh-80px)]"
-              : "h-[calc(53vh-40px)]"
-          }`}
+            currentItems.length > 0
+              ? "h-[calc(63.6vh-80px)]"
+              : "h-[calc(68vh-80px)]"
+          } `}
         >
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
@@ -958,76 +962,82 @@ const CajaDiariaPage = () => {
           title="Nuevo Movimiento"
         >
           <div className="flex flex-col gap-4 pb-6">
-            <div className="flex flex-col gap-2">
-              <label className="block text-gray_m dark:text-white text-sm font-semibold">
-                Tipo de Movimiento
-              </label>
-              <Select
-                options={movementTypes}
-                value={movementTypes.find((m) => m.value === movementType)}
-                onChange={(option) =>
-                  option && setMovementType(option.value as MovementType)
-                }
-                className="w-full text-black"
-              />
-            </div>
-            {movementType === "EGRESO" && (
-              <div className="flex flex-col gap-2">
-                <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Proveedor (opcional)
+            <div className="w-full flex justify-between space-x-4 ">
+              <div className="flex flex-col gap-2 w-full">
+                <label className="block text-gray_m dark:text-white text-sm font-semibold">
+                  Tipo de Movimiento
                 </label>
                 <Select
-                  options={suppliers.map((s) => ({
-                    value: s.id,
-                    label: s.companyName,
-                  }))}
-                  value={selectedSupplier}
-                  onChange={(option) => setSelectedSupplier(option)}
-                  isClearable
-                  placeholder="Seleccionar proveedor..."
+                  options={movementTypes}
+                  value={movementTypes.find((m) => m.value === movementType)}
+                  onChange={(option) =>
+                    option && setMovementType(option.value as MovementType)
+                  }
                   className="w-full text-black"
                 />
               </div>
-            )}
 
-            <div className="flex flex-col gap-2">
-              <label className="block text-gray_m dark:text-white text-sm font-semibold">
-                Método de Pago
-              </label>
-              <Select
-                options={paymentMethods}
-                value={paymentMethods.find((m) => m.value === paymentMethod)}
-                onChange={(option) => {
-                  if (
-                    option &&
-                    ["EFECTIVO", "TRANSFERENCIA", "TARJETA"].includes(
-                      option.value
-                    )
-                  ) {
-                    setPaymentMethod(option.value as PaymentMethod);
-                  }
-                }}
-                className="w-full text-black"
+              <div className="flex flex-col gap-2  w-full">
+                <label className="block text-gray_m dark:text-white text-sm font-semibold">
+                  Método de Pago
+                </label>
+                <Select
+                  defaultValue={paymentMethods.find(
+                    (m) => m.value === "EFECTIVO"
+                  )}
+                  options={paymentMethods}
+                  value={paymentMethods.find((m) => m.value === paymentMethod)}
+                  onChange={(option) => {
+                    if (
+                      option &&
+                      ["EFECTIVO", "TRANSFERENCIA", "TARJETA"].includes(
+                        option.value
+                      )
+                    ) {
+                      setPaymentMethod(option.value as PaymentMethod);
+                    }
+                  }}
+                  className="w-full text-black"
+                />
+              </div>
+              {movementType === "EGRESO" && (
+                <div className="flex flex-col gap-2  w-full">
+                  <label className="block text-sm font-medium text-gray_m dark:text-white">
+                    Proveedor (opcional)
+                  </label>
+                  <Select
+                    options={suppliers.map((s) => ({
+                      value: s.id,
+                      label: s.companyName,
+                    }))}
+                    value={selectedSupplier}
+                    onChange={(option) => setSelectedSupplier(option)}
+                    isClearable
+                    placeholder="Seleccionar proveedor..."
+                    className="w-full text-black"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between space-x-4">
+              <Input
+                label="Monto"
+                type="number"
+                name="amount"
+                placeholder="$ Ingrese el monto..."
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+
+              <Input
+                label="Descripción"
+                type="text"
+                name="description"
+                placeholder="Ingrese una descripción..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-
-            <Input
-              label="Monto"
-              type="number"
-              name="amount"
-              placeholder="Ingrese el monto..."
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-
-            <Input
-              label="Descripción"
-              type="text"
-              name="description"
-              placeholder="Ingrese una descripción..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
           </div>
 
           <div className="flex justify-end space-x-2">
@@ -1082,8 +1092,8 @@ const CajaDiariaPage = () => {
           title="Cierre de Caja"
         >
           <div className="flex flex-col gap-4 pb-6">
-            <div className="bg-green-50 p-3 rounded-lg">
-              <h4 className="font-semibold">Resumen de Efectivo</h4>
+            <div className="text-gray_b bg-green-50 p-3 rounded-lg">
+              <h4 className="font-semibold ">Resumen de Efectivo</h4>
               <p>
                 Ingresos en efectivo:{" "}
                 {formatCurrency(
@@ -1120,7 +1130,7 @@ const CajaDiariaPage = () => {
               </p>
             </div>
 
-            <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="text-gray_b bg-blue_xl p-3 rounded-lg">
               <h4 className="font-semibold">Otros Ingresos</h4>
               <p>
                 Transferencias:{" "}

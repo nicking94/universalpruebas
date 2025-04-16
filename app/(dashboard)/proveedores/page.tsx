@@ -10,7 +10,7 @@ import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
 import { Supplier, SupplierContact } from "@/app/lib/types/types";
 import SearchBar from "@/app/components/SearchBar";
-import { Plus, Trash, Info, Edit } from "lucide-react";
+import { Plus, Trash, Edit, Truck } from "lucide-react";
 import Pagination from "@/app/components/Pagination";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 
@@ -34,7 +34,7 @@ const ProveedoresPage = () => {
   // Form state
   const [companyName, setCompanyName] = useState("");
   const [contacts, setContacts] = useState<SupplierContact[]>([
-    { name: "", phone: "", email: "" },
+    { name: "", phone: "" },
   ]);
   const [lastVisit, setLastVisit] = useState<string | undefined>(undefined);
   const [nextVisit, setNextVisit] = useState<string | undefined>(undefined);
@@ -79,14 +79,14 @@ const ProveedoresPage = () => {
 
   const resetForm = () => {
     setCompanyName("");
-    setContacts([{ name: "", phone: "", email: "" }]);
+    setContacts([{ name: "", phone: "" }]);
     setLastVisit(undefined);
     setNextVisit(undefined);
     setEditingSupplier(null);
   };
 
   const handleAddContact = () => {
-    setContacts([...contacts, { name: "", phone: "", email: "" }]);
+    setContacts([...contacts, { name: "", phone: "" }]);
   };
 
   const handleRemoveContact = (index: number) => {
@@ -123,7 +123,6 @@ const ProveedoresPage = () => {
         contacts: contacts.map((contact) => ({
           name: contact.name.trim(),
           phone: contact.phone?.trim(),
-          email: contact.email?.trim(),
         })),
         lastVisit: lastVisit || undefined,
         nextVisit: nextVisit || undefined,
@@ -163,7 +162,7 @@ const ProveedoresPage = () => {
     setContacts(
       supplier.contacts.length > 0
         ? supplier.contacts
-        : [{ name: "", phone: "", email: "" }]
+        : [{ name: "", phone: "" }]
     );
     setLastVisit(supplier.lastVisit || undefined);
     setNextVisit(supplier.nextVisit || undefined);
@@ -317,7 +316,7 @@ const ProveedoresPage = () => {
                 <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
                   <td colSpan={5} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                      <Info size={64} className="mb-4 text-gray_m" />
+                      <Truck size={64} className="mb-4 text-gray_m" />
                       <p className="text-gray_m">
                         {searchQuery
                           ? "No hay proveedores que coincidan con la búsqueda"
@@ -356,7 +355,7 @@ const ProveedoresPage = () => {
         >
           <div className="space-y-4">
             <Input
-              label="Nombre de la Empresa*"
+              label="Nombre de la Empresa"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               placeholder="Ej: Distribuidora S.A."
@@ -364,7 +363,10 @@ const ProveedoresPage = () => {
 
             <div className="space-y-2">
               {contacts.map((contact, index) => (
-                <div key={index} className=" space-y-2 border-b pb-4 mb-4">
+                <div
+                  key={index}
+                  className="bg-blue_xl space-y-2 border border-blue_xl shadow-lg shadow-gray_l p-4 mb-8"
+                >
                   <div className="flex justify-between items-center">
                     <span className="bg-blue_m rounded-md px-2 py-1 text-white text-sm font-medium">
                       Proveedor #{index + 1}
@@ -386,30 +388,26 @@ const ProveedoresPage = () => {
                       </Button>
                     )}
                   </div>
-                  <Input
-                    label="Nombre*"
-                    value={contact.name}
-                    onChange={(e) =>
-                      handleContactChange(index, "name", e.target.value)
-                    }
-                    placeholder="Nombre del contacto"
-                  />
-                  <Input
-                    label="Teléfono"
-                    value={contact.phone}
-                    onChange={(e) =>
-                      handleContactChange(index, "phone", e.target.value)
-                    }
-                    placeholder="Teléfono del contacto"
-                  />
-                  <Input
-                    label="Email"
-                    value={contact.email}
-                    onChange={(e) =>
-                      handleContactChange(index, "email", e.target.value)
-                    }
-                    placeholder="Email del proveedor"
-                  />
+                  <div className="flex items-center space-x-4">
+                    <Input
+                      colorLabel="text-gray_m"
+                      label="Nombre"
+                      value={contact.name}
+                      onChange={(e) =>
+                        handleContactChange(index, "name", e.target.value)
+                      }
+                      placeholder="Nombre del proveedor"
+                    />
+                    <Input
+                      colorLabel="text-gray_m"
+                      label="Teléfono"
+                      value={contact.phone}
+                      onChange={(e) =>
+                        handleContactChange(index, "phone", e.target.value)
+                      }
+                      placeholder="Teléfono del proveedor"
+                    />
+                  </div>
                 </div>
               ))}
               <Button

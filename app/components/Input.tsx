@@ -3,6 +3,7 @@ import { InputProps } from "../lib/types/types";
 
 const Input: React.FC<InputProps> = ({
   label,
+  colorLabel = "text-gray_m dark:text-white",
   type,
   name,
   value,
@@ -15,9 +16,9 @@ const Input: React.FC<InputProps> = ({
   ref,
 }) => {
   return (
-    <div>
+    <div className="w-full">
       <label
-        className="block text-gray_m dark:text-white text-sm font-semibold mb-1"
+        className={`${colorLabel} block text-sm font-semibold mb-2`}
         htmlFor={name}
       >
         {label}
@@ -33,7 +34,7 @@ const Input: React.FC<InputProps> = ({
           readOnly={readOnly}
           placeholder={placeholder}
           accept={accept}
-          className={` focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l  outline-none text-gray_b ${border}`}
+          className={` focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l  outline-none text-gray_b ${border} max-h-9`}
         />
       </div>
     </div>

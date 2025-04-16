@@ -103,7 +103,7 @@ export default function ImportExportPage() {
             colorBgHover="hover:bg-blue_l dark:hover:bg-gray_l"
           />
         </div>
-        <p className="text-xs text-center font-light text-gray_l dark:text-gray_l">
+        <p className="text-xs text-center font-light text-gray_l dark:text-gray_l italic">
           Universal App
           <span className=" text-gray_m dark:text-gray_xl">
             {" "}

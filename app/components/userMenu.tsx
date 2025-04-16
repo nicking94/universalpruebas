@@ -1,8 +1,6 @@
-import { Sun, Moon, LogOut } from "lucide-react";
+import { Sun, Moon, LogOut, Settings, HelpCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { UserMenuProps } from "../lib/types/types";
-import logo from "../../public/logo.png";
-import Image from "next/image";
 
 const UserMenu: React.FC<UserMenuProps> = ({
   theme,
@@ -36,13 +34,9 @@ const UserMenu: React.FC<UserMenuProps> = ({
       <div
         ref={userIconRef}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="cursor-pointer flex bg-white rounded-full p-1 text-gray_b w-14 h-14"
+        className="cursor-pointer flex bg-white dark:bg-gray_b rounded-full p-1 text-gray_b w-8 h-8"
       >
-        <Image
-          className="shadow-lg shadow-blue_b rounded-full"
-          src={logo}
-          alt="User Logo"
-        />
+        <Settings className="flex items-center justify-center w-full h-full text-gray_b dark:text-white" />
       </div>
       {isMenuOpen && (
         <div
@@ -63,6 +57,13 @@ const UserMenu: React.FC<UserMenuProps> = ({
             )}
             {theme === "dark" ? "Modo Claro" : "Modo Oscuro"}
           </button>
+          <a
+            className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray-100 dark:hover:bg-gray_b transition-all duration-200 rounded-b-md"
+            href="#"
+          >
+            <HelpCircle className="mr-2" />
+            Tutoriales
+          </a>
           <button
             onClick={() => {
               handleCloseSession();

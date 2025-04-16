@@ -30,7 +30,7 @@ const menuItems = [
   { label: "Clientes", href: "/clientes", icon: <Users /> },
   { label: "Fiados", href: "/fiados", icon: <Wallet /> },
 
-  { label: "Proovedores", href: "/proveedores", icon: <Truck /> },
+  { label: "Proveedores", href: "/proveedores", icon: <Truck /> },
   {
     label: "Soporte técnico",
     href: "https://wa.me/5492613077147",

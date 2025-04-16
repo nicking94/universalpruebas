@@ -19,7 +19,6 @@ export type ButtonProps = {
   text?: string;
   icon?: React.ReactNode;
   iconPosition?: "left" | "right";
-
   type?: "button" | "submit" | "reset";
   colorText?: string;
   colorBg?: string;
@@ -74,6 +73,7 @@ export type PersonalData = {
 
 export type InputProps = {
   label?: string;
+  colorLabel?: string;
   type?: string;
   name?: string;
   value?: string;
@@ -241,7 +241,6 @@ export type Customer = {
 export type SupplierContact = {
   name: string;
   phone?: string;
-  email?: string;
 };
 
 export type Supplier = {
