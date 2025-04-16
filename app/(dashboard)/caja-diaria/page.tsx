@@ -7,6 +7,7 @@ import {
   DailyCashMovement,
   Option,
   PaymentMethod,
+  Supplier,
 } from "@/app/lib/types/types";
 import { Plus, Info, X, Check } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -50,6 +51,12 @@ const CajaDiariaPage = () => {
     null
   );
   const [isDeleteCashModalOpen, setIsDeleteCashModalOpen] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<{
+    value: number;
+    label: string;
+  } | null>(null);
+
   const deleteDailyCash = async () => {
     if (!dailyCashToDelete) return;
 
@@ -389,6 +396,8 @@ const CajaDiariaPage = () => {
         type: movementType,
         paymentMethod,
         date: new Date().toISOString(),
+        supplierId: selectedSupplier?.value,
+        supplierName: selectedSupplier?.label,
       };
 
       const updatedCash = {
@@ -463,6 +472,13 @@ const CajaDiariaPage = () => {
       showNotification("Error al eliminar movimiento", "error");
     }
   };
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      const allSuppliers = await db.suppliers.toArray();
+      setSuppliers(allSuppliers);
+    };
+    fetchSuppliers();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -634,7 +650,7 @@ const CajaDiariaPage = () => {
                     <td className=" px-4 py-2 text-sm text-gray-500">
                       {movement.description || "-"}
                     </td>
-                    <td className="flex justify-center px-4 py-2 whitespace-nowrap text-sm">
+                    <td className="flex justify-center items-center px-4 py-2 whitespace-nowrap text-sm">
                       <Button
                         text="Eliminar"
                         colorText="text-white"
@@ -955,6 +971,24 @@ const CajaDiariaPage = () => {
                 className="w-full text-black"
               />
             </div>
+            {movementType === "EGRESO" && (
+              <div className="flex flex-col gap-2">
+                <label className="block text-sm font-medium text-gray_m dark:text-white">
+                  Proveedor (opcional)
+                </label>
+                <Select
+                  options={suppliers.map((s) => ({
+                    value: s.id,
+                    label: s.companyName,
+                  }))}
+                  value={selectedSupplier}
+                  onChange={(option) => setSelectedSupplier(option)}
+                  isClearable
+                  placeholder="Seleccionar proveedor..."
+                  className="w-full text-black"
+                />
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <label className="block text-gray_m dark:text-white text-sm font-semibold">

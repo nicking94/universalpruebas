@@ -191,6 +191,8 @@ export type DailyCashMovement = {
   unit?: "Unid." | "gr" | "Kg" | "ml" | "L";
   isCreditPayment?: boolean;
   originalSaleId?: number;
+  supplierId?: number;
+  supplierName?: string;
 };
 export type DailyCash = {
   id: number;
@@ -234,4 +236,28 @@ export type Customer = {
   phone?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type SupplierContact = {
+  name: string;
+  phone?: string;
+  email?: string;
+};
+
+export type Supplier = {
+  id: number;
+  companyName: string;
+  contacts: SupplierContact[];
+  lastVisit?: string;
+  nextVisit?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+export type DatepickerProps = {
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
+  error?: string | null;
+  isClearable?: boolean;
+  label?: string;
+  placeholderText?: string;
 };

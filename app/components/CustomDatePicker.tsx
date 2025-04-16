@@ -3,20 +3,16 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale/es";
-import { Calendar } from "lucide-react";
+import { Calendar, X } from "lucide-react";
+import { DatepickerProps } from "../lib/types/types";
 
-interface Props {
-  value: string | undefined;
-  onChange: (value: string | undefined) => void;
-  error?: string;
-  isClearable?: boolean;
-}
-
-const CustomDatePicker: React.FC<Props> = ({
+const CustomDatePicker: React.FC<DatepickerProps> = ({
   value,
   onChange,
   error,
   isClearable = false,
+  label = "Fecha de vencimiento",
+  placeholderText = "Seleccionar fecha de vencimiento...",
 }) => {
   const [startDate, setStartDate] = useState<Date | null>(null);
 
@@ -34,6 +30,9 @@ const CustomDatePicker: React.FC<Props> = ({
     }
   }, [value]);
 
+  const handleClear = () => {
+    handleDateChange(null);
+  };
   const handleDateChange = (date: Date | null) => {
     setStartDate(date);
     if (date) {
@@ -50,7 +49,7 @@ const CustomDatePicker: React.FC<Props> = ({
         htmlFor="datepicker"
         className="block text-gray_m dark:text-white text-sm font-semibold mb-1"
       >
-        Fecha de vencimiento
+        {label}
       </label>
       <div className="relative w-full">
         <DatePicker
@@ -59,11 +58,10 @@ const CustomDatePicker: React.FC<Props> = ({
           onChange={handleDateChange}
           dateFormat="dd-MM-yyyy"
           locale={es}
-          placeholderText="Seleccionar fecha de vencimiento..."
+          placeholderText={placeholderText}
           className="pl-10 border border-gray_xl focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l outline-none text-gray_b"
           wrapperClassName="w-full"
-          isClearable={isClearable}
-          clearButtonClassName="text-gray-500 hover:text-red-500"
+          isClearable={false}
         />
         {!startDate && (
           <Calendar
@@ -79,6 +77,15 @@ const CustomDatePicker: React.FC<Props> = ({
               }
             }}
           />
+        )}
+        {isClearable && startDate && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="cursor-pointer absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-blue_b"
+          >
+            <X size={20} />
+          </button>
         )}
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}

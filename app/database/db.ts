@@ -1,5 +1,12 @@
 import Dexie, { Table } from "dexie";
-import { Product, Sale, Theme, DailyCash, Customer } from "../lib/types/types";
+import {
+  Product,
+  Sale,
+  Theme,
+  DailyCash,
+  Customer,
+  Supplier,
+} from "../lib/types/types";
 
 class MyDatabase extends Dexie {
   theme!: Table<Theme, number>;
@@ -13,6 +20,7 @@ class MyDatabase extends Dexie {
     number
   >;
   customers!: Table<Customer, string>;
+  suppliers!: Table<Supplier, number>;
 
   constructor() {
     super("MyDatabase");
@@ -25,6 +33,7 @@ class MyDatabase extends Dexie {
       dailyCashMovements: "++id, dailyCashId, date, type",
       payments: "++id, saleId, date",
       customers: "&id, name",
+      suppliers: "++id, companyName, lastVisit, nextVisit, createdAt",
     });
   }
 }

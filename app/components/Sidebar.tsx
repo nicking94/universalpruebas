@@ -8,6 +8,7 @@ import {
   Wallet,
   Headphones,
   Users,
+  Truck,
   // Truck,
 } from "lucide-react";
 import Button from "./Button";
@@ -19,21 +20,22 @@ import { useEffect, useState } from "react";
 import { TbCashRegister } from "react-icons/tb";
 
 const menuItems = [
-  { label: "Ventas", href: "/ventas", icon: <ShoppingCart /> },
-  { label: "Productos", href: "/productos", icon: <Package /> },
-  { label: "Clientes", href: "/clientes", icon: <Users /> },
-  { label: "Fiados", href: "/fiados", icon: <Wallet /> },
   {
     label: "Caja diaria",
     href: "/caja-diaria",
     icon: <TbCashRegister className="w-6 h-6" />,
   },
+  { label: "Ventas", href: "/ventas", icon: <ShoppingCart /> },
+  { label: "Productos", href: "/productos", icon: <Package /> },
+  { label: "Clientes", href: "/clientes", icon: <Users /> },
+  { label: "Fiados", href: "/fiados", icon: <Wallet /> },
+
+  { label: "Proovedores", href: "/proveedores", icon: <Truck /> },
   {
     label: "Soporte técnico",
     href: "https://wa.me/5492613077147",
     icon: <Headphones />,
   },
-  // { label: "Proovedores", href: "/proovedores", icon: <Truck /> },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
