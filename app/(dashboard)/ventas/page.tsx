@@ -83,7 +83,6 @@ const VentasPage = () => {
         break;
       case "L":
       case "ml":
-        // Para líquidos, manejamos igual que sólidos por simplicidad
         quantityInKg = unit === "L" ? quantity : quantity / 1000;
         break;
       default:
@@ -223,11 +222,9 @@ const VentasPage = () => {
       setIsNotificationOpen(false);
     }, 2000);
   };
-  // En addIncomeToDailyCash (debería estar en VentasPage), modificar para manejar fiados
   const addIncomeToDailyCash = async (
     sale: Sale & { manualAmount?: number; credit?: boolean; paid?: boolean }
   ) => {
-    // No registrar si es un fiado no pagado
     if (sale.credit && !sale.paid) {
       return;
     }
@@ -237,8 +234,6 @@ const VentasPage = () => {
       let dailyCash = await db.dailyCashes.get({ date: today });
 
       const movements: DailyCashMovement[] = [];
-
-      // Agregar movimientos de productos
       if (sale.products.length > 0) {
         sale.products.forEach((product) => {
           const profit = (product.price - product.costPrice) * product.quantity;
@@ -263,13 +258,11 @@ const VentasPage = () => {
             quantity: product.quantity,
             unit: product.unit,
             profit: profit,
-            isCreditPayment: sale.credit, // Marcar si es pago de fiado
-            originalSaleId: sale.id, // ID de la venta original
+            isCreditPayment: sale.credit,
+            originalSaleId: sale.id,
           });
         });
       }
-
-      // Agregar movimiento manual si existe
       if (sale.manualAmount && sale.manualAmount > 0) {
         movements.push({
           id: Date.now(),
@@ -409,8 +402,8 @@ const VentasPage = () => {
   };
 
   const handleConfirmAddSale = async () => {
-    if (newSale.products.length === 0 && newSale.manualAmount === 0) {
-      showNotification("Debe agregar productos o un monto manual", "error");
+    if (newSale.products.length === 0) {
+      showNotification("Debe agregar al menos un producto", "error");
       return;
     }
 
@@ -436,9 +429,7 @@ const VentasPage = () => {
         return;
       }
     }
-
     try {
-      // Actualizar stock
       for (const product of newSale.products) {
         const updatedStock = updateStockAfterSale(
           product.id,
@@ -450,16 +441,12 @@ const VentasPage = () => {
 
       let customerId = selectedCustomer?.value;
       const generateCustomerId = (name: string): string => {
-        // Elimina caracteres especiales y reemplaza espacios con guiones
         const cleanName = name
           .toUpperCase()
           .trim()
           .replace(/\s+/g, "-")
           .replace(/[^a-zA-Z0-9-]/g, "");
-
-        // Añade un timestamp para asegurar unicidad
         const timestamp = Date.now().toString().slice(-5);
-
         return `${cleanName}-${timestamp}`;
       };
 
@@ -659,7 +646,7 @@ const VentasPage = () => {
   const handleUnitChange = (
     productId: number,
     selectedOption: SingleValue<UnitOption>,
-    currentQuantity: number // Cambiar a number en lugar de string
+    currentQuantity: number
   ) => {
     if (!selectedOption) return;
 
@@ -668,8 +655,6 @@ const VentasPage = () => {
         if (p.id === productId) {
           const newUnit = selectedOption.value as Product["unit"];
           let newQuantity = currentQuantity;
-
-          // Solo convertir si el valor actual es un número válido
           if (!isNaN(currentQuantity)) {
             if (p.unit === "Kg" && newUnit === "gr") {
               newQuantity = currentQuantity * 1000;
@@ -680,8 +665,6 @@ const VentasPage = () => {
             } else if (p.unit === "ml" && newUnit === "L") {
               newQuantity = currentQuantity / 1000;
             }
-
-            // Redondear a 3 decimales para evitar números largos
             newQuantity = parseFloat(newQuantity.toFixed(3));
           }
 
@@ -720,8 +703,6 @@ const VentasPage = () => {
       };
     });
   };
-
-  // Get current sales
   const indexOfLastSale = currentPage * salesPerPage;
   const indexOfFirstSale = indexOfLastSale - salesPerPage;
   const currentSales = filteredSales.slice(indexOfFirstSale, indexOfLastSale);
@@ -926,19 +907,20 @@ const VentasPage = () => {
               </div>
             </Modal>
           )}
-
-          <Pagination
-            text="Ventas por página"
-            text2="Total de ventas"
-            currentPage={currentPage}
-            totalItems={filteredSales.length}
-            itemsPerPage={salesPerPage}
-            onPageChange={setCurrentPage}
-            onItemsPerPageChange={(newItemsPerPage) => {
-              setSalesPerPage(newItemsPerPage);
-              setCurrentPage(1);
-            }}
-          />
+          {currentSales.length > 0 && (
+            <Pagination
+              text="Ventas por página"
+              text2="Total de ventas"
+              currentPage={currentPage}
+              totalItems={filteredSales.length}
+              itemsPerPage={salesPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={(newItemsPerPage) => {
+                setSalesPerPage(newItemsPerPage);
+                setCurrentPage(1);
+              }}
+            />
+          )}
         </div>
 
         <Modal
@@ -1034,7 +1016,6 @@ const VentasPage = () => {
                             value={product.quantity.toString() || ""}
                             onChange={(e) => {
                               const value = e.target.value;
-                              // Permitir vacío o número válido
                               if (value === "" || !isNaN(Number(value))) {
                                 handleQuantityChange(
                                   product.id,

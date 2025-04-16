@@ -54,8 +54,6 @@ const ProductsPage = () => {
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [barcodeInput, setBarcodeInput] = useState("");
-
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage, setProductsPerPage] = useState(5);
 
@@ -119,7 +117,6 @@ const ProductsPage = () => {
     setIsPriceModalOpen(true);
     setScannedProduct(null);
     setBarcodeInput("");
-    // Enfocar el input después de que el modal se abra
     setTimeout(() => {
       const input = document.getElementById("price-check-barcode");
       if (input) input.focus();
@@ -137,7 +134,7 @@ const ProductsPage = () => {
     } else {
       showNotification("Producto no encontrado", "error");
     }
-    setBarcodeInput(""); // Limpiar después de escanear
+    setBarcodeInput("");
   };
   const hasChanges = (originalProduct: Product, updatedProduct: Product) => {
     return (
@@ -185,7 +182,6 @@ const ProductsPage = () => {
         showNotification(`Producto ${newProduct.name} actualizado`, "success");
         setEditingProduct(null);
       } else {
-        // Agregar nuevo producto
         const id = await db.products.add(newProduct);
         setProducts([...products, { ...newProduct, id }]);
         showNotification(`Producto ${newProduct.name} agregado`, "success");
@@ -194,8 +190,6 @@ const ProductsPage = () => {
       showNotification("Error al guardar el producto", "error");
       console.error(error);
     }
-
-    // Resetear valores
     setNewProduct({
       id: Date.now(),
       name: "",
@@ -292,7 +286,7 @@ const ProductsPage = () => {
         }
       } catch (error) {
         console.error("Error fetching products:", error);
-        showNotification("Error al cargar los productos", "error"); // <-- Agrega esto
+        showNotification("Error al cargar los productos", "error");
       }
     };
 
@@ -518,17 +512,18 @@ const ProductsPage = () => {
               )}
             </tbody>
           </table>
-
-          <Pagination
-            currentPage={currentPage}
-            totalItems={sortedProducts.length}
-            itemsPerPage={productsPerPage}
-            onPageChange={paginate}
-            onItemsPerPageChange={(newItemsPerPage) => {
-              setProductsPerPage(newItemsPerPage);
-              setCurrentPage(1);
-            }}
-          />
+          {sortedProducts.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={sortedProducts.length}
+              itemsPerPage={productsPerPage}
+              onPageChange={paginate}
+              onItemsPerPageChange={(newItemsPerPage) => {
+                setProductsPerPage(newItemsPerPage);
+                setCurrentPage(1);
+              }}
+            />
+          )}
         </div>
 
         <Modal

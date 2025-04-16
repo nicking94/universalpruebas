@@ -1,7 +1,9 @@
 "use client";
+import Image from "next/image";
 import { useSidebar } from "../context/SidebarContext";
 import { NavbarProps } from "../lib/types/types";
 import UserMenu from "./userMenu";
+import logo from "../../public/logo.png";
 
 const Navbar: React.FC<NavbarProps> = ({
   theme,
@@ -17,7 +19,11 @@ const Navbar: React.FC<NavbarProps> = ({
           isSidebarOpen ? "ml-64" : "ml-30"
         } transition-all duration-200 flex items-center justify-between h-10`}
       >
-        <h1 className="text-2xl">MarketMix</h1>
+        <div className="flex items-center gap-1">
+          <Image className=" rounded-full w-8 h-8" src={logo} alt="User Logo" />
+          <h1 className="text-lg italic">Universal App</h1>
+        </div>
+
         <div className="flex items-center gap-10">
           <UserMenu
             theme={theme}

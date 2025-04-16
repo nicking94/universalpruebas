@@ -11,8 +11,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "MarketMix",
-  description: "Dashboard MarketMix",
+  title: "Universal App",
+  description: "Software de gestión",
 };
 
 export default function RootLayout({

@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import Button from "./Button";
 import { AuthData } from "../lib/types/types";
 import Image from "next/image";
-import logo from "../../public/logo.jpg";
+import logo from "../../public/logo.png";
 
 interface AuthFormProps {
   type?: "login" | "register";

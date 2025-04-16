@@ -1,7 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { db } from "../database/db"; // Asegúrate de importar la base de datos
-
-// Definir el tipo del contexto
+import { db } from "../database/db";
 interface AuthContextType {
   isAuthenticated: boolean | null;
   setIsAuthenticated: (authStatus: boolean) => void;
@@ -23,7 +21,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const checkAuth = async () => {
       const authData = await db.auth.get(1);
-      setIsAuthenticated(authData?.isAuthenticated || false); // Establecer el valor desde la base de datos
+      setIsAuthenticated(authData?.isAuthenticated || false);
     };
 
     checkAuth();
@@ -31,7 +29,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateAuthStatus = async (authStatus: boolean) => {
     setIsAuthenticated(authStatus);
-    // Actualizar el estado de autenticación en la base de datos
     await db.auth.put({ id: 1, isAuthenticated: authStatus });
   };
 

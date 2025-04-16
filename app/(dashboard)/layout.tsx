@@ -21,10 +21,7 @@ export default function AppLayout({
   };
 
   const handleCloseSession = async () => {
-    // Establecer isAuthenticated a false en la base de datos
     await db.auth.put({ id: 1, isAuthenticated: false });
-
-    // Redirigir al login
     router.push("/login");
   };
 

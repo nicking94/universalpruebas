@@ -7,7 +7,7 @@ const SidebarContext = createContext<SidebarContextProps | undefined>(
 );
 
 export const SidebarProvider = ({ children }: { children: ReactNode }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 🔹 Siempre abierto en la primera carga
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);

@@ -128,15 +128,12 @@ const Pagination: React.FC<PaginationProps> = ({
               </button>
             </li>
           )}
-
-          {/* Mostrar puntos suspensivos si hay páginas ocultas al final */}
           {currentPage < totalPages - 2 && (
             <li>
               <span className="px-2 text-gray-500">...</span>
             </li>
           )}
 
-          {/* Mostrar última página si no es la actual */}
           {currentPage < totalPages - 1 && (
             <li>
               <button
@@ -148,8 +145,6 @@ const Pagination: React.FC<PaginationProps> = ({
               </button>
             </li>
           )}
-
-          {/* Botón Siguiente */}
           <li>
             <button
               onClick={handleNext}
@@ -167,7 +162,6 @@ const Pagination: React.FC<PaginationProps> = ({
         </ul>
       </nav>
 
-      {/* Contador total */}
       <div className="text-sm text-gray-600 dark:text-gray-300">
         {text2}: <span className="font-medium">{totalItems}</span>
       </div>

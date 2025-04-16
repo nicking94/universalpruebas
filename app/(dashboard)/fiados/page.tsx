@@ -81,22 +81,6 @@ const FiadosPage = () => {
 
     fetchData();
   }, []);
-  useEffect(() => {
-    const fetchCreditSales = async () => {
-      const sales = await db.sales
-        .filter((sale) => sale.credit === true)
-        .toArray();
-      setCreditSales(sales as CreditSale[]);
-    };
-
-    const fetchPayments = async () => {
-      const payments = await db.payments.toArray();
-      setPayments(payments);
-    };
-
-    fetchCreditSales();
-    fetchPayments();
-  }, []);
 
   const showNotification = (
     message: string,
@@ -112,14 +96,20 @@ const FiadosPage = () => {
     const customerSales = creditSales.filter(
       (sale) => sale.customerName === customerName
     );
-    return customerSales.reduce((total, sale) => {
-      const paymentsForSale = payments
-        .filter((p) => p.saleId === sale.id)
-        .reduce((sum, p) => sum + p.amount, 0);
-      return total + (sale.total - paymentsForSale);
-    }, 0);
-  };
+    const customerPayments = payments.filter((p) =>
+      creditSales.some(
+        (s) => s.id === p.saleId && s.customerName === customerName
+      )
+    );
 
+    const totalSales = customerSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalPayments = customerPayments.reduce(
+      (sum, p) => sum + p.amount,
+      0
+    );
+
+    return totalSales - totalPayments;
+  };
   const calculateRemainingBalance = (sale: CreditSale) => {
     if (!sale) return 0;
     const totalPayments = payments
@@ -131,7 +121,6 @@ const FiadosPage = () => {
   const addIncomeToDailyCash = async (
     sale: CreditSale & { manualAmount?: number }
   ) => {
-    // Verificación de tipos mejorada
     if (sale.credit && !sale.paid) {
       return;
     }
@@ -141,8 +130,6 @@ const FiadosPage = () => {
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       const movements: DailyCashMovement[] = [];
-
-      // Agregar movimientos de productos
       if (sale.products && sale.products.length > 0) {
         sale.products.forEach((product) => {
           const profit =
@@ -232,15 +219,12 @@ const FiadosPage = () => {
     if (!customerToDelete) return;
 
     try {
-      // Encontrar el cliente por nombre
       const customer = customers.find((c) => c.name === customerToDelete);
 
       if (!customer) {
         showNotification("Cliente no encontrado", "error");
         return;
       }
-
-      // Eliminar solo las ventas a crédito y pagos asociados
       const salesToDelete = creditSales
         .filter((sale) => sale.customerName === customerToDelete)
         .map((sale) => sale.id);
@@ -261,8 +245,6 @@ const FiadosPage = () => {
       setIsDeleteModalOpen(false);
       setCustomerToDelete(null);
       setIsInfoModalOpen(false);
-
-      // Nota: El cliente permanece en la base de datos
     } catch (error) {
       console.error("Error al eliminar fiados:", error);
       showNotification("Error al eliminar fiados", "error");
@@ -277,16 +259,12 @@ const FiadosPage = () => {
       setPayments(payments.filter((p) => p.saleId !== saleId));
 
       showNotification("Fiado eliminado correctamente", "success");
-
-      // Actualizar la información del modal si está abierto
       if (currentCustomerInfo) {
         const updatedSales = currentCustomerInfo.sales.filter(
           (s) => s.id !== saleId
         );
-
-        // Verificar si quedan fiados después de la eliminación
         if (updatedSales.length === 0) {
-          setIsInfoModalOpen(false); // Cerrar el modal si no hay más fiados
+          setIsInfoModalOpen(false);
           return;
         }
 
@@ -324,48 +302,58 @@ const FiadosPage = () => {
         amount: paymentAmount,
         date: new Date().toISOString(),
       };
-
       await db.payments.add(newPayment);
-      setPayments([...payments, newPayment]);
-
+      const updatedPayments = [...payments, newPayment];
       const newRemainingBalance = remainingBalance - paymentAmount;
-
-      // Si se completó el pago, marcar como pagado y registrar en caja diaria
+      setPayments(updatedPayments);
       if (newRemainingBalance <= 0) {
         await db.sales.update(currentCreditSale.id, { paid: true });
+        const updatedCreditSales = creditSales.map((sale) =>
+          sale.id === currentCreditSale.id ? { ...sale, paid: true } : sale
+        );
+        setCreditSales(updatedCreditSales);
 
-        // Crear objeto con todos los campos necesarios
         const saleToRegister: CreditSale = {
           ...currentCreditSale,
           total: paymentAmount,
           paid: true,
-          products: currentCreditSale.products || [], // Asegurar que products existe
-          paymentMethod: currentCreditSale.paymentMethod || "Efectivo", // Valor por defecto
+          products: currentCreditSale.products || [],
+          paymentMethod: currentCreditSale.paymentMethod || "Efectivo",
         };
-
         await addIncomeToDailyCash(saleToRegister);
+      }
+      if (currentCustomerInfo) {
+        const updatedBalance = updatedPayments
+          .filter((p) =>
+            currentCustomerInfo.sales.some((s) => s.id === p.saleId)
+          )
+          .reduce((sum, p) => sum + p.amount, 0);
+
+        const totalDebt = currentCustomerInfo.sales.reduce(
+          (sum, sale) => sum + sale.total,
+          0
+        );
+
+        const newCustomerBalance = totalDebt - updatedBalance;
+
+        setCurrentCustomerInfo({
+          ...currentCustomerInfo,
+          balance: newCustomerBalance,
+          sales: currentCustomerInfo.sales.map((sale) => {
+            if (sale.id === currentCreditSale.id) {
+              return {
+                ...sale,
+                paid: newRemainingBalance <= 0,
+              };
+            }
+            return sale;
+          }),
+        });
       }
 
       showNotification("Pago registrado correctamente", "success");
       setIsPaymentModalOpen(false);
       setPaymentAmount(0);
-
-      // Actualizar la lista de ventas
-      const updatedSales = await db.sales.toArray();
-      setCreditSales(
-        updatedSales.filter((sale): sale is CreditSale => sale.credit === true)
-      );
-
-      // Actualizar la información del modal si está abierto
-      if (currentCustomerInfo) {
-        const updatedBalance = calculateCustomerBalance(
-          currentCustomerInfo.name
-        );
-        setCurrentCustomerInfo({
-          ...currentCustomerInfo,
-          balance: updatedBalance,
-        });
-      }
     } catch (error) {
       console.error("Error al registrar pago:", error);
       showNotification("Error al registrar pago", "error");
@@ -648,18 +636,18 @@ const FiadosPage = () => {
 
             <div className="flex justify-end space-x-2">
               <Button
+                text="Registrar"
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={handlePayment}
+              />
+              <Button
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:text-white hover:dark:text-white"
                 colorBg="bg-gray_xl dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
                 onClick={() => setIsPaymentModalOpen(false)}
-              />
-              <Button
-                text="Registrar"
-                colorText="text-white"
-                colorTextHover="text-white"
-                onClick={handlePayment}
               />
             </div>
           </div>

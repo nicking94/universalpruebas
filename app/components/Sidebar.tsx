@@ -7,6 +7,7 @@ import {
   Repeat,
   Wallet,
   Headphones,
+  Users,
   // Truck,
 } from "lucide-react";
 import Button from "./Button";
@@ -20,6 +21,7 @@ import { TbCashRegister } from "react-icons/tb";
 const menuItems = [
   { label: "Ventas", href: "/ventas", icon: <ShoppingCart /> },
   { label: "Productos", href: "/productos", icon: <Package /> },
+  { label: "Clientes", href: "/clientes", icon: <Users /> },
   { label: "Fiados", href: "/fiados", icon: <Wallet /> },
   {
     label: "Caja diaria",

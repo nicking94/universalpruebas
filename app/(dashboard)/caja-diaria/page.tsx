@@ -59,8 +59,6 @@ const CajaDiariaPage = () => {
       setDailyCashes((prev) =>
         prev.filter((dc) => dc.id !== dailyCashToDelete.id)
       );
-
-      // Si estamos eliminando la caja actual, la limpiamos
       if (currentDailyCash && currentDailyCash.id === dailyCashToDelete.id) {
         setCurrentDailyCash(null);
       }
@@ -72,8 +70,6 @@ const CajaDiariaPage = () => {
       showNotification("Error al eliminar caja", "error");
     }
   };
-
-  // Form states
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [movementType, setMovementType] = useState<"INGRESO" | "EGRESO">(
@@ -83,8 +79,6 @@ const CajaDiariaPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(
     null
   );
-
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -102,8 +96,6 @@ const CajaDiariaPage = () => {
     { value: "TRANSFERENCIA", label: "Transferencia" },
     { value: "TARJETA", label: "Tarjeta" },
   ];
-
-  // Función para filtrar movimientos
   const getFilteredMovements = () => {
     return selectedDayMovements.filter((movement) => {
       const typeMatch = filterType === "TODOS" || movement.type === filterType;
@@ -114,7 +106,6 @@ const CajaDiariaPage = () => {
     });
   };
 
-  // Calcular totales filtrados
   const calculateFilteredTotals = () => {
     const filtered = getFilteredMovements();
     return {
@@ -162,7 +153,6 @@ const CajaDiariaPage = () => {
     }).format(value);
   };
 
-  // Verificar estado de la caja
   const checkCashStatus = async () => {
     const today = new Date().toISOString().split("T")[0];
     const dailyCash = await db.dailyCashes.get({ date: today });
@@ -178,7 +168,6 @@ const CajaDiariaPage = () => {
     }
   };
 
-  // Abrir caja
   const openCash = async () => {
     if (!initialAmount) {
       showNotification("Debe ingresar un monto inicial", "error");
@@ -215,7 +204,6 @@ const CajaDiariaPage = () => {
     }
   };
 
-  // Cerrar caja
   const closeCash = async () => {
     if (!actualCashCount) {
       showNotification("Debe ingresar el monto real contado", "error");
@@ -233,12 +221,9 @@ const CajaDiariaPage = () => {
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       if (dailyCash) {
-        // Calcular solo ingresos en efectivo
         const cashIncome = dailyCash.movements
           .filter((m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO")
           .reduce((sum, m) => sum + m.amount, 0);
-
-        // Calcular todos los egresos (asumimos que siempre son en efectivo)
         const cashExpense = dailyCash.movements
           .filter((m) => m.type === "EGRESO")
           .reduce((sum, m) => sum + m.amount, 0);
@@ -251,20 +236,17 @@ const CajaDiariaPage = () => {
           ...dailyCash,
           closed: true,
           closingAmount: actualCashCountNumber,
-          cashIncome, // Solo ingresos en efectivo
-          cashExpense, // Egresos en efectivo
+          cashIncome,
+          cashExpense,
           otherIncome: dailyCash.movements
             .filter(
               (m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO"
             )
-            .reduce((sum, m) => sum + m.amount, 0), // Ingresos no en efectivo
+            .reduce((sum, m) => sum + m.amount, 0),
           closingDifference: difference,
           closingDate: new Date().toISOString(),
         };
-
         await db.dailyCashes.update(dailyCash.id, updatedCash);
-
-        // Actualizar estados
         setDailyCashes((prev) =>
           prev.map((dc) => (dc.id === dailyCash.id ? updatedCash : dc))
         );
@@ -287,7 +269,7 @@ const CajaDiariaPage = () => {
         ingresos: number;
         egresos: number;
         ganancia: number;
-        gananciaNeta: number; // Nueva propiedad
+        gananciaNeta: number;
         movements: DailyCashMovement[];
         closed: boolean;
         initialAmount?: number;
@@ -306,7 +288,7 @@ const CajaDiariaPage = () => {
           ingresos: 0,
           egresos: 0,
           ganancia: 0,
-          gananciaNeta: 0, // Inicializar
+          gananciaNeta: 0,
           movements: [],
           closed: dailyCash.closed || false,
           initialAmount: dailyCash.initialAmount,
@@ -319,7 +301,6 @@ const CajaDiariaPage = () => {
         summary[date].movements.push(movement);
         if (movement.type === "INGRESO") {
           summary[date].ingresos += movement.amount;
-          // Sumar la ganancia si es un movimiento de producto
           if (movement.profit) {
             summary[date].gananciaNeta += movement.profit;
           }
@@ -331,7 +312,6 @@ const CajaDiariaPage = () => {
       summary[date].ganancia = summary[date].ingresos - summary[date].egresos;
     });
 
-    // Si hay una caja actual que no está en los resultados (porque es de hoy y no tiene movimientos)
     if (currentDailyCash) {
       const today = new Date().toISOString().split("T")[0];
       if (!summary[today]) {
@@ -358,7 +338,6 @@ const CajaDiariaPage = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
-  // Obtener resumen mensual
   const getMonthlySummary = () => {
     const dailySummaries = getDailySummary();
 
@@ -375,8 +354,6 @@ const CajaDiariaPage = () => {
 
   const dailySummaries = getDailySummary();
   const monthlySummary = getMonthlySummary();
-
-  // Agregar movimiento a la caja diaria
   const addMovement = async () => {
     if (!amount) {
       showNotification("Debe haber un monto", "error");
@@ -445,8 +422,6 @@ const CajaDiariaPage = () => {
       showNotification("Error al registrar movimiento", "error");
     }
   };
-
-  // Eliminar movimiento
   const handleDeleteMovement = async () => {
     if (!movementToDelete) return;
 
@@ -474,12 +449,11 @@ const CajaDiariaPage = () => {
 
         await db.dailyCashes.update(dailyCash.id, updatedCash);
 
-        // Actualizar los estados
         setDailyCashes((prev) =>
           prev.map((dc) => (dc.id === dailyCash.id ? updatedCash : dc))
         );
         setCurrentDailyCash(updatedCash);
-        setSelectedDayMovements(updatedMovements); // Actualizar movimientos en el modal
+        setSelectedDayMovements(updatedMovements);
 
         setIsConfirmModalOpen(false);
         showNotification("Movimiento eliminado correctamente", "success");
@@ -512,7 +486,6 @@ const CajaDiariaPage = () => {
     fetchData();
   }, []);
 
-  // Paginación
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = dailySummaries.slice(indexOfFirstItem, indexOfLastItem);
@@ -545,8 +518,6 @@ const CajaDiariaPage = () => {
             </p>
           </div>
         </div>
-
-        {/* Filtros */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
@@ -706,8 +677,6 @@ const CajaDiariaPage = () => {
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
         <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Caja Diaria</h1>
-
-        {/* Estado de caja actual */}
         {currentDailyCash ? (
           <div
             className={`p-3 rounded-lg mb-4 ${
@@ -726,8 +695,6 @@ const CajaDiariaPage = () => {
                   Monto inicial:{" "}
                   {formatCurrency(currentDailyCash.initialAmount)}
                 </p>
-
-                {/* Mostrar ingresos separados por tipo de pago */}
                 {!currentDailyCash.closed ? (
                   <>
                     <p>
@@ -818,11 +785,8 @@ const CajaDiariaPage = () => {
             />
           </div>
         )}
-
-        {/* Resumen Mensual */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {" "}
-          {/* Cambiado a 4 columnas */}
           <div className="bg-green-100 text-green-800 p-4 rounded-lg">
             <h3 className="font-bold">Ingresos Totales</h3>
             <p className="text-2xl">
@@ -840,7 +804,6 @@ const CajaDiariaPage = () => {
             </p>
           </div>
         </div>
-        {/* Filtros de mes y año */}
         <div className="flex justify-between mb-4">
           <div className="flex gap-4">
             <Select
@@ -959,6 +922,7 @@ const CajaDiariaPage = () => {
               )}
             </tbody>
           </table>
+
           <Pagination
             text="Días por página"
             text2="Total de días"
@@ -972,8 +936,6 @@ const CajaDiariaPage = () => {
             }}
           />
         </div>
-
-        {/* Modal para agregar movimiento */}
         <Modal
           isOpen={isOpenModal}
           onClose={() => setIsOpenModal(false)}
@@ -1051,8 +1013,6 @@ const CajaDiariaPage = () => {
             />
           </div>
         </Modal>
-
-        {/* Modal para abrir caja */}
         <Modal
           isOpen={isOpenCashModal}
           onClose={() => setIsOpenCashModal(false)}
@@ -1082,7 +1042,6 @@ const CajaDiariaPage = () => {
           </div>
         </Modal>
         <DetailModal />
-        {/* Modal para cerrar caja */}
         <Modal
           isOpen={isCloseCashModal}
           onClose={() => setIsCloseCashModal(false)}
@@ -1183,8 +1142,6 @@ const CajaDiariaPage = () => {
             />
           </div>
         </Modal>
-
-        {/* Modal de confirmación para eliminar */}
         <Modal
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
@@ -1227,7 +1184,6 @@ const CajaDiariaPage = () => {
             />
           </div>
         </Modal>
-        {/* Modal de confirmación para eliminar caja */}
         <Modal
           isOpen={isDeleteCashModalOpen}
           onClose={() => setIsDeleteCashModalOpen(false)}

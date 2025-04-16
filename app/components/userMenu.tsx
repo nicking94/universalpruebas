@@ -1,7 +1,7 @@
 import { Sun, Moon, LogOut } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { UserMenuProps } from "../lib/types/types";
-import logo from "../../public/logo.jpg";
+import logo from "../../public/logo.png";
 import Image from "next/image";
 
 const UserMenu: React.FC<UserMenuProps> = ({
@@ -36,10 +36,10 @@ const UserMenu: React.FC<UserMenuProps> = ({
       <div
         ref={userIconRef}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="cursor-pointer flex bg-gray_xl rounded-full p-1 text-gray_b w-14 h-14"
+        className="cursor-pointer flex bg-white rounded-full p-1 text-gray_b w-14 h-14"
       >
         <Image
-          className="shadow-lg shadow-gray_m dark:shadow-gray_xl rounded-full"
+          className="shadow-lg shadow-blue_b rounded-full"
           src={logo}
           alt="User Logo"
         />

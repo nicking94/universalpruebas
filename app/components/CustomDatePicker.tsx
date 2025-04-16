@@ -62,7 +62,7 @@ const CustomDatePicker: React.FC<Props> = ({
           placeholderText="Seleccionar fecha de vencimiento..."
           className="pl-10 border border-gray_xl focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l outline-none text-gray_b"
           wrapperClassName="w-full"
-          isClearable={isClearable} // Añade esta prop
+          isClearable={isClearable}
           clearButtonClassName="text-gray-500 hover:text-red-500"
         />
         {!startDate && (
