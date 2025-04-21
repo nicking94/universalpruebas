@@ -55,7 +55,7 @@ const Pagination: React.FC<PaginationProps> = ({
           id="items-per-page"
           value={itemsPerPage}
           onChange={handleItemsPerPageChange}
-          className="cursor-pointer bg-white text-black border border-gray_l rounded-md p-1 text-sm focus:outline-none"
+          className="cursor-pointer bg-white text-black border border-gray_xl rounded-md p-1 text-sm focus:outline-none"
           aria-label="Items por página"
         >
           {[5, 10, 20, 30].map((n) => (

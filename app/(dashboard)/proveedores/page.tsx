@@ -30,8 +30,6 @@ const ProveedoresPage = () => {
   >("success");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Form state
   const [companyName, setCompanyName] = useState("");
   const [contacts, setContacts] = useState<SupplierContact[]>([
     { name: "", phone: "" },
@@ -223,21 +221,21 @@ const ProveedoresPage = () => {
             <thead className="text-white bg-blue_b">
               <tr>
                 <th className="px-4 py-2 text-left">Empresa</th>
-                <th className="px-4 py-2 text-left">Proveedores</th>
+                <th className="px-4 py-2">Proveedores</th>
                 <th className="px-4 py-2">Última Visita</th>
                 <th className="px-4 py-2">Próxima Visita</th>
-                <th className="px-4 py-2">Acciones</th>
+                <th className="w-40 max-w-[10rem] px-4 py-2">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
+            <tbody className={`bg-white text-gray_b divide-y divide-gray_xl`}>
               {currentItems.length > 0 ? (
                 currentItems.map((supplier) => (
                   <tr key={supplier.id}>
-                    <td className="px-4 py-2 text-left font-semibold">
+                    <td className="px-4 py-2 text-left font-semibold border border-gray_xl">
                       {supplier.companyName}
                     </td>
-                    <td className="px-4 py-2 text-left">
-                      <div className="flex items-center space-x-4  ">
+                    <td className="px-4 py-2  border border-gray_xl">
+                      <div className="flex justify-center items-center space-x-4  ">
                         {supplier.contacts.length > 0 && (
                           <div className="text-sm">
                             <p className="font-medium">
@@ -265,7 +263,7 @@ const ProveedoresPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 border border-gray_xl">
                       {supplier.lastVisit ? (
                         format(parseISO(supplier.lastVisit), "dd/MM/yyyy", {
                           locale: es,
@@ -274,7 +272,7 @@ const ProveedoresPage = () => {
                         <span className="text-gray_m">No registrada</span>
                       )}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 border border-gray_xl">
                       {supplier.nextVisit ? (
                         <span className="font-semibold">
                           {format(parseISO(supplier.nextVisit), "dd/MM/yyyy", {
@@ -285,7 +283,7 @@ const ProveedoresPage = () => {
                         <span className="text-gray_m">No programada</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 space-x-2">
+                    <td className="px-4 py-2 space-x-2 border border-gray_xl">
                       <div className="flex justify-center gap-2">
                         <Button
                           icon={<Edit size={20} />}

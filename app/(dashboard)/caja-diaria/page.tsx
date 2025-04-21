@@ -7,16 +7,17 @@ import {
   DailyCashMovement,
   Option,
   PaymentMethod,
+  PaymentSplit,
   Supplier,
 } from "@/app/lib/types/types";
-import { Plus, Info, X, Check } from "lucide-react";
+import { Plus, X, Check, Info, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import { format, parseISO, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
-import Select from "react-select";
+import Select, { SingleValue } from "react-select";
 import Input from "@/app/components/Input";
 
 const CajaDiariaPage = () => {
@@ -42,6 +43,7 @@ const CajaDiariaPage = () => {
   const [filterType, setFilterType] = useState<"TODOS" | "INGRESO" | "EGRESO">(
     "TODOS"
   );
+  const [amount, setAmount] = useState("");
   const [filterPaymentMethod, setFilterPaymentMethod] = useState<
     PaymentMethod | "TODOS"
   >("TODOS");
@@ -56,6 +58,12 @@ const CajaDiariaPage = () => {
     value: number;
     label: string;
   } | null>(null);
+
+  const paymentOptions: Option[] = [
+    { value: "EFECTIVO", label: "Efectivo" },
+    { value: "TRANSFERENCIA", label: "Transferencia" },
+    { value: "TARJETA", label: "Tarjeta" },
+  ];
 
   const deleteDailyCash = async () => {
     if (!dailyCashToDelete) return;
@@ -77,17 +85,17 @@ const CajaDiariaPage = () => {
       showNotification("Error al eliminar caja", "error");
     }
   };
-  const [amount, setAmount] = useState("");
+
   const [description, setDescription] = useState("");
   const [movementType, setMovementType] = useState<"INGRESO" | "EGRESO">(
     "INGRESO"
   );
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(
-    null
-  );
+  const [paymentMethods, setPaymentMethods] = useState<PaymentSplit[]>([
+    { method: "EFECTIVO", amount: 0 },
+  ]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -98,11 +106,6 @@ const CajaDiariaPage = () => {
     { value: "EGRESO", label: "Egreso" },
   ];
 
-  const paymentMethods: { value: PaymentMethod; label: string }[] = [
-    { value: "EFECTIVO", label: "Efectivo" },
-    { value: "TRANSFERENCIA", label: "Transferencia" },
-    { value: "TARJETA", label: "Tarjeta" },
-  ];
   const getFilteredMovements = () => {
     return selectedDayMovements.filter((movement) => {
       const typeMatch = filterType === "TODOS" || movement.type === filterType;
@@ -149,7 +152,7 @@ const CajaDiariaPage = () => {
     setIsNotificationOpen(true);
     setTimeout(() => {
       setIsNotificationOpen(false);
-    }, 2000);
+    }, 3000);
   };
 
   const formatCurrency = (value: number) => {
@@ -362,14 +365,14 @@ const CajaDiariaPage = () => {
   const dailySummaries = getDailySummary();
   const monthlySummary = getMonthlySummary();
   const addMovement = async () => {
-    if (!amount) {
-      showNotification("Debe haber un monto", "error");
-      return;
-    }
-
+    const totalPayment = paymentMethods.reduce((sum, m) => sum + m.amount, 0);
     const amountNumber = parseFloat(amount);
-    if (isNaN(amountNumber)) {
-      showNotification("El monto debe ser un número válido", "error");
+
+    if (Math.abs(totalPayment - amountNumber) > 0.01) {
+      showNotification(
+        "La suma de los métodos no coincide con el monto total",
+        "error"
+      );
       return;
     }
 
@@ -384,25 +387,20 @@ const CajaDiariaPage = () => {
         showNotification("La caja no está abierta", "error");
         return;
       }
-
-      if (!paymentMethod) {
-        throw new Error("El método de pago es obligatorio.");
-      }
-
-      const movement: DailyCashMovement = {
-        id: Date.now(),
-        amount: amountNumber,
+      const movements: DailyCashMovement[] = paymentMethods.map((method) => ({
+        id: Date.now() + Math.random(),
+        amount: method.amount,
         description,
         type: movementType,
-        paymentMethod,
+        paymentMethod: method.method,
         date: new Date().toISOString(),
         supplierId: selectedSupplier?.value,
         supplierName: selectedSupplier?.label,
-      };
+      }));
 
       const updatedCash = {
         ...dailyCash,
-        movements: [...dailyCash.movements, movement],
+        movements: [...dailyCash.movements, ...movements],
         totalIncome:
           movementType === "INGRESO"
             ? (dailyCash.totalIncome || 0) + amountNumber
@@ -423,13 +421,98 @@ const CajaDiariaPage = () => {
       setAmount("");
       setDescription("");
       setMovementType("INGRESO");
-      setPaymentMethod("EFECTIVO");
+      setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
       setIsOpenModal(false);
       showNotification("Movimiento registrado correctamente", "success");
     } catch (error) {
       console.error("Error al registrar movimiento:", error);
       showNotification("Error al registrar movimiento", "error");
     }
+  };
+  const handlePaymentMethodChange = (
+    index: number,
+    field: keyof PaymentSplit,
+    value: string | number
+  ) => {
+    setPaymentMethods((prev) => {
+      const updated = [...prev];
+
+      if (field === "amount") {
+        const numericValue =
+          typeof value === "string"
+            ? parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0
+            : (value as number);
+
+        updated[index] = {
+          ...updated[index],
+          amount: parseFloat(numericValue.toFixed(2)),
+        };
+
+        if (updated.length === 2) {
+          const totalPayment = updated.reduce((sum, m) => sum + m.amount, 0);
+          const difference = parseFloat(amount) - totalPayment;
+
+          if (difference !== 0) {
+            const otherIndex = index === 0 ? 1 : 0;
+            updated[otherIndex].amount = Math.max(
+              0,
+              updated[otherIndex].amount + difference
+            );
+          }
+        }
+      } else {
+        updated[index] = {
+          ...updated[index],
+          method: value as PaymentMethod,
+        };
+      }
+
+      return updated;
+    });
+  };
+  const handlePaymentAmountChange = (index: number, value: string) => {
+    const cleanValue = value.replace(/[^0-9]/g, "");
+    const numericValue = parseFloat(cleanValue) || 0;
+    handlePaymentMethodChange(index, "amount", numericValue);
+  };
+  const addPaymentMethod = () => {
+    setPaymentMethods((prev) => {
+      if (prev.length >= paymentOptions.length) return prev;
+      const newMethods = [...prev];
+      if (newMethods.length === 2) {
+        newMethods.forEach((method) => {
+          method.amount = 0;
+        });
+      }
+
+      const usedMethods = newMethods.map((m) => m.method);
+      const availableMethod = paymentOptions.find(
+        (option) => !usedMethods.includes(option.value as PaymentMethod)
+      );
+
+      return [
+        ...newMethods,
+        {
+          method: (availableMethod?.value as PaymentMethod) || "EFECTIVO",
+          amount: 0,
+        },
+      ];
+    });
+  };
+  const removePaymentMethod = (index: number) => {
+    setPaymentMethods((prev) => {
+      if (prev.length <= 1) return prev;
+
+      const updated = [...prev];
+      updated.splice(index, 1);
+      if (updated.length === 2) {
+        const totalAmount = parseFloat(amount) || 0;
+        updated[0].amount = totalAmount / 2;
+        updated[1].amount = totalAmount / 2;
+      }
+
+      return updated;
+    });
   };
   const handleDeleteMovement = async () => {
     if (!movementToDelete) return;
@@ -536,41 +619,33 @@ const CajaDiariaPage = () => {
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
+            <label className="block text-sm font-medium text-gray_b dark:text-white">
               Tipo
             </label>
             <Select
-              options={[
-                { value: "TODOS", label: "Todos" },
-                { value: "INGRESO", label: "Ingresos" },
-                { value: "EGRESO", label: "Egresos" },
-              ]}
-              value={{
-                value: filterType,
-                label:
-                  filterType === "TODOS"
-                    ? "Todos"
-                    : filterType === "INGRESO"
-                    ? "Ingresos"
-                    : "Egresos",
-              }}
+              options={[{ value: "TODOS", label: "Todos" }, ...paymentOptions]}
+              value={
+                filterPaymentMethod === "TODOS"
+                  ? { value: "TODOS", label: "Todos" }
+                  : paymentOptions.find((m) => m.value === filterPaymentMethod)
+              }
               onChange={(option) =>
                 option &&
-                setFilterType(option.value as "TODOS" | "INGRESO" | "EGRESO")
+                setFilterPaymentMethod(option.value as PaymentMethod | "TODOS")
               }
               className="w-full"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
+            <label className="block text-sm font-medium text-gray_b dark:text-white">
               Método de Pago
             </label>
             <Select
-              options={[{ value: "TODOS", label: "Todos" }, ...paymentMethods]}
+              options={[{ value: "TODOS", label: "Todos" }, ...paymentOptions]}
               value={
                 filterPaymentMethod === "TODOS"
                   ? { value: "TODOS", label: "Todos" }
-                  : paymentMethods.find((m) => m.value === filterPaymentMethod)
+                  : paymentOptions.find((m) => m.value === filterPaymentMethod)
               }
               onChange={(option) =>
                 option &&
@@ -598,22 +673,25 @@ const CajaDiariaPage = () => {
                   Cantidad
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Proveedor
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Descripción
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className=" w-40 max-w-[10rem] px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider ">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className={`bg-white divide-y divide-gray_xl`}>
               {filteredMovements.length > 0 ? (
                 filteredMovements.map((movement, index) => (
                   <tr
                     key={index}
-                    className={movement.type === "EGRESO" ? "bg-red-50 " : ""}
+                    className={movement.type === "EGRESO" ? "bg-red-50" : ""}
                   >
                     <td className="px-4 py-2 whitespace-nowrap text-sm">
                       <span
@@ -627,7 +705,8 @@ const CajaDiariaPage = () => {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-sm text-gray-500">
-                      {movement.paymentMethod}
+                      {movement.paymentMethod}:{" "}
+                      {formatCurrency(movement.amount)}
                     </td>
                     <td className="px-4 py-2 text-sm text-gray-500">
                       {movement.productName ||
@@ -636,6 +715,11 @@ const CajaDiariaPage = () => {
                     <td className="px-4 py-2 text-sm text-gray-500">
                       {movement.quantity
                         ? `${movement.quantity} ${movement.unit || ""}`
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-500">
+                      {movement.type === "EGRESO" && movement.supplierName
+                        ? movement.supplierName
                         : "-"}
                     </td>
                     <td
@@ -647,24 +731,27 @@ const CajaDiariaPage = () => {
                     >
                       {formatCurrency(movement.amount)}
                     </td>
-                    <td className=" px-4 py-2 text-sm text-gray-500">
+                    <td className="px-4 py-2 text-sm text-gray-500">
                       {movement.description || "-"}
                     </td>
                     <td className="flex justify-center items-center px-4 py-2 whitespace-nowrap text-sm">
                       <Button
-                        text="Eliminar"
-                        colorText="text-white"
+                        icon={<Trash size={20} />}
+                        colorText="text-gray_b"
                         colorTextHover="hover:text-white"
-                        colorBg="bg-red-500"
-                        colorBgHover="hover:bg-red-700"
+                        colorBg="bg-transparent"
+                        colorBgHover="hover:bg-red-500"
+                        px="px-1"
+                        py="py-1"
+                        minwidth="min-w-0"
                         onClick={() => handleDeleteClick(movement)}
-                      ></Button>
+                      />
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-4 text-center text-gray_l">
+                  <td colSpan={8} className="py-4 text-center text-gray_l">
                     No hay movimientos que coincidan con los filtros
                   </td>
                 </tr>
@@ -691,257 +778,257 @@ const CajaDiariaPage = () => {
   };
   return (
     <ProtectedRoute>
-      <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Caja Diaria</h1>
-        {currentDailyCash ? (
-          <div
-            className={`p-3 rounded-lg mb-4 ${
-              currentDailyCash.closed ? "bg-gray-200" : "bg-green-100"
-            }`}
-          >
-            <div className="flex justify-between items-center">
-              <div className="text-gray_m font-semibold">
-                <h3
-                  className={`text-gray_b font-bold ${
-                    currentDailyCash.closed ? "text-red-600" : "text-green-600"
-                  }`}
-                >
-                  {currentDailyCash.closed ? "Caja Cerrada" : "Caja Abierta"}
-                </h3>
-                <p>
-                  Fecha: {format(parseISO(currentDailyCash.date), "dd/MM/yyyy")}
-                </p>
-                <p>
-                  Monto inicial:{" "}
-                  {formatCurrency(currentDailyCash.initialAmount)}
-                </p>
-                {!currentDailyCash.closed ? (
-                  <>
-                    <p>
-                      Ingresos en efectivo:{" "}
-                      {formatCurrency(
-                        currentDailyCash.movements
-                          .filter(
-                            (m) =>
-                              m.type === "INGRESO" &&
-                              m.paymentMethod === "EFECTIVO"
-                          )
-                          .reduce((sum, m) => sum + m.amount, 0)
-                      )}
-                    </p>
-                    <p>
-                      Otros ingresos:{" "}
-                      {formatCurrency(
-                        currentDailyCash.movements
-                          .filter(
-                            (m) =>
-                              m.type === "INGRESO" &&
-                              m.paymentMethod !== "EFECTIVO"
-                          )
-                          .reduce((sum, m) => sum + m.amount, 0)
-                      )}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p>
-                      Ingresos en efectivo:{" "}
-                      {formatCurrency(currentDailyCash.cashIncome || 0)}
-                    </p>
-                    <p>
-                      Otros ingresos:{" "}
-                      {formatCurrency(currentDailyCash.otherIncome || 0)}
-                    </p>
-                    <p>
-                      Egresos:{" "}
-                      {formatCurrency(currentDailyCash.cashExpense || 0)}
-                    </p>
-                    <p className="font-semibold">
-                      Monto esperado (solo efectivo):{" "}
-                      {formatCurrency(
-                        currentDailyCash.initialAmount +
-                          (currentDailyCash.cashIncome || 0) -
-                          (currentDailyCash.cashExpense || 0)
-                      )}
-                    </p>
-                    <p>
-                      Efectivo contado:{" "}
-                      {formatCurrency(currentDailyCash.closingAmount || 0)}
-                    </p>
-                    <p
-                      className={`font-bold ${
-                        (currentDailyCash.closingDifference || 0) >= 0
-                          ? "text-green-600"
-                          : "text-red-600"
+      <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)] flex flex-col justify-between ">
+        <div className="flex flex-col justify-between h-[calc(100vh-80px)]">
+          <div>
+            <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">
+              Caja Diaria
+            </h1>
+            {currentDailyCash ? (
+              <div
+                className={`p-3 rounded-lg mb-4 ${
+                  currentDailyCash.closed ? "bg-red-100" : "bg-green-100"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="text-gray_m font-semibold">
+                    <h3
+                      className={`text-gray_b font-bold ${
+                        currentDailyCash.closed
+                          ? "text-red-600"
+                          : "text-green-600"
                       }`}
                     >
-                      Diferencia:{" "}
-                      {formatCurrency(currentDailyCash.closingDifference || 0)}
+                      {currentDailyCash.closed
+                        ? "Caja Cerrada"
+                        : "Caja Abierta"}
+                    </h3>
+                    <p>
+                      Fecha:{" "}
+                      {format(parseISO(currentDailyCash.date), "dd/MM/yyyy")}
                     </p>
-                  </>
-                )}
+                    <p>
+                      Monto inicial:{" "}
+                      {formatCurrency(currentDailyCash.initialAmount)}
+                    </p>
+                    {currentDailyCash.closed ? (
+                      <>
+                        <p>
+                          Ingresos en efectivo:{" "}
+                          {formatCurrency(currentDailyCash.cashIncome || 0)}
+                        </p>
+                        <p>
+                          Otros ingresos:{" "}
+                          {formatCurrency(currentDailyCash.otherIncome || 0)}
+                        </p>
+                        <p>
+                          Egresos:{" "}
+                          {formatCurrency(currentDailyCash.cashExpense || 0)}
+                        </p>
+                        <p className="font-semibold">
+                          Monto esperado (solo efectivo):{" "}
+                          {formatCurrency(
+                            currentDailyCash.initialAmount +
+                              (currentDailyCash.cashIncome || 0) -
+                              (currentDailyCash.cashExpense || 0)
+                          )}
+                        </p>
+                        <p>
+                          Efectivo contado:{" "}
+                          {formatCurrency(currentDailyCash.closingAmount || 0)}
+                        </p>
+                        <p
+                          className={`font-bold ${
+                            (currentDailyCash.closingDifference || 0) >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          Diferencia:{" "}
+                          {formatCurrency(
+                            currentDailyCash.closingDifference || 0
+                          )}
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
+                  {!currentDailyCash.closed && (
+                    <Button
+                      icon={<X />}
+                      text="Cerrar Caja"
+                      colorText="text-white"
+                      colorTextHover="text-white"
+                      colorBg="bg-red-500"
+                      colorBgHover="hover:bg-red-700"
+                      onClick={() => setIsCloseCashModal(true)}
+                    />
+                  )}
+                </div>
               </div>
-              {!currentDailyCash.closed && (
+            ) : (
+              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-2">
+                <p className="text-gray_m">No hay caja abierta para hoy</p>
                 <Button
-                  icon={<X />}
-                  text="Cerrar Caja"
+                  text="Abrir Caja"
                   colorText="text-white"
                   colorTextHover="text-white"
-                  colorBg="bg-red-500"
-                  colorBgHover="hover:bg-red-700"
-                  onClick={() => setIsCloseCashModal(true)}
+                  onClick={() => setIsOpenCashModal(true)}
                 />
-              )}
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              {" "}
+              <div className="bg-green-100 text-green-800 p-4 rounded-lg">
+                <h3 className="font-bold">Ingresos Totales</h3>
+                <p className="text-2xl">
+                  {formatCurrency(monthlySummary.ingresos)}
+                </p>
+              </div>
+              <div className="bg-red-100 text-red-800 p-4 rounded-lg">
+                <h3 className="font-bold">Egresos Totales</h3>
+                <p className="text-2xl">
+                  {formatCurrency(monthlySummary.egresos)}
+                </p>
+              </div>
+              <div className="bg-purple-100 text-purple-800 p-4 rounded-lg">
+                <h3 className="font-bold">Ganancia</h3>
+                <p className="text-2xl">
+                  {formatCurrency(monthlySummary.gananciaNeta || 0)}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-between mb-2">
+              <div className="flex gap-4">
+                <Select
+                  options={monthOptions}
+                  value={monthOptions.find((m) => m.value === selectedMonth)}
+                  onChange={(option) =>
+                    option && setSelectedMonth(option.value)
+                  }
+                  className="w-40"
+                />
+                <Select
+                  options={yearOptions}
+                  value={yearOptions.find((y) => y.value === selectedYear)}
+                  onChange={(option) => option && setSelectedYear(option.value)}
+                  className="w-28"
+                />
+              </div>
+              <Button
+                icon={<Plus className="w-4 h-4" />}
+                text="Nuevo Movimiento"
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={async () => {
+                  const isCashOpen = await checkCashStatus();
+                  if (isCashOpen) setIsOpenModal(true);
+                }}
+              />
+            </div>
+            <div
+              className={` flex flex-col justify-between ${
+                currentItems.length > 0 ? "h-[calc(53vh-80px)]" : ""
+              } `}
+            >
+              <table className=" table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
+                <thead className="text-white bg-blue_b">
+                  <tr>
+                    <th className="text-xs xl:text-lg px-4 py-2 text-start">
+                      Fecha
+                    </th>
+                    <th className="text-xs xl:text-lg px-4 py-2">Ingresos</th>
+                    <th className="text-xs xl:text-lg px-4 py-2">Egresos</th>
+                    <th className="text-xs xl:text-lg px-4 py-2">Ganancia</th>
+                    <th className="text-xs xl:text-lg px-4 py-2">
+                      Estado de caja
+                    </th>{" "}
+                    <th className="w-40 max-w-[10rem] text-xs xl:text-lg px-4 py-2">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  className={`bg-white text-gray_b divide-y divide-gray_xl `}
+                >
+                  {currentItems.length > 0 ? (
+                    currentItems.map((day, index) => (
+                      <tr
+                        key={index}
+                        className="text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_xl"
+                      >
+                        <td className="font-semibold px-4 py-2 border border-gray_xl text-start">
+                          {format(parseISO(day.date), "dd/MM/yyyy")}
+                        </td>
+                        <td className="font-semibold text-green-600 px-4 py-2 border border-gray_xl">
+                          {formatCurrency(day.ingresos)}
+                        </td>
+                        <td className="font-semibold text-red-600 px-4 py-2 border border-gray_xl">
+                          {formatCurrency(day.egresos)}
+                        </td>
+                        <td className="font-semibold text-purple-600 px-4 py-2 border border-gray_xl">
+                          {formatCurrency(day.gananciaNeta || 0)}
+                        </td>
+                        <td className="px-4 py-2 border border-gray_xl">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              day.closed
+                                ? "bg-green-100 text-green-800"
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {day.closed ? "Cerrada" : "Abierta"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 flex justify-center items-center gap-2">
+                          <Button
+                            icon={<Info size={20} />}
+                            colorText="text-gray_b"
+                            colorTextHover="hover:text-white"
+                            colorBg="bg-transparent"
+                            px="px-1"
+                            py="py-1"
+                            minwidth="min-w-0"
+                            onClick={() => openDetailModal(day.movements)}
+                          />
+
+                          <Button
+                            icon={<Trash size={20} />}
+                            colorText="text-gray_b"
+                            colorTextHover="hover:text-white"
+                            colorBg="bg-transparent"
+                            colorBgHover="hover:bg-red-500"
+                            px="px-1"
+                            py="py-1"
+                            minwidth="min-w-0"
+                            onClick={() => {
+                              const cashToDelete = dailyCashes.find(
+                                (dc) => dc.date === day.date
+                              );
+                              if (cashToDelete) {
+                                setDailyCashToDelete(cashToDelete);
+                                setIsDeleteCashModalOpen(true);
+                              }
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="h-[55vh] 2xl:h-[calc(54vh-80px)]">
+                      <td colSpan={6} className="py-4 text-center">
+                        <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
+                          <Info size={64} className="mb-4 text-gray_m" />
+                          <p className="text-gray_m">
+                            No hay registros para el período seleccionado.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        ) : (
-          <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-2">
-            <p className="text-gray_m">No hay caja abierta para hoy</p>
-            <Button
-              text="Abrir Caja"
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={() => setIsOpenCashModal(true)}
-            />
-          </div>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          {" "}
-          <div className="bg-green-100 text-green-800 p-4 rounded-lg">
-            <h3 className="font-bold">Ingresos Totales</h3>
-            <p className="text-2xl">
-              {formatCurrency(monthlySummary.ingresos)}
-            </p>
-          </div>
-          <div className="bg-red-100 text-red-800 p-4 rounded-lg">
-            <h3 className="font-bold">Egresos Totales</h3>
-            <p className="text-2xl">{formatCurrency(monthlySummary.egresos)}</p>
-          </div>
-          <div className="bg-purple-100 text-purple-800 p-4 rounded-lg">
-            <h3 className="font-bold">Ganancia</h3>
-            <p className="text-2xl">
-              {formatCurrency(monthlySummary.gananciaNeta || 0)}
-            </p>
-          </div>
-        </div>
-        <div className="flex justify-between mb-4">
-          <div className="flex gap-4">
-            <Select
-              options={monthOptions}
-              value={monthOptions.find((m) => m.value === selectedMonth)}
-              onChange={(option) => option && setSelectedMonth(option.value)}
-              className="w-40"
-            />
-            <Select
-              options={yearOptions}
-              value={yearOptions.find((y) => y.value === selectedYear)}
-              onChange={(option) => option && setSelectedYear(option.value)}
-              className="w-28"
-            />
-          </div>
-          <Button
-            icon={<Plus className="w-4 h-4" />}
-            text="Nuevo Movimiento"
-            colorText="text-white"
-            colorTextHover="text-white"
-            onClick={async () => {
-              const isCashOpen = await checkCashStatus();
-              if (isCashOpen) setIsOpenModal(true);
-            }}
-          />
-        </div>
-        <div
-          className={`flex flex-col justify-between ${
-            currentItems.length > 0
-              ? "h-[calc(63.6vh-80px)]"
-              : "h-[calc(68vh-80px)]"
-          } `}
-        >
-          <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
-            <thead className="text-white bg-blue_b">
-              <tr>
-                <th className="text-xs xl:text-lg px-4 py-2">Fecha</th>
-                <th className="text-xs xl:text-lg px-4 py-2">Ingresos</th>
-                <th className="text-xs xl:text-lg px-4 py-2">Egresos</th>
-                <th className="text-xs xl:text-lg px-4 py-2">Ganancia</th>
-                <th className="text-xs xl:text-lg px-4 py-2">
-                  Estado de caja
-                </th>{" "}
-                <th className="text-xs xl:text-lg px-4 py-2">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
-              {currentItems.length > 0 ? (
-                currentItems.map((day, index) => (
-                  <tr
-                    key={index}
-                    className="text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_l"
-                  >
-                    <td className="font-semibold px-4 py-2 border border-gray_l">
-                      {format(parseISO(day.date), "dd/MM/yyyy")}
-                    </td>
-                    <td className="font-semibold text-green-600 px-4 py-2 border border-gray_l">
-                      {formatCurrency(day.ingresos)}
-                    </td>
-                    <td className="font-semibold text-red-600 px-4 py-2 border border-gray_l">
-                      {formatCurrency(day.egresos)}
-                    </td>
-                    <td className="font-semibold text-purple-600 px-4 py-2 border border-gray_l">
-                      {formatCurrency(day.gananciaNeta || 0)}
-                    </td>
-                    <td className="px-4 py-2 border border-gray_l">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          day.closed
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {day.closed ? "Cerrada" : "Abierta"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 border border-gray_l flex justify-center gap-2">
-                      <Button
-                        text="Detalles"
-                        colorText="text-gray_b"
-                        colorTextHover="hover:text-white"
-                        colorBg="bg-transparent"
-                        colorBgHover="hover:bg-blue_m"
-                        onClick={() => openDetailModal(day.movements)}
-                      />
-                      <Button
-                        text="Eliminar"
-                        colorText="text-white"
-                        colorTextHover="hover:text-white"
-                        colorBg="bg-red-500"
-                        colorBgHover="hover:bg-red-700"
-                        onClick={() => {
-                          const cashToDelete = dailyCashes.find(
-                            (dc) => dc.date === day.date
-                          );
-                          if (cashToDelete) {
-                            setDailyCashToDelete(cashToDelete);
-                            setIsDeleteCashModalOpen(true);
-                          }
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr className="h-[55vh] 2xl:h-[calc(54vh-80px)]">
-                  <td colSpan={6} className="py-4 text-center">
-                    <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                      <Info size={64} className="mb-4 text-gray_m" />
-                      <p className="text-gray_m">
-                        No hay registros para el período seleccionado.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
 
           <Pagination
             text="Días por página"
@@ -958,12 +1045,16 @@ const CajaDiariaPage = () => {
         </div>
         <Modal
           isOpen={isOpenModal}
-          onClose={() => setIsOpenModal(false)}
+          onClose={() => {
+            setIsOpenModal(false);
+            setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+          }}
           title="Nuevo Movimiento"
+          onConfirm={addMovement}
         >
           <div className="flex flex-col gap-4 pb-6">
-            <div className="w-full flex justify-between space-x-4 ">
-              <div className="flex flex-col gap-2 w-full">
+            <div className="w-full flex justify-between space-x-4">
+              <div className="flex flex-col w-full">
                 <label className="block text-gray_m dark:text-white text-sm font-semibold">
                   Tipo de Movimiento
                 </label>
@@ -976,32 +1067,8 @@ const CajaDiariaPage = () => {
                   className="w-full text-black"
                 />
               </div>
-
-              <div className="flex flex-col gap-2  w-full">
-                <label className="block text-gray_m dark:text-white text-sm font-semibold">
-                  Método de Pago
-                </label>
-                <Select
-                  defaultValue={paymentMethods.find(
-                    (m) => m.value === "EFECTIVO"
-                  )}
-                  options={paymentMethods}
-                  value={paymentMethods.find((m) => m.value === paymentMethod)}
-                  onChange={(option) => {
-                    if (
-                      option &&
-                      ["EFECTIVO", "TRANSFERENCIA", "TARJETA"].includes(
-                        option.value
-                      )
-                    ) {
-                      setPaymentMethod(option.value as PaymentMethod);
-                    }
-                  }}
-                  className="w-full text-black"
-                />
-              </div>
               {movementType === "EGRESO" && (
-                <div className="flex flex-col gap-2  w-full">
+                <div className="flex flex-col w-full">
                   <label className="block text-sm font-medium text-gray_m dark:text-white">
                     Proveedor (opcional)
                   </label>
@@ -1019,24 +1086,87 @@ const CajaDiariaPage = () => {
                 </div>
               )}
             </div>
-            <div className="flex justify-between space-x-4">
-              <Input
-                label="Monto"
-                type="number"
-                name="amount"
-                placeholder="$ Ingrese el monto..."
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
 
-              <Input
-                label="Descripción"
-                type="text"
-                name="description"
-                placeholder="Ingrese una descripción..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray_m dark:text-white">
+                Métodos de Pago
+              </label>
+              {paymentMethods.map((method, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Select
+                    value={paymentOptions.find(
+                      (option) => option.value === method.method
+                    )}
+                    onChange={(
+                      selectedOption: SingleValue<{
+                        value: string;
+                        label: string;
+                      }>
+                    ) =>
+                      handlePaymentMethodChange(
+                        index,
+                        "method",
+                        (selectedOption?.value as PaymentMethod) || "EFECTIVO"
+                      )
+                    }
+                    options={paymentOptions}
+                    className="w-full text-black"
+                    classNamePrefix="react-select"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Monto"
+                    value={
+                      method.amount > 0
+                        ? new Intl.NumberFormat("es-AR").format(method.amount)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handlePaymentAmountChange(index, e.target.value)
+                    }
+                    className="w-32"
+                  />
+                  {paymentMethods.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePaymentMethod(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {paymentMethods.length < 3 && (
+                <button
+                  type="button"
+                  onClick={addPaymentMethod}
+                  className="text-sm text-blue-500 hover:text-blue-700 flex items-center"
+                >
+                  <Plus size={16} className="mr-1" /> Agregar otro método
+                </button>
+              )}
+            </div>
+
+            <Input
+              label="Descripción"
+              type="text"
+              name="description"
+              placeholder="Ingrese una descripción..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+
+            <div className="p-2 bg-gray_b text-white text-center">
+              <p className="font-semibold text-3xl">
+                TOTAL:{" "}
+                {paymentMethods
+                  .reduce((sum, m) => sum + m.amount, 0)
+                  .toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+              </p>
             </div>
           </div>
 
@@ -1046,6 +1176,10 @@ const CajaDiariaPage = () => {
               colorText="text-white"
               colorTextHover="text-white"
               onClick={addMovement}
+              disabled={
+                paymentMethods.reduce((sum, m) => sum + m.amount, 0) !==
+                  parseFloat(amount || "0") || parseFloat(amount || "0") <= 0
+              }
             />
             <Button
               text="Cancelar"
@@ -1053,7 +1187,10 @@ const CajaDiariaPage = () => {
               colorTextHover="hover:text-white hover:dark:text-white"
               colorBg="bg-gray_xl dark:bg-gray_m"
               colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsOpenModal(false)}
+              onClick={() => {
+                setIsOpenModal(false);
+                setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+              }}
             />
           </div>
         </Modal>
@@ -1061,6 +1198,7 @@ const CajaDiariaPage = () => {
           isOpen={isOpenCashModal}
           onClose={() => setIsOpenCashModal(false)}
           title="Apertura de Caja"
+          onConfirm={openCash}
         >
           <div className="flex flex-col gap-4 pb-6">
             <p className="text-gray_m dark:text-white">
@@ -1090,73 +1228,9 @@ const CajaDiariaPage = () => {
           isOpen={isCloseCashModal}
           onClose={() => setIsCloseCashModal(false)}
           title="Cierre de Caja"
+          onConfirm={closeCash}
         >
           <div className="flex flex-col gap-4 pb-6">
-            <div className="text-gray_b bg-green-50 p-3 rounded-lg">
-              <h4 className="font-semibold ">Resumen de Efectivo</h4>
-              <p>
-                Ingresos en efectivo:{" "}
-                {formatCurrency(
-                  currentDailyCash?.movements
-                    .filter(
-                      (m) =>
-                        m.type === "INGRESO" && m.paymentMethod === "EFECTIVO"
-                    )
-                    .reduce((sum, m) => sum + m.amount, 0) || 0
-                )}
-              </p>
-              <p>
-                Egresos:{" "}
-                {formatCurrency(
-                  currentDailyCash?.movements
-                    .filter((m) => m.type === "EGRESO")
-                    .reduce((sum, m) => sum + m.amount, 0) || 0
-                )}
-              </p>
-              <p className="font-semibold">
-                Monto esperado:{" "}
-                {formatCurrency(
-                  (currentDailyCash?.initialAmount || 0) +
-                    (currentDailyCash?.movements
-                      .filter(
-                        (m) =>
-                          m.type === "INGRESO" && m.paymentMethod === "EFECTIVO"
-                      )
-                      .reduce((sum, m) => sum + m.amount, 0) || 0) -
-                    (currentDailyCash?.movements
-                      .filter((m) => m.type === "EGRESO")
-                      .reduce((sum, m) => sum + m.amount, 0) || 0)
-                )}
-              </p>
-            </div>
-
-            <div className="text-gray_b bg-blue_xl p-3 rounded-lg">
-              <h4 className="font-semibold">Otros Ingresos</h4>
-              <p>
-                Transferencias:{" "}
-                {formatCurrency(
-                  currentDailyCash?.movements
-                    .filter(
-                      (m) =>
-                        m.type === "INGRESO" &&
-                        m.paymentMethod === "TRANSFERENCIA"
-                    )
-                    .reduce((sum, m) => sum + m.amount, 0) || 0
-                )}
-              </p>
-              <p>
-                Tarjetas:{" "}
-                {formatCurrency(
-                  currentDailyCash?.movements
-                    .filter(
-                      (m) =>
-                        m.type === "INGRESO" && m.paymentMethod === "TARJETA"
-                    )
-                    .reduce((sum, m) => sum + m.amount, 0) || 0
-                )}
-              </p>
-            </div>
-
             <Input
               label="Monto Contado en Efectivo"
               type="number"
@@ -1194,21 +1268,7 @@ const CajaDiariaPage = () => {
           <p className="text-gray_m dark:text-white">
             ¿Está seguro de que desea eliminar este movimiento?
           </p>
-          {movementToDelete && (
-            <div className="mt-2 p-3 bg-gray-100 rounded">
-              <p>
-                <strong>Tipo:</strong> {movementToDelete.type}
-              </p>
-              <p>
-                <strong>Monto:</strong>{" "}
-                {formatCurrency(movementToDelete.amount)}
-              </p>
-              <p>
-                <strong>Descripción:</strong>{" "}
-                {movementToDelete.description || "-"}
-              </p>
-            </div>
-          )}
+
           <div className="flex justify-end space-x-2 mt-4">
             <Button
               text="Eliminar"
@@ -1232,6 +1292,7 @@ const CajaDiariaPage = () => {
           isOpen={isDeleteCashModalOpen}
           onClose={() => setIsDeleteCashModalOpen(false)}
           title="Eliminar Caja"
+          onConfirm={deleteDailyCash}
         >
           <p className="text-gray_m dark:text-white">
             ¿Está seguro de que desea eliminar esta caja? Esta acción no se

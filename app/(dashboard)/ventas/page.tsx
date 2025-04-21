@@ -7,11 +7,12 @@ import {
   CreditSale,
   Customer,
   DailyCashMovement,
+  PaymentSplit,
   Product,
   Sale,
   UnitOption,
 } from "@/app/lib/types/types";
-import { Info, ShoppingCart, Trash } from "lucide-react";
+import { Info, Plus, ShoppingCart, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import { parseISO, format } from "date-fns";
@@ -28,7 +29,7 @@ const VentasPage = () => {
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [newSale, setNewSale] = useState<Omit<Sale, "id">>({
     products: [],
-    paymentMethod: "Efectivo",
+    paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
     total: 0,
     date: new Date().toISOString(),
     barcode: "",
@@ -189,13 +190,10 @@ const VentasPage = () => {
     const year = currentYear - i;
     return { value: year, label: String(year) };
   });
-  const paymentOptions: {
-    value: "Efectivo" | "Transferencia" | "Tarjeta";
-    label: string;
-  }[] = [
-    { value: "Efectivo", label: "Efectivo" },
-    { value: "Transferencia", label: "Transferencia" },
-    { value: "Tarjeta", label: "Tarjeta" },
+  const paymentOptions = [
+    { value: "EFECTIVO", label: "Efectivo" },
+    { value: "TRANSFERENCIA", label: "Transferencia" },
+    { value: "TARJETA", label: "Tarjeta" },
   ];
 
   const filteredSales = sales
@@ -222,7 +220,7 @@ const VentasPage = () => {
     setIsNotificationOpen(true);
     setTimeout(() => {
       setIsNotificationOpen(false);
-    }, 2000);
+    }, 3000);
   };
   const addIncomeToDailyCash = async (
     sale: Sale & { manualAmount?: number; credit?: boolean; paid?: boolean }
@@ -236,50 +234,63 @@ const VentasPage = () => {
       let dailyCash = await db.dailyCashes.get({ date: today });
 
       const movements: DailyCashMovement[] = [];
+      const totalSaleAmount = sale.total;
       if (sale.products.length > 0) {
         sale.products.forEach((product) => {
-          const profit = (product.price - product.costPrice) * product.quantity;
-          movements.push({
-            id: Date.now(),
-            amount:
-              product.price *
-              (product.unit === "gr"
-                ? product.quantity / 1000
-                : product.quantity),
-            description: `Venta de ${product.name} - ${product.quantity} ${product.unit}`,
-            type: "INGRESO",
-            date: new Date().toISOString(),
-            paymentMethod:
-              sale.paymentMethod === "Efectivo"
-                ? "EFECTIVO"
-                : sale.paymentMethod === "Tarjeta"
-                ? "TARJETA"
-                : "TRANSFERENCIA",
-            productId: product.id,
-            productName: product.name,
-            quantity: product.quantity,
-            unit: product.unit,
-            profit: profit,
-            isCreditPayment: sale.credit,
-            originalSaleId: sale.id,
+          const productAmount = calculatePrice(product);
+          const productRatio = productAmount / totalSaleAmount;
+
+          sale.paymentMethods.forEach((payment) => {
+            const paymentProductAmount = productRatio * payment.amount;
+            const profit =
+              (product.price - product.costPrice) *
+              (payment.amount / productAmount);
+
+            let quantity = product.quantity;
+            if (product.unit === "Unid.") {
+              quantity = Math.round(
+                product.quantity * (payment.amount / productAmount)
+              );
+            } else {
+              quantity = product.quantity;
+            }
+
+            movements.push({
+              id: Date.now(),
+              amount: paymentProductAmount,
+              description: `Venta de ${product.name} - ${quantity.toFixed(2)} ${
+                product.unit
+              }`,
+              type: "INGRESO",
+              date: new Date().toISOString(),
+              paymentMethod: payment.method,
+              productId: product.id,
+              productName: product.name,
+              quantity: quantity,
+              unit: product.unit,
+              profit: profit,
+              isCreditPayment: sale.credit,
+              originalSaleId: sale.id,
+            });
           });
         });
       }
       if (sale.manualAmount && sale.manualAmount > 0) {
-        movements.push({
-          id: Date.now(),
-          amount: sale.manualAmount,
-          description: "Monto manual adicional",
-          type: "INGRESO",
-          date: new Date().toISOString(),
-          paymentMethod:
-            sale.paymentMethod === "Efectivo"
-              ? "EFECTIVO"
-              : sale.paymentMethod === "Tarjeta"
-              ? "TARJETA"
-              : "TRANSFERENCIA",
-          isCreditPayment: sale.credit,
-          originalSaleId: sale.id,
+        const manualRatio = sale.manualAmount / totalSaleAmount;
+
+        sale.paymentMethods.forEach((payment) => {
+          const paymentManualAmount = manualRatio * payment.amount;
+
+          movements.push({
+            id: Date.now(),
+            amount: paymentManualAmount,
+            description: "Monto manual adicional",
+            type: "INGRESO",
+            date: new Date().toISOString(),
+            paymentMethod: payment.method,
+            isCreditPayment: sale.credit,
+            originalSaleId: sale.id,
+          });
         });
       }
 
@@ -365,12 +376,17 @@ const VentasPage = () => {
     });
   };
   const handleManualAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value) || 0;
-    setNewSale((prev) => ({
-      ...prev,
-      manualAmount: value,
-      total: calculateCombinedTotal(prev.products, value),
-    }));
+    const rawValue = e.target.value.replace(/[^0-9.]/g, "");
+    const numericValue = parseFloat(rawValue.replace(/\./g, "")) || 0;
+
+    setNewSale((prev) => {
+      const newTotal = calculateCombinedTotal(prev.products, numericValue);
+      return {
+        ...prev,
+        manualAmount: numericValue,
+        total: newTotal,
+      };
+    });
   };
   const handleMonthChange = (
     selectedOption: { value: string; label: string } | null
@@ -389,21 +405,143 @@ const VentasPage = () => {
       setSelectedYear(parsedYear);
     }
   };
-  const handlePaymentChange = (
-    selectedOption: SingleValue<{
-      value: "Efectivo" | "Transferencia" | "Tarjeta";
-      label: string;
-    }>
+  const handlePaymentMethodChange = (
+    index: number,
+    field: keyof PaymentSplit,
+    value: string | number
   ) => {
-    if (!selectedOption) return;
-    setNewSale((prev) => ({ ...prev, paymentMethod: selectedOption.value }));
+    setNewSale((prev) => {
+      const updatedMethods = [...prev.paymentMethods];
+      const total = calculateCombinedTotal(
+        prev.products,
+        prev.manualAmount || 0
+      );
+
+      if (field === "amount") {
+        const numericValue =
+          typeof value === "string"
+            ? parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0
+            : value;
+
+        updatedMethods[index] = {
+          ...updatedMethods[index],
+          amount: parseFloat(numericValue.toFixed(2)),
+        };
+        if (updatedMethods.length === 2) {
+          let sum = 0;
+          for (let i = 0; i < updatedMethods.length; i++) {
+            sum += updatedMethods[i].amount;
+          }
+
+          const difference = total - sum;
+
+          if (updatedMethods.length > 1) {
+            const numOtherInputs = updatedMethods.length - 1;
+            const share = difference / numOtherInputs;
+
+            for (let i = 0; i < updatedMethods.length; i++) {
+              if (i !== index) {
+                const newAmount = parseFloat(
+                  Math.max(0, updatedMethods[i].amount + share).toFixed(2)
+                );
+                updatedMethods[i] = {
+                  ...updatedMethods[i],
+                  amount: newAmount,
+                };
+              }
+            }
+          }
+        }
+
+        return {
+          ...prev,
+          paymentMethods: updatedMethods,
+        };
+      } else {
+        updatedMethods[index] = {
+          ...updatedMethods[index],
+          method: value as "EFECTIVO" | "TRANSFERENCIA" | "TARJETA",
+        };
+      }
+
+      return {
+        ...prev,
+        paymentMethods: updatedMethods,
+      };
+    });
   };
 
+  const handlePaymentAmountChange = (index: number, value: string) => {
+    const cleanValue = value.replace(/\./g, "");
+    const numericValue = cleanValue.replace(/[^0-9]/g, "");
+    const amount = parseFloat(numericValue) || 0;
+    handlePaymentMethodChange(index, "amount", amount);
+  };
+
+  const addPaymentMethod = () => {
+    setNewSale((prev) => {
+      if (prev.paymentMethods.length >= paymentOptions.length) return prev;
+      const newMethods = [...prev.paymentMethods];
+      if (newMethods.length === 2) {
+        newMethods.forEach((method) => {
+          method.amount = 0;
+        });
+      }
+
+      return {
+        ...prev,
+        paymentMethods: [
+          ...newMethods,
+          {
+            method: paymentOptions[prev.paymentMethods.length].value as
+              | "EFECTIVO"
+              | "TRANSFERENCIA"
+              | "TARJETA",
+            amount: 0,
+          },
+        ],
+      };
+    });
+  };
+
+  const removePaymentMethod = (index: number) => {
+    setNewSale((prev) => {
+      if (prev.paymentMethods.length <= 1) return prev;
+      const updatedMethods = [...prev.paymentMethods];
+      updatedMethods.splice(index, 1);
+      if (updatedMethods.length === 2) {
+        const total = calculateCombinedTotal(
+          prev.products,
+          prev.manualAmount || 0
+        );
+        updatedMethods[0].amount = total / 2;
+        updatedMethods[1].amount = total / 2;
+      }
+
+      return {
+        ...prev,
+        paymentMethods: updatedMethods,
+      };
+    });
+  };
   const handleAddSale = () => {
     setIsOpenModal(true);
   };
 
   const handleConfirmAddSale = async () => {
+    const totalPaymentMethods = newSale.paymentMethods.reduce(
+      (sum, method) => sum + method.amount,
+      0
+    );
+    const calculatedTotal = calculateCombinedTotal(
+      newSale.products,
+      newSale.manualAmount || 0
+    );
+
+    if (Math.abs(totalPaymentMethods - calculatedTotal) > 0.01) {
+      showNotification(`La suma de los métodos de pago no coinciden`, "error");
+      return;
+    }
     if (newSale.products.length === 0) {
       showNotification("Debe agregar al menos un producto", "error");
       return;
@@ -472,29 +610,27 @@ const VentasPage = () => {
       const saleToSave: CreditSale = {
         id: Date.now(),
         products: newSale.products,
-        paymentMethod: newSale.paymentMethod,
+        paymentMethods: newSale.paymentMethods,
         total: newSale.total,
         date: new Date().toISOString(),
         barcode: newSale.barcode,
         manualAmount: newSale.manualAmount,
-        credit: isCredit,
+        credit: true,
         customerName: isCredit
           ? customerName.toUpperCase().trim()
           : "CLIENTE OCASIONAL",
-        customerPhone: isCredit ? customerPhone : undefined,
-        customerId: isCredit ? customerId : undefined,
+        customerPhone: isCredit ? customerPhone : "",
+        customerId: isCredit ? customerId : "",
         paid: false,
       };
-
       await db.sales.add(saleToSave);
       setSales([...sales, saleToSave]);
-
       if (!isCredit) {
         await addIncomeToDailyCash(saleToSave);
       }
       setNewSale({
         products: [],
-        paymentMethod: "Efectivo",
+        paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
         total: 0,
         date: new Date().toISOString(),
         barcode: "",
@@ -521,7 +657,7 @@ const VentasPage = () => {
   const handleCloseModal = () => {
     setNewSale({
       products: [],
-      paymentMethod: "Efectivo",
+      paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
       total: 0,
       date: new Date().toISOString(),
       barcode: "",
@@ -547,6 +683,19 @@ const VentasPage = () => {
     setSaleToDelete(sale);
     setIsConfirmModalOpen(true);
   };
+  useEffect(() => {
+    if (newSale.paymentMethods.length === 1) {
+      setNewSale((prev) => ({
+        ...prev,
+        paymentMethods: [
+          {
+            ...prev.paymentMethods[0],
+            amount: prev.total,
+          },
+        ],
+      }));
+    }
+  }, [newSale.total, newSale.paymentMethods.length]);
   useEffect(() => {
     const fetchCustomers = async () => {
       const allCustomers = await db.customers.toArray();
@@ -581,6 +730,34 @@ const VentasPage = () => {
     fetchProducts();
     fetchSales();
   }, []);
+  useEffect(() => {
+    setNewSale((prev) => {
+      const total = calculateCombinedTotal(
+        prev.products,
+        prev.manualAmount || 0
+      );
+      const updatedMethods = [...prev.paymentMethods];
+      if (updatedMethods.length === 1) {
+        updatedMethods[0].amount = total;
+      } else if (updatedMethods.length === 2) {
+        const sumOthers = updatedMethods
+          .slice(0, -1)
+          .reduce((sum, m) => sum + m.amount, 0);
+        const remaining = total - sumOthers;
+
+        if (remaining >= 0) {
+          updatedMethods[updatedMethods.length - 1].amount = parseFloat(
+            remaining.toFixed(2)
+          );
+        }
+      }
+      return {
+        ...prev,
+        paymentMethods: updatedMethods,
+        total: total,
+      };
+    });
+  }, [newSale.products, newSale.manualAmount, newSale.paymentMethods.length]);
 
   const handleProductSelect = (
     selectedOptions: readonly {
@@ -611,13 +788,24 @@ const VentasPage = () => {
         })
         .filter(Boolean) as Product[];
 
+      const newTotal = calculateCombinedTotal(
+        updatedProducts,
+        prevState.manualAmount || 0
+      );
+      const updatedPaymentMethods = [...prevState.paymentMethods];
+      if (updatedPaymentMethods.length > 0) {
+        const assignedAmount = updatedPaymentMethods
+          .slice(0, -1)
+          .reduce((sum, m) => sum + m.amount, 0);
+        updatedPaymentMethods[updatedPaymentMethods.length - 1].amount =
+          parseFloat((newTotal - assignedAmount).toFixed(2));
+      }
+
       return {
         ...prevState,
         products: updatedProducts,
-        total: calculateCombinedTotal(
-          updatedProducts,
-          prevState.manualAmount || 0
-        ),
+        paymentMethods: updatedPaymentMethods,
+        total: newTotal,
       };
     });
   };
@@ -634,14 +822,20 @@ const VentasPage = () => {
         }
         return p;
       });
+      const newTotal = calculateCombinedTotal(
+        updatedProducts,
+        prevState.manualAmount || 0
+      );
+      const updatedPaymentMethods = [...prevState.paymentMethods];
+      if (updatedPaymentMethods.length > 0) {
+        updatedPaymentMethods[0].amount = newTotal;
+      }
 
       return {
         ...prevState,
         products: updatedProducts,
-        total: calculateCombinedTotal(
-          updatedProducts,
-          prevState.manualAmount || 0
-        ),
+        paymentMethods: updatedPaymentMethods,
+        total: newTotal,
       };
     });
   };
@@ -705,6 +899,7 @@ const VentasPage = () => {
       };
     });
   };
+
   const indexOfLastSale = currentPage * salesPerPage;
   const indexOfFirstSale = indexOfLastSale - salesPerPage;
   const currentSales = filteredSales.slice(indexOfFirstSale, indexOfLastSale);
@@ -768,79 +963,101 @@ const VentasPage = () => {
                 <th className="text-xs xl:text-lg px-4 py-2 ">Total</th>
                 <th className=" text-xs xl:text-lg px-4 py-2 ">Fecha</th>
                 <th className="text-xs xl:text-lg px-4 py-2 ">Forma De Pago</th>
-                <th className="text-xs xl:text-lg px-4 py-2 w-[12rem] ">
+                <th className="w-40 max-w-[10rem] text-xs xl:text-lg px-4 py-2">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
+            <tbody className={`bg-white text-gray_b divide-y divide-gray_xl `}>
               {currentSales.length > 0 ? (
-                currentSales.map((sale) => (
-                  <tr
-                    key={sale.id}
-                    className={` text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_l`}
-                  >
-                    <td
-                      className="font-semibold px-2 text-start uppercase border border-gray_l truncate max-w-[200px]"
-                      title={sale.products.map((p) => p.name).join(", ")}
-                    >
-                      {sale.products.map((p) => p.name).join(", ").length > 60
-                        ? sale.products
-                            .map((p) => p.name)
-                            .join(", ")
-                            .slice(0, 30) + "..."
-                        : sale.products
-                            .map((p) => p.name + " x " + p.quantity + p.unit)
-                            .join(" | ")}
-                    </td>
-                    <td className="font-semibold px-4 py-2 border border-gray_l">
-                      {sale.credit ? (
-                        <span className="text-orange-500">
-                          FIADO - $
-                          {sale.total.toLocaleString("es-AR", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </span>
-                      ) : (
-                        `$${sale.total.toLocaleString("es-AR", {
-                          minimumFractionDigits: 2,
-                        })}`
-                      )}
-                    </td>
+                currentSales.map((sale) => {
+                  const products = sale.products || [];
+                  const paymentMethods = sale.paymentMethods || [];
+                  const saleDate = sale.date ? parseISO(sale.date) : new Date();
+                  const total = sale.total || 0;
 
-                    <td className="font-semibold px-4 py-2 border border-gray_l">
-                      {format(parseISO(sale.date), "dd/MM/yyyy", {
-                        locale: es,
-                      })}
-                    </td>
-                    <td className="font-semibold px-4 py-2 border border-gray_l">
-                      {sale.paymentMethod}
-                    </td>
-                    <td className="flex justify-center items-center gap-2 p-2">
-                      <Button
-                        icon={<Info size={20} />}
-                        colorText="text-gray_b"
-                        colorTextHover="hover:text-white"
-                        colorBg="bg-transparent"
-                        px="px-1"
-                        py="py-1"
-                        minwidth="min-w-0"
-                        onClick={() => handleOpenInfoModal(sale)}
-                      />
-                      <Button
-                        icon={<Trash size={20} />}
-                        colorText="text-gray_b"
-                        colorTextHover="hover:text-white"
-                        colorBg="bg-transparent"
-                        colorBgHover="hover:bg-red-500"
-                        px="px-1"
-                        py="py-1"
-                        minwidth="min-w-0"
-                        onClick={() => handleOpenDeleteConfirmation(sale)}
-                      />
-                    </td>
-                  </tr>
-                ))
+                  return (
+                    <tr
+                      key={sale.id || Date.now()}
+                      className=" text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_xl"
+                    >
+                      <td
+                        className="font-semibold px-2 text-start uppercase border border-gray_xl truncate max-w-[200px]"
+                        title={products.map((p) => p?.name || "").join(", ")}
+                      >
+                        {products.map((p) => p?.name || "").join(", ").length >
+                        60
+                          ? products
+                              .map((p) => p?.name || "")
+                              .join(", ")
+                              .slice(0, 30) + "..."
+                          : products
+                              .map(
+                                (p) =>
+                                  `${p?.name || ""} x ${p?.quantity || 0}${
+                                    p?.unit || ""
+                                  }`
+                              )
+                              .join(" | ")}
+                      </td>
+
+                      <td className="font-semibold px-4 py-2 border border-gray_xl">
+                        {sale.credit ? (
+                          <span className="text-orange-500">
+                            FIADO - $
+                            {total.toLocaleString("es-AR", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        ) : (
+                          `$${total.toLocaleString("es-AR", {
+                            minimumFractionDigits: 2,
+                          })}`
+                        )}
+                      </td>
+
+                      <td className="font-semibold px-4 py-2 border border-gray_xl">
+                        {format(saleDate, "dd/MM/yyyy", { locale: es })}
+                      </td>
+
+                      <td className="font-semibold px-4 py-2 border border-gray_xl">
+                        {paymentMethods.map((payment, i) => (
+                          <div key={i} className="text-xs">
+                            {payment?.method || "Método no especificado"}:{" "}
+                            {formatPrice(payment?.amount || 0)}
+                          </div>
+                        ))}
+                      </td>
+
+                      <td className="px-4 py-2 border border-gray_xl">
+                        <div className="flex justify-center items-center gap-2 h-full">
+                          <Button
+                            icon={<Info size={20} />}
+                            colorText="text-gray_b"
+                            colorTextHover="hover:text-white"
+                            colorBg="bg-transparent"
+                            colorBgHover="hover:bg-blue-500"
+                            px="px-1"
+                            py="py-1"
+                            minwidth="min-w-0"
+                            onClick={() => handleOpenInfoModal(sale)}
+                          />
+                          <Button
+                            icon={<Trash size={20} />}
+                            colorText="text-gray_b"
+                            colorTextHover="hover:text-white"
+                            colorBg="bg-transparent"
+                            colorBgHover="hover:bg-red-500"
+                            px="px-1"
+                            py="py-1"
+                            minwidth="min-w-0"
+                            onClick={() => handleOpenDeleteConfirmation(sale)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
                   <td colSpan={6} className="py-4 text-center">
@@ -874,7 +1091,14 @@ const VentasPage = () => {
                   )}
                 </p>
                 <p className="flex text-lg justify-between">
-                  <strong>Forma de Pago:</strong> {selectedSale.paymentMethod}
+                  <strong>Forma de Pago:</strong>
+                  <div>
+                    {selectedSale.paymentMethods.map((payment, i) => (
+                      <div key={i}>
+                        {payment.method}: {formatPrice(payment.amount)}
+                      </div>
+                    ))}
+                  </div>
                 </p>
 
                 <p className="text-center border-t-2 pt-4">
@@ -937,7 +1161,7 @@ const VentasPage = () => {
           >
             <div className="w-full flex items-center space-x-4">
               <div className="w-full">
-                <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
+                <label className="block text-sm font-medium text-gray_m dark:text-white">
                   Escanear código de barras
                 </label>
                 <BarcodeScanner
@@ -957,10 +1181,10 @@ const VentasPage = () => {
                   }}
                 />
               </div>
-              <div className="w-full flex flex-col gap-2">
+              <div className="w-full flex flex-col">
                 <label
                   htmlFor="productSelect"
-                  className="block text-gray_m dark:text-white text-sm font-semibold"
+                  className="block text-gray_m dark:text-white text-sm font-semibold "
                 >
                   Productos
                 </label>
@@ -983,24 +1207,26 @@ const VentasPage = () => {
               </div>
             </div>
             {newSale.products.length > 0 && (
-              <table className="table-auto w-full ">
+              <table className="table-auto w-full  ">
                 <thead className=" bg-blue_b text-white ">
                   <tr>
                     <th className="px-4 py-2">Producto</th>
                     <th className="px-4 py-2 text-center">Unidad</th>
                     <th className="px-4 py-2 text-center">Cantidad</th>
                     <th className="px-4 py-2 text-center">Total</th>
-                    <th className="px-4 py-2 text-center">Acciones</th>
+                    <th className="w-40 max-w-[10rem] px-4 py-2 text-center">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white text-gray_b divide-y divide-gray_xl ">
                   {newSale.products.map((product) => {
                     return (
                       <tr className="border-b border-gray-xl" key={product.id}>
                         <td className=" px-4 py-2">
                           {product.name.toUpperCase()}
                         </td>
-                        <td>
+                        <td className="w-40 max-w-40 px-4 py-2">
                           {" "}
                           <Select
                             placeholder="Unidad"
@@ -1015,11 +1241,12 @@ const VentasPage = () => {
                                 product.quantity
                               );
                             }}
-                            className="text-black"
+                            className="text-black "
                           />
                         </td>
-                        <td className="w-20 px-4 py-2 text-center">
+                        <td className="w-20 max-w-20 px-4 py-2  ">
                           <Input
+                            textPosition="text-center"
                             type="number"
                             value={product.quantity.toString() || ""}
                             onChange={(e) => {
@@ -1049,19 +1276,20 @@ const VentasPage = () => {
                           />
                         </td>
 
-                        <td className="px-4 py-2 text-center">
-                          $
-                          {(
-                            product.price *
-                            (product.unit === "gr"
-                              ? product.quantity / 1000
-                              : product.quantity)
-                          ).toFixed(2)}
+                        <td className="w-30 max-w-30 px-4 py-2 text-center ">
+                          {formatPrice(
+                            calculatePrice({
+                              ...product,
+                              price: product.price || 0,
+                              quantity: product.quantity || 0,
+                              unit: product.unit || "Unid.",
+                            })
+                          )}
                         </td>
                         <td className=" px-4 py-2 text-center">
                           <button
                             onClick={() => handleRemoveProduct(product.id)}
-                            className="cursor-pointer text-gray_b bg-gray_xl  p-1 rounded-sm"
+                            className="cursor-pointer hover:bg-red-500 text-gray_b hover:text-white p-1 rounded-sm transition-all duration-200"
                           >
                             <Trash size={20} />
                           </button>
@@ -1081,38 +1309,95 @@ const VentasPage = () => {
                 <Input
                   type="text"
                   placeholder="Ingrese monto manual..."
-                  value={newSale.manualAmount ? `$${newSale.manualAmount}` : ""}
+                  value={
+                    newSale.manualAmount
+                      ? new Intl.NumberFormat("es-AR").format(
+                          newSale.manualAmount
+                        )
+                      : ""
+                  }
                   onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^0-9]/g, "");
-                    handleManualAmountChange({
-                      target: {
-                        value: numericValue,
-                      },
-                    } as React.ChangeEvent<HTMLInputElement>);
+                    handleManualAmountChange(e);
                   }}
                 />
               </div>
 
-              <div className="w-full flex flex-col gap-2">
-                <label
-                  htmlFor="paymentMethod"
-                  className="block text-gray_m dark:text-white text-sm font-semibold"
-                >
-                  Método de Pago
+              <div className="w-full flex flex-col mt-8">
+                <label className="block text-gray_m dark:text-white text-sm font-semibold">
+                  Métodos de Pago
                 </label>
-                <Select
-                  id="paymentMethod"
-                  value={
-                    paymentOptions.find(
-                      (option) => option.value === newSale.paymentMethod
-                    ) || null
-                  }
-                  onChange={handlePaymentChange}
-                  options={paymentOptions}
-                  placeholder="Seleccionar método de pago"
-                  className="w-full text-gray_b"
-                  classNamePrefix="react-select"
-                />
+
+                {newSale.paymentMethods.map((payment, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-2">
+                    <Select
+                      value={paymentOptions.find(
+                        (option) => option.value === payment.method
+                      )}
+                      onChange={(selected) =>
+                        selected &&
+                        handlePaymentMethodChange(
+                          index,
+                          "method",
+                          selected.value
+                        )
+                      }
+                      options={paymentOptions}
+                      className="w-60 max-w-60 text-gray_b"
+                    />
+
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={
+                          payment.amount > 0
+                            ? new Intl.NumberFormat("es-AR").format(
+                                payment.amount
+                              )
+                            : ""
+                        }
+                        onChange={(e) =>
+                          handlePaymentAmountChange(index, e.target.value)
+                        }
+                        className="w-32"
+                        placeholder="Monto"
+                      />
+                      {index === newSale.paymentMethods.length - 1 &&
+                        newSale.paymentMethods.reduce(
+                          (sum, m) => sum + m.amount,
+                          0
+                        ) >
+                          newSale.total + 0.1 && (
+                          <span className="text-xs text-red-500 ml-2">
+                            Exceso: $
+                            {(
+                              newSale.paymentMethods.reduce(
+                                (sum, m) => sum + m.amount,
+                                0
+                              ) - newSale.total
+                            ).toFixed(2)}
+                          </span>
+                        )}
+                    </div>
+
+                    {newSale.paymentMethods.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removePaymentMethod(index)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addPaymentMethod}
+                  className="text-sm text-blue-500 hover:text-blue-700 mt-1 flex items-center"
+                >
+                  <Plus size={16} className="mr-1" /> Agregar otro método de
+                  pago
+                </button>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1126,7 +1411,7 @@ const VentasPage = () => {
             </div>
 
             {isCredit && (
-              <div className="space-y-2">
+              <div>
                 <label className="block text-gray_m dark:text-white text-sm font-semibold">
                   Cliente existente
                 </label>
@@ -1171,20 +1456,28 @@ const VentasPage = () => {
                 </div>
               </div>
             )}
-
-            <Input
-              label="Total"
-              type="text"
-              name="totalPrice"
-              placeholder="Precio total..."
-              value={`$ ${newSale.total.toFixed(2)}`}
-              readOnly
-            />
+            <div className="p-2 bg-gray_b text-white text-center">
+              <p className="font-semibold text-3xl">
+                TOTAL:{" "}
+                {newSale.total.toLocaleString("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                })}
+              </p>
+              {Math.abs(
+                newSale.paymentMethods.reduce((sum, m) => sum + m.amount, 0) -
+                  newSale.total
+              ) > 0.1 && (
+                <p className="text-red-500 text-sm">
+                  La suma de los métodos no coincide con el total
+                </p>
+              )}
+            </div>
           </form>
 
           <div className="flex justify-end space-x-2 mt-4">
             <Button
-              text={"Guardar"}
+              text={"Cobrar"}
               colorText="text-white"
               colorTextHover="text-white"
               onClick={handleConfirmAddSale}
@@ -1204,6 +1497,7 @@ const VentasPage = () => {
           isOpen={isConfirmModalOpen}
           title="Eliminar Venta"
           onClose={() => setIsConfirmModalOpen(false)}
+          onConfirm={handleDeleteSale}
         >
           <p>¿Está seguro de que desea eliminar esta venta?</p>
           <div className="flex justify-end space-x-2">

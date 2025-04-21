@@ -11,8 +11,12 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Universal App",
-  description: "Software de gestión",
+  title: "Universal App | Kioskos",
+  description:
+    "Software de gestión para PyMEs. stock, ventas, cuentas corrientes, proveedores y más...",
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

@@ -14,11 +14,12 @@ const Input: React.FC<InputProps> = ({
   accept,
   autoFocus = false,
   ref,
+  textPosition = "text-start",
 }) => {
   return (
     <div className="w-full">
       <label
-        className={`${colorLabel} block text-sm font-semibold mb-2`}
+        className={`${colorLabel} block text-sm font-semibold`}
         htmlFor={name}
       >
         {label}
@@ -34,7 +35,7 @@ const Input: React.FC<InputProps> = ({
           readOnly={readOnly}
           placeholder={placeholder}
           accept={accept}
-          className={` focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l  outline-none text-gray_b ${border} max-h-9`}
+          className={`${textPosition} focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l outline-none text-gray_b ${border} h-[2.35rem] max-h-[2.35rem]`}
         />
       </div>
     </div>

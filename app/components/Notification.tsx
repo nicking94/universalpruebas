@@ -24,7 +24,7 @@ const Notification: React.FC<NotificationProps> = ({
       setAnimateOut(true);
       const timer = setTimeout(() => {
         setVisible(false);
-      }, 300);
+      }, 5000);
       return () => clearTimeout(timer);
     }
   }, [isOpen]);

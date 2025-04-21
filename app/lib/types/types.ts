@@ -64,13 +64,6 @@ export type ModalProps = {
   bgColor?: string;
 };
 
-export type PersonalData = {
-  name: string;
-  age: string | number;
-  phone: string;
-  email: string;
-};
-
 export type InputProps = {
   label?: string;
   colorLabel?: string;
@@ -89,6 +82,7 @@ export type InputProps = {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   required?: boolean;
   disabled?: boolean;
+  textPosition?: string;
 };
 export type UserMenuProps = {
   theme: string;
@@ -137,13 +131,16 @@ export type SearchBarProps = {
 export type Sale = {
   id: number;
   products: Product[];
-  paymentMethod: "Efectivo" | "Transferencia" | "Tarjeta";
+  paymentMethods: PaymentSplit[];
   total: number;
   date: string;
   barcode?: string;
   manualAmount?: number;
   credit?: boolean;
   paid?: boolean;
+  customerName?: string;
+  customerPhone?: string;
+  customerId?: string;
 };
 
 export type SaleItem = {
@@ -172,6 +169,11 @@ export type ProductOption = {
 };
 
 export type PaymentMethod = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA";
+
+export type PaymentSplit = {
+  method: PaymentMethod;
+  amount: number;
+};
 
 export type MovementType = "INGRESO" | "EGRESO";
 
@@ -216,12 +218,11 @@ export type DailyCash = {
 };
 
 export interface CreditSale extends Sale {
-  credit: boolean;
+  credit: true;
   customerName: string;
   customerPhone?: string;
   customerId?: string;
   paid?: boolean;
-  products: Product[];
 }
 
 export interface Payment {
@@ -229,6 +230,7 @@ export interface Payment {
   saleId: number;
   amount: number;
   date: string;
+  method: PaymentMethod;
 }
 export type Customer = {
   id: string;

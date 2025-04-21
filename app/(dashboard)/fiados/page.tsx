@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Select, { SingleValue } from "react-select";
 import { db } from "@/app/database/db";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -11,12 +12,14 @@ import Notification from "@/app/components/Notification";
 import {
   CreditSale,
   Customer,
-  DailyCash,
   DailyCashMovement,
   Payment,
+  PaymentMethod,
+  PaymentSplit,
+  Product,
 } from "@/app/lib/types/types";
 import SearchBar from "@/app/components/SearchBar";
-import { Info, Wallet } from "lucide-react";
+import { Info, Plus, Trash, Wallet } from "lucide-react";
 import Pagination from "@/app/components/Pagination";
 
 const FiadosPage = () => {
@@ -24,11 +27,14 @@ const FiadosPage = () => {
   const [creditsPerPage, setCreditsPerPage] = useState(5);
   const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentSplit[]>([
+    { method: "EFECTIVO", amount: 0 },
+  ]);
+
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [currentCreditSale, setCurrentCreditSale] = useState<CreditSale | null>(
     null
   );
-  const [paymentAmount, setPaymentAmount] = useState(0);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState<
@@ -57,6 +63,12 @@ const FiadosPage = () => {
     return acc;
   }, {} as Record<string, CreditSale[]>);
 
+  const paymentOptions = [
+    { value: "EFECTIVO", label: "Efectivo" },
+    { value: "TRANSFERENCIA", label: "Transferencia" },
+    { value: "TARJETA", label: "Tarjeta" },
+  ];
+
   const uniqueCustomers = Object.keys(salesByCustomer);
   const totalCustomers = uniqueCustomers.length;
   const indexOfLastCredit = currentPage * creditsPerPage;
@@ -68,15 +80,22 @@ const FiadosPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [sales, payments, customers] = await Promise.all([
-        db.sales.filter((sale) => sale.credit === true).toArray(),
-        db.payments.toArray(),
-        db.customers.toArray(),
-      ]);
+      try {
+        const allSales = await db.sales.toArray();
+        const sales = allSales.filter((sale) => sale.credit === true);
 
-      setCreditSales(sales as CreditSale[]);
-      setPayments(payments);
-      setCustomers(customers);
+        const [payments, customers] = await Promise.all([
+          db.payments.toArray(),
+          db.customers.toArray(),
+        ]);
+
+        setCreditSales(sales as CreditSale[]);
+        setPayments(payments);
+        setCustomers(customers);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        showNotification("Error al cargar los fiados", "error");
+      }
     };
 
     fetchData();
@@ -110,6 +129,7 @@ const FiadosPage = () => {
 
     return totalSales - totalPayments;
   };
+
   const calculateRemainingBalance = (sale: CreditSale) => {
     if (!sale) return 0;
     const totalPayments = payments
@@ -118,69 +138,118 @@ const FiadosPage = () => {
 
     return sale.total - totalPayments;
   };
-  const addIncomeToDailyCash = async (
-    sale: CreditSale & { manualAmount?: number }
-  ) => {
-    if (sale.credit && !sale.paid) {
-      return;
+
+  const calculatePrice = (product: Product): number => {
+    const pricePerKg = product.price;
+    const quantity = product.quantity;
+    const unit = product.unit;
+    if (unit === "Unid.") {
+      return pricePerKg * quantity;
+    }
+    let quantityInKg: number;
+
+    switch (unit) {
+      case "gr":
+        quantityInKg = quantity / 1000;
+        break;
+      case "Kg":
+        quantityInKg = quantity;
+        break;
+      case "L":
+      case "ml":
+        quantityInKg = unit === "L" ? quantity : quantity / 1000;
+        break;
+      default:
+        return pricePerKg * quantity;
     }
 
+    return parseFloat((pricePerKg * quantityInKg).toFixed(2));
+  };
+
+  const addPaymentMethod = () => {
+    setPaymentMethods((prev) => {
+      if (prev.length >= paymentOptions.length) return prev;
+      const newMethods = [...prev];
+      if (newMethods.length === 2) {
+        newMethods.forEach((method) => {
+          method.amount = 0;
+        });
+      }
+
+      const usedMethods = newMethods.map((m) => m.method);
+      const availableMethod = paymentOptions.find(
+        (option) => !usedMethods.includes(option.value as PaymentMethod)
+      );
+
+      return [
+        ...newMethods,
+        {
+          method: (availableMethod?.value as PaymentMethod) || "EFECTIVO",
+          amount: 0,
+        },
+      ];
+    });
+  };
+
+  const addIncomeToDailyCash = async (sale: CreditSale) => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const dailyCash = await db.dailyCashes.get({ date: today });
+      let dailyCash = await db.dailyCashes.get({ date: today });
 
       const movements: DailyCashMovement[] = [];
+      const totalSaleAmount = sale.total;
+
       if (sale.products && sale.products.length > 0) {
         sale.products.forEach((product) => {
-          const profit =
-            (product.price - (product.costPrice || 0)) * product.quantity;
-          movements.push({
-            id: Date.now(),
-            amount:
-              product.price *
-              (product.unit === "gr"
-                ? product.quantity / 1000
-                : product.quantity),
-            description: `Venta de ${product.name} - ${product.quantity} ${product.unit}`,
-            type: "INGRESO",
-            date: new Date().toISOString(),
-            paymentMethod:
-              sale.paymentMethod === "Efectivo"
-                ? "EFECTIVO"
-                : sale.paymentMethod === "Tarjeta"
-                ? "TARJETA"
-                : "TRANSFERENCIA",
-            productId: product.id,
-            productName: product.name,
-            quantity: product.quantity,
-            unit: product.unit,
-            profit: profit,
-            isCreditPayment: sale.credit,
-            originalSaleId: sale.id,
+          const productAmount = calculatePrice(product);
+          const productRatio = productAmount / totalSaleAmount;
+
+          sale.paymentMethods.forEach((payment) => {
+            const paymentProductAmount = productRatio * payment.amount;
+            const profit =
+              (product.price - (product.costPrice || 0)) *
+              (payment.amount / productAmount);
+
+            movements.push({
+              id: Date.now(),
+              amount: paymentProductAmount,
+              description: `Venta de ${product.name} - ${product.quantity} ${product.unit}`,
+              type: "INGRESO",
+              date: new Date().toISOString(),
+              paymentMethod: payment.method,
+              productId: product.id,
+              productName: product.name,
+              quantity: product.quantity,
+              unit: product.unit,
+              profit: profit,
+              isCreditPayment: true,
+              originalSaleId: sale.id,
+            });
           });
         });
       }
 
       if (sale.manualAmount && sale.manualAmount > 0) {
-        movements.push({
-          id: Date.now(),
-          amount: sale.manualAmount,
-          description: "Monto manual adicional",
-          type: "INGRESO",
-          date: new Date().toISOString(),
-          paymentMethod:
-            sale.paymentMethod === "Efectivo"
-              ? "EFECTIVO"
-              : sale.paymentMethod === "Tarjeta"
-              ? "TARJETA"
-              : "TRANSFERENCIA",
-          isCreditPayment: sale.credit,
-          originalSaleId: sale.id,
+        const manualRatio = sale.manualAmount / totalSaleAmount;
+
+        sale.paymentMethods.forEach((payment) => {
+          const paymentManualAmount = manualRatio * payment.amount;
+
+          movements.push({
+            id: Date.now(),
+            amount: paymentManualAmount,
+            description: "Monto manual adicional",
+            type: "INGRESO",
+            date: new Date().toISOString(),
+            paymentMethod: payment.method,
+            isCreditPayment: true,
+            originalSaleId: sale.id,
+          });
         });
       }
 
       if (!dailyCash) {
-        const newDailyCash: DailyCash = {
+        dailyCash = {
           id: Date.now(),
           date: today,
           initialAmount: 0,
@@ -190,15 +259,14 @@ const FiadosPage = () => {
           totalExpense: 0,
           totalProfit: movements.reduce((sum, m) => sum + (m.profit || 0), 0),
         };
-        await db.dailyCashes.add(newDailyCash);
+        await db.dailyCashes.add(dailyCash);
       } else {
-        const updatedCash: DailyCash = {
+        const updatedCash = {
           ...dailyCash,
           movements: [...dailyCash.movements, ...movements],
           totalIncome:
             (dailyCash.totalIncome || 0) +
             movements.reduce((sum, m) => sum + m.amount, 0),
-          totalExpense: dailyCash.totalExpense || 0,
           totalProfit:
             (dailyCash.totalProfit || 0) +
             movements.reduce((sum, m) => sum + (m.profit || 0), 0),
@@ -232,7 +300,6 @@ const FiadosPage = () => {
       await db.sales.bulkDelete(salesToDelete);
       await db.payments.where("saleId").anyOf(salesToDelete).delete();
 
-      // Actualizar estados
       setCreditSales(
         creditSales.filter((sale) => sale.customerName !== customerToDelete)
       );
@@ -250,6 +317,7 @@ const FiadosPage = () => {
       showNotification("Error al eliminar fiados", "error");
     }
   };
+
   const handleDeleteSingleCredit = async (saleId: number) => {
     try {
       await db.sales.delete(saleId);
@@ -286,84 +354,165 @@ const FiadosPage = () => {
   };
 
   const handlePayment = async () => {
-    if (!currentCreditSale || paymentAmount <= 0) return;
+    if (!currentCreditSale) return;
+
+    const totalPayment = paymentMethods.reduce(
+      (sum, method) => sum + method.amount,
+      0
+    );
+    const remainingBalance = calculateRemainingBalance(currentCreditSale);
+
+    if (totalPayment <= 0) {
+      showNotification("El monto debe ser mayor a cero", "error");
+      return;
+    }
+
+    if (totalPayment > remainingBalance + 0.1) {
+      showNotification("El monto excede el saldo pendiente", "error");
+      return;
+    }
 
     try {
-      const remainingBalance = calculateRemainingBalance(currentCreditSale);
-
-      if (paymentAmount > remainingBalance) {
-        showNotification("El monto excede el saldo pendiente", "error");
-        return;
+      for (const method of paymentMethods) {
+        if (method.amount > 0) {
+          const newPayment: Payment = {
+            id: Date.now() + Math.random(),
+            saleId: currentCreditSale.id,
+            amount: method.amount,
+            date: new Date().toISOString(),
+            method: method.method,
+          };
+          await db.payments.add(newPayment);
+        }
       }
-
-      const newPayment: Payment = {
-        id: Date.now(),
-        saleId: currentCreditSale.id,
-        amount: paymentAmount,
-        date: new Date().toISOString(),
-      };
-      await db.payments.add(newPayment);
-      const updatedPayments = [...payments, newPayment];
-      const newRemainingBalance = remainingBalance - paymentAmount;
+      const newRemainingBalance = remainingBalance - totalPayment;
+      if (newRemainingBalance <= 0.1) {
+        await db.sales.update(currentCreditSale.id, {
+          paid: true,
+        } as Partial<CreditSale>);
+      }
+      const updatedPayments = await db.payments
+        .where("saleId")
+        .equals(currentCreditSale.id)
+        .toArray();
       setPayments(updatedPayments);
-      if (newRemainingBalance <= 0) {
-        await db.sales.update(currentCreditSale.id, { paid: true });
-        const updatedCreditSales = creditSales.map((sale) =>
-          sale.id === currentCreditSale.id ? { ...sale, paid: true } : sale
-        );
-        setCreditSales(updatedCreditSales);
-
+      if (newRemainingBalance <= 0.1) {
         const saleToRegister: CreditSale = {
           ...currentCreditSale,
-          total: paymentAmount,
+          total: totalPayment,
           paid: true,
-          products: currentCreditSale.products || [],
-          paymentMethod: currentCreditSale.paymentMethod || "Efectivo",
+          paymentMethods: paymentMethods.filter((m) => m.amount > 0),
         };
         await addIncomeToDailyCash(saleToRegister);
-      }
-      if (currentCustomerInfo) {
-        const updatedBalance = updatedPayments
-          .filter((p) =>
-            currentCustomerInfo.sales.some((s) => s.id === p.saleId)
-          )
-          .reduce((sum, p) => sum + p.amount, 0);
-
-        const totalDebt = currentCustomerInfo.sales.reduce(
-          (sum, sale) => sum + sale.total,
-          0
-        );
-
-        const newCustomerBalance = totalDebt - updatedBalance;
-
-        setCurrentCustomerInfo({
-          ...currentCustomerInfo,
-          balance: newCustomerBalance,
-          sales: currentCustomerInfo.sales.map((sale) => {
-            if (sale.id === currentCreditSale.id) {
-              return {
-                ...sale,
-                paid: newRemainingBalance <= 0,
-              };
-            }
-            return sale;
-          }),
-        });
       }
 
       showNotification("Pago registrado correctamente", "success");
       setIsPaymentModalOpen(false);
-      setPaymentAmount(0);
+      setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+      if (currentCustomerInfo) {
+        const updatedSales = (await db.sales
+          .where("customerName")
+          .equals(currentCustomerInfo.name)
+          .toArray()) as CreditSale[];
+
+        setCurrentCustomerInfo({
+          ...currentCustomerInfo,
+          balance:
+            updatedSales.reduce((total, sale) => total + (sale.total || 0), 0) -
+            updatedPayments.reduce((sum, p) => sum + p.amount, 0),
+          sales: updatedSales.map((s) => ({
+            ...s,
+            credit: true,
+            customerName: s.customerName || currentCustomerInfo.name,
+            customerPhone: s.customerPhone || "",
+            customerId: s.customerId || "",
+            paid: s.paid || false,
+            products: s.products || [],
+            paymentMethods: s.paymentMethods || [
+              { method: "EFECTIVO", amount: 0 },
+            ],
+            total: s.total || 0,
+            date: s.date || new Date().toISOString(),
+            barcode: s.barcode || "",
+            manualAmount: s.manualAmount || 0,
+          })),
+        });
+      }
     } catch (error) {
       console.error("Error al registrar pago:", error);
       showNotification("Error al registrar pago", "error");
     }
   };
 
+  const handlePaymentMethodChange = (
+    index: number,
+    field: keyof PaymentSplit,
+    value: string | number
+  ) => {
+    setPaymentMethods((prev) => {
+      const updated = [...prev];
+      const remainingBalance = calculateRemainingBalance(currentCreditSale!);
+
+      if (field === "amount") {
+        const numericValue =
+          typeof value === "string"
+            ? parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0
+            : (value as number);
+
+        updated[index] = {
+          ...updated[index],
+          amount: parseFloat(numericValue.toFixed(2)),
+        };
+        if (updated.length === 2) {
+          const totalPayment = updated.reduce((sum, m) => sum + m.amount, 0);
+          const difference = remainingBalance - totalPayment;
+
+          if (difference !== 0) {
+            const otherIndex = index === 0 ? 1 : 0;
+            updated[otherIndex].amount = Math.max(
+              0,
+              updated[otherIndex].amount + difference
+            );
+          }
+        }
+      } else {
+        updated[index] = {
+          ...updated[index],
+          method: value as PaymentMethod,
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handlePaymentAmountChange = (index: number, value: string) => {
+    const cleanValue = value.replace(/\./g, "");
+    const numericValue = cleanValue.replace(/[^0-9]/g, "");
+    const amount = parseFloat(numericValue) || 0;
+    handlePaymentMethodChange(index, "amount", amount);
+  };
+
+  const removePaymentMethod = (index: number) => {
+    setPaymentMethods((prev) => {
+      if (prev.length <= 1) return prev;
+
+      const updated = [...prev];
+      updated.splice(index, 1);
+      if (updated.length === 2) {
+        const remainingBalance = calculateRemainingBalance(currentCreditSale!);
+        updated[0].amount = remainingBalance / 2;
+        updated[1].amount = remainingBalance / 2;
+      }
+
+      return updated;
+    });
+  };
+
   const handleOpenInfoModal = (sale: CreditSale) => {
     const customerSales = creditSales.filter(
       (cs) => cs.customerName === sale.customerName
     );
+
     setCurrentCustomerInfo({
       name: sale.customerName,
       balance: calculateCustomerBalance(sale.customerName),
@@ -383,16 +532,16 @@ const FiadosPage = () => {
         </div>
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)] ">
-          <table className="w-full text-center border-collapse">
+          <table className="table-auto w-full text-center border-collapse">
             <thead className="text-white bg-blue_b">
               <tr>
-                <th className="px-4 py-2">Cliente</th>
+                <th className="px-4 py-2 text-start">Cliente</th>
                 <th className="px-4 py-2">Fecha</th>
                 <th className="px-4 py-2">Deuda</th>
-                <th className="px-4 py-2">Acciones</th>
+                <th className="w-40 max-w-[10rem] px-4 py-2">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
+            <tbody className={`bg-white text-gray_b divide-y divide-gray_xl `}>
               {totalCustomers > 0 ? (
                 currentCustomers.map((customerName) => {
                   const sales = salesByCustomer[customerName];
@@ -406,14 +555,16 @@ const FiadosPage = () => {
 
                   return (
                     <tr key={customerName}>
-                      <td className="px-4 py-2">{customerName}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2 border border-gray_xl text-start">
+                        {customerName}
+                      </td>
+                      <td className="px-4 py-2 border border-gray_xl">
                         {format(new Date(oldestSale.date), "dd/MM/yyyy", {
                           locale: es,
                         })}
                       </td>
                       <td
-                        className={`px-4 py-2 ${
+                        className={`px-4 py-2 border border-gray_xl ${
                           customerBalance <= 0
                             ? "text-green-600"
                             : "text-red-600"
@@ -424,8 +575,8 @@ const FiadosPage = () => {
                           currency: "ARS",
                         })}
                       </td>
-                      <td className="px-4 py-2 space-x-2">
-                        <div className="flex justify-center items-center">
+                      <td className="px-4 py-2 border border-gray_xl">
+                        <div className="flex justify-center items-center h-full">
                           <Button
                             icon={<Info size={20} />}
                             iconPosition="left"
@@ -499,11 +650,12 @@ const FiadosPage = () => {
                     <th className="px-2 py-1">Fecha</th>
                     <th className="px-2 py-1">Total</th>
                     <th className="px-2 py-1">Pagado</th>
+
                     <th className="px-2 py-1">Debe</th>
-                    <th className="px-2 py-1">Acciones</th>
+                    <th className="w-40 max-w-[10rem] px-2 py-1">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200  ">
+                <tbody className="divide-y divide-gray_xl border">
                   {currentCustomerInfo?.sales.map((sale) => {
                     const totalPayments = payments
                       .filter((p) => p.saleId === sale.id)
@@ -529,6 +681,7 @@ const FiadosPage = () => {
                             currency: "ARS",
                           })}
                         </td>
+
                         <td
                           className={`px-2 py-3 ${
                             remainingBalance <= 0
@@ -541,25 +694,45 @@ const FiadosPage = () => {
                             currency: "ARS",
                           })}
                         </td>
-                        <td className="flex justify-center items-center px-2 py-3 space-x-2">
-                          <Button
-                            text="Pagar"
-                            colorText="text-white"
-                            colorTextHover="text-white"
-                            onClick={() => {
-                              setCurrentCreditSale(sale);
-                              setIsPaymentModalOpen(true);
-                            }}
-                            disabled={remainingBalance <= 0}
-                          />
-                          <Button
-                            text="Eliminar"
-                            colorText="text-white"
-                            colorTextHover="text-white"
-                            colorBg="bg-red-500"
-                            colorBgHover="hover:bg-red-700"
-                            onClick={() => handleDeleteSingleCredit(sale.id)}
-                          />
+                        <td
+                          className={`flex ${
+                            remainingBalance > 0
+                              ? "justify-center"
+                              : "justify-end"
+                          } items-center px-2 py-3 space-x-2`}
+                        >
+                          {remainingBalance > 0 ? (
+                            <>
+                              <Button
+                                text="Pagar"
+                                colorText="text-white"
+                                colorTextHover="text-white"
+                                onClick={() => {
+                                  setCurrentCreditSale(sale);
+                                  setIsPaymentModalOpen(true);
+                                }}
+                              />
+                              <Button
+                                text="Eliminar"
+                                colorText="text-white"
+                                colorTextHover="text-white"
+                                colorBg="bg-red-500"
+                                colorBgHover="hover:bg-red-700"
+                                onClick={() =>
+                                  handleDeleteSingleCredit(sale.id)
+                                }
+                              />
+                            </>
+                          ) : (
+                            <Button
+                              text="Eliminar"
+                              colorText="text-white"
+                              colorTextHover="text-white"
+                              colorBg="bg-red-500"
+                              colorBgHover="hover:bg-red-700"
+                              onClick={() => handleDeleteSingleCredit(sale.id)}
+                            />
+                          )}
                         </td>
                       </tr>
                     );
@@ -601,6 +774,7 @@ const FiadosPage = () => {
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           title="Registrar Pago"
+          onConfirm={handlePayment}
         >
           <div className="space-y-4">
             <div>
@@ -625,14 +799,84 @@ const FiadosPage = () => {
               </p>
             </div>
 
-            <Input
-              label="Monto del pago"
-              type="number"
-              value={paymentAmount.toString()}
-              onChange={(e) =>
-                setPaymentAmount(parseFloat(e.target.value) || 0)
-              }
-            />
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">
+                Métodos de Pago
+              </label>
+              {paymentMethods.map((method, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Select
+                    value={paymentOptions.find(
+                      (option) => option.value === method.method
+                    )}
+                    onChange={(
+                      selectedOption: SingleValue<{
+                        value: string;
+                        label: string;
+                      }>
+                    ) =>
+                      handlePaymentMethodChange(
+                        index,
+                        "method",
+                        (selectedOption?.value as PaymentMethod) || "EFECTIVO"
+                      )
+                    }
+                    options={paymentOptions}
+                    className="w-full text-black"
+                    classNamePrefix="react-select"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Monto"
+                    value={
+                      method.amount > 0
+                        ? new Intl.NumberFormat("es-AR").format(method.amount)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handlePaymentAmountChange(index, e.target.value)
+                    }
+                    className="w-32"
+                  />
+                  {paymentMethods.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePaymentMethod(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {paymentMethods.length < 3 && (
+                <button
+                  type="button"
+                  onClick={addPaymentMethod}
+                  className="text-sm text-blue-500 hover:text-blue-700 flex items-center"
+                >
+                  <Plus size={16} className="mr-1" /> Agregar otro método
+                </button>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <p className="font-semibold">
+                Total a pagar:{" "}
+                {paymentMethods
+                  .reduce((sum, m) => sum + m.amount, 0)
+                  .toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+              </p>
+              {paymentMethods.reduce((sum, m) => sum + m.amount, 0) >
+                calculateRemainingBalance(currentCreditSale!) && (
+                <p className="text-red-500 text-sm">
+                  El monto total excede la deuda pendiente
+                </p>
+              )}
+            </div>
 
             <div className="flex justify-end space-x-2">
               <Button
@@ -640,6 +884,11 @@ const FiadosPage = () => {
                 colorText="text-white"
                 colorTextHover="text-white"
                 onClick={handlePayment}
+                disabled={
+                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
+                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) >
+                    calculateRemainingBalance(currentCreditSale!)
+                }
               />
               <Button
                 text="Cancelar"
@@ -647,7 +896,10 @@ const FiadosPage = () => {
                 colorTextHover="hover:text-white hover:dark:text-white"
                 colorBg="bg-gray_xl dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-                onClick={() => setIsPaymentModalOpen(false)}
+                onClick={() => {
+                  setIsPaymentModalOpen(false);
+                  setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+                }}
               />
             </div>
           </div>

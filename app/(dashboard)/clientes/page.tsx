@@ -8,7 +8,7 @@ import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
 import Pagination from "@/app/components/Pagination";
-import { Plus, Users } from "lucide-react";
+import { Edit, Plus, Trash, Users } from "lucide-react";
 import SearchBar from "@/app/components/SearchBar";
 
 const ClientesPage = () => {
@@ -20,6 +20,11 @@ const ClientesPage = () => {
     name: "",
     phone: "",
   });
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
+    null
+  );
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState<
@@ -105,11 +110,17 @@ const ClientesPage = () => {
     return `${cleanName}-${timestamp}`;
   };
 
-  const handleDeleteCustomer = async (customerId: string) => {
+  const handleDeleteClick = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setIsDeleteModalOpen(true);
+  };
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+
     try {
       const customerSales = await db.sales
         .where("customerId")
-        .equals(customerId)
+        .equals(customerToDelete.id)
         .toArray();
 
       if (customerSales.length > 0) {
@@ -120,12 +131,63 @@ const ClientesPage = () => {
         return;
       }
 
-      await db.customers.delete(customerId);
-      setCustomers(customers.filter((c) => c.id !== customerId));
+      await db.customers.delete(customerToDelete.id);
+      setCustomers(customers.filter((c) => c.id !== customerToDelete.id));
       showNotification("Cliente eliminado correctamente", "success");
     } catch (error) {
       console.error("Error al eliminar cliente:", error);
       showNotification("Error al eliminar cliente", "error");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setCustomerToDelete(null);
+    }
+  };
+  const handleEditClick = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setNewCustomer({
+      name: customer.name,
+      phone: customer.phone || "",
+    });
+    setIsModalOpen(true);
+  };
+  const handleUpdateCustomer = async () => {
+    if (!editingCustomer || !newCustomer.name.trim()) {
+      showNotification("El nombre del cliente es requerido", "error");
+      return;
+    }
+
+    try {
+      const existingCustomer = customers.find(
+        (c) =>
+          c.id !== editingCustomer.id &&
+          c.name.toLowerCase() === newCustomer.name.toLowerCase().trim()
+      );
+
+      if (existingCustomer) {
+        showNotification("Ya existe un cliente con este nombre", "error");
+        return;
+      }
+
+      const updatedCustomer = {
+        ...editingCustomer,
+        name: newCustomer.name.toUpperCase().trim(),
+        phone: newCustomer.phone,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await db.customers.update(editingCustomer.id, updatedCustomer);
+      setCustomers(
+        customers.map((c) =>
+          c.id === editingCustomer.id ? updatedCustomer : c
+        )
+      );
+      setNewCustomer({ name: "", phone: "" });
+      setEditingCustomer(null);
+      setIsModalOpen(false);
+      showNotification("Cliente actualizado correctamente", "success");
+    } catch (error) {
+      console.error("Error al actualizar cliente:", error);
+      showNotification("Error al actualizar cliente", "error");
     }
   };
 
@@ -153,34 +215,55 @@ const ClientesPage = () => {
         </div>
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
-          <table className="w-full text-center border-collapse">
+          <table className="table-auto w-full text-center border-collapse">
             <thead className="text-white bg-blue_b">
               <tr>
                 <th className="px-4 py-2">Nombre</th>
                 <th className="px-4 py-2">Teléfono</th>
                 <th className="px-4 py-2">Fecha de Registro</th>
-                <th className="px-4 py-2">Acciones</th>
+                <th className="px-4 py-2 w-40 max-w-[10rem]">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
+            <tbody className={`bg-white text-gray_b divide-y divide-gray_xl `}>
               {currentCustomers.length > 0 ? (
                 currentCustomers.map((customer) => (
                   <tr key={customer.id}>
-                    <td className="px-4 py-2">{customer.name}</td>
-                    <td className="px-4 py-2">{customer.phone || "-"}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 border border-gray_xl">
+                      {customer.name}
+                    </td>
+                    <td className="px-4 py-2 border border-gray_xl">
+                      {customer.phone || "-"}
+                    </td>
+                    <td className="px-4 py-2 border border-gray_xl">
                       {new Date(customer.createdAt).toLocaleDateString("es-AR")}
                     </td>
-                    <td className="flex justify-center px-4 py-2">
-                      <Button
-                        text="Eliminar"
-                        colorText="text-white"
-                        colorTextHover="text-white"
-                        colorBg="bg-red-500"
-                        colorBgHover="hover:bg-red-700"
-                        onClick={() => handleDeleteCustomer(customer.id)}
-                        disabled={customer.name === "CLIENTE OCASIONAL"}
-                      />
+                    <td className="px-4 py-2 border border-gray_xl">
+                      <div className="flex justify-center items-center gap-2 h-full">
+                        <Button
+                          icon={<Edit size={20} />}
+                          colorText="text-gray_b"
+                          colorTextHover="hover:text-white"
+                          colorBg="bg-transparent"
+                          colorBgHover="hover:bg-blue-500"
+                          px="px-1"
+                          py="py-1"
+                          minwidth="min-w-0"
+                          onClick={() => handleEditClick(customer)}
+                          disabled={customer.name === "CLIENTE OCASIONAL"}
+                        />
+                        <Button
+                          icon={<Trash size={20} />}
+                          colorText="text-gray_b"
+                          colorTextHover="hover:text-white"
+                          colorBg="bg-transparent"
+                          colorBgHover="hover:bg-red-500"
+                          px="px-1"
+                          py="py-1"
+                          minwidth="min-w-0"
+                          onClick={() => handleDeleteClick(customer)}
+                          disabled={customer.name === "CLIENTE OCASIONAL"}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -218,8 +301,13 @@ const ClientesPage = () => {
         </div>
         <Modal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          title="Nuevo Cliente"
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingCustomer(null);
+            setNewCustomer({ name: "", phone: "" });
+          }}
+          title={editingCustomer ? "Editar Cliente" : "Nuevo Cliente"}
+          onConfirm={editingCustomer ? handleUpdateCustomer : handleAddCustomer}
         >
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
@@ -256,6 +344,34 @@ const ClientesPage = () => {
                 onClick={() => setIsModalOpen(false)}
               />
             </div>
+          </div>
+        </Modal>
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Confirmar Eliminación"
+          onConfirm={handleConfirmDelete}
+        >
+          <p>
+            ¿Está seguro que desea eliminar al cliente {customerToDelete?.name}?
+          </p>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button
+              text="Eliminar"
+              colorText="text-white"
+              colorTextHover="text-white"
+              colorBg="bg-red-500"
+              colorBgHover="hover:bg-red-700"
+              onClick={handleConfirmDelete}
+            />
+            <Button
+              text="Cancelar"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={() => setIsDeleteModalOpen(false)}
+            />
           </div>
         </Modal>
 

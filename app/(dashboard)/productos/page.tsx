@@ -156,7 +156,7 @@ const ProductsPage = () => {
     setIsNotificationOpen(true);
     setTimeout(() => {
       setIsNotificationOpen(false);
-    }, 2000);
+    }, 3000);
   };
   const handleAddProduct = () => {
     setIsOpenModal(true);
@@ -365,12 +365,12 @@ const ProductsPage = () => {
                   Precio de venta
                 </th>
                 <th className="text-xs xl:text-lg px-4 py-2 ">Vencimiento</th>
-                <th className="text-xs xl:text-lg px-4 py-2 xl:w-[12rem] ">
+                <th className="w-40 max-w-[10rem] text-xs xl:text-lg px-4 py-2">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white text-gray_b divide-y divide-gray_l">
+            <tbody className={`bg-white text-gray_b divide-y divide-gray_xl `}>
               {sortedProducts.length > 0 ? (
                 sortedProducts
                   .slice(indexOfFirstProduct, indexOfLastProduct)
@@ -399,7 +399,7 @@ const ProductsPage = () => {
                     return (
                       <tr
                         key={index}
-                        className={` text-xs 2xl:text-[.9rem] border-b border-gray_l ${
+                        className={` text-xs 2xl:text-[.9rem] border-b border-gray_xl ${
                           isExpired
                             ? "border-l-2 border-l-red-500 text-gray_b bg-white"
                             : expiredToday
@@ -409,7 +409,7 @@ const ProductsPage = () => {
                             : "text-gray_b bg-white"
                         }`}
                       >
-                        <td className="font-semibold px-2 text-start uppercase">
+                        <td className="font-semibold px-2 text-start uppercase border border-gray_xl">
                           <div className="flex items-center gap-1 h-full">
                             {expiredToday && (
                               <AlertTriangle
@@ -441,20 +441,20 @@ const ProductsPage = () => {
                             Number(product.stock) > 0
                               ? ""
                               : "text-red-900"
-                          } font-normal px-4 py-2 border border-gray_l`}
+                          } font-normal px-4 py-2 border border-gray_xl`}
                         >
                           {!isNaN(Number(product.stock)) &&
                           Number(product.stock) > 0
                             ? `${product.stock} ${product.unit}`
                             : "Agotado"}
                         </td>
-                        <td className="font-semibold px-4 py-2 border border-gray_l">
+                        <td className="font-semibold px-4 py-2 border border-gray_xl">
                           {formatPrice(product.costPrice)}
                         </td>
-                        <td className="font-semibold px-4 py-2 border border-gray_l">
+                        <td className="font-semibold px-4 py-2 border border-gray_xl">
                           {formatPrice(product.price)}
                         </td>
-                        <td className="font-semibold px-4 py-2 border border-gray_l">
+                        <td className="font-semibold px-4 py-2 border border-gray_xl">
                           {expirationDate
                             ? format(expirationDate, "dd/MM/yyyy", {
                                 locale: es,
@@ -536,7 +536,7 @@ const ProductsPage = () => {
           <form className="flex flex-col gap-4">
             <div className="w-full flex items-center space-x-4">
               <div className="w-full">
-                <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
+                <label className="block text-gray_m dark:text-white text-sm font-semibold">
                   Código de Barras
                 </label>
                 <BarcodeScanner
@@ -589,10 +589,7 @@ const ProductsPage = () => {
                       unit: selectedOption?.value as Product["unit"],
                     });
                   }}
-                  className="mt-2 text-black"
-                  classNames={{
-                    control: () => "text-sm  border-gray-300 rounded-md ",
-                  }}
+                  className="text-black"
                   isSearchable={false}
                 />
               </div>
@@ -655,6 +652,7 @@ const ProductsPage = () => {
           onClose={() => setIsConfirmModalOpen(false)}
           title="Eliminar Producto"
           bgColor="bg-white dark:bg-gray_b"
+          onConfirm={handleConfirmDelete}
         >
           <p>¿Desea eliminar el producto {productToDelete?.name}?</p>
           <div className="flex justify-end space-x-2">
@@ -682,7 +680,7 @@ const ProductsPage = () => {
         >
           <div className="flex flex-col gap-4">
             <div>
-              <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
+              <label className="block text-gray_m dark:text-white text-sm font-semibold">
                 Código de Barras
               </label>
               <BarcodeScanner

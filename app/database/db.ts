@@ -6,6 +6,7 @@ import {
   DailyCash,
   Customer,
   Supplier,
+  Payment,
 } from "../lib/types/types";
 
 class MyDatabase extends Dexie {
@@ -15,10 +16,7 @@ class MyDatabase extends Dexie {
   sales!: Table<Sale, number>;
   dailyCashes!: Table<DailyCash, number>;
   dailyCashMovements!: Table<{ id: number; dailyCashId: number }, number>;
-  payments!: Table<
-    { id: number; saleId: number; amount: number; date: string },
-    number
-  >;
+  payments!: Table<Payment, number>;
   customers!: Table<Customer, string>;
   suppliers!: Table<Supplier, number>;
 
@@ -28,10 +26,11 @@ class MyDatabase extends Dexie {
       theme: "id",
       products: "++id, name, barcode, stock",
       auth: "id",
-      sales: "++id, date, credit, paymentMethod, customerName, customerId",
+      sales:
+        "++id, date, *paymentMethod, customerName, customerId, paid, credit",
       dailyCashes: "++id, &date, closed",
       dailyCashMovements: "++id, dailyCashId, date, type",
-      payments: "++id, saleId, date",
+      payments: "++id, saleId, date, method",
       customers: "&id, name",
       suppliers: "++id, companyName, lastVisit, nextVisit, createdAt",
     });
