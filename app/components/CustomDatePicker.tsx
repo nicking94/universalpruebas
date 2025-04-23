@@ -12,6 +12,9 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import es from "date-fns/locale/es";
+import { registerLocale } from "react-datepicker";
+
+registerLocale("es", es);
 
 const CustomDatePicker: React.FC<DatepickerProps> = ({
   value,
@@ -96,12 +99,13 @@ const CustomDatePicker: React.FC<DatepickerProps> = ({
             mode="single"
             selected={date}
             onSelect={handleDateChange}
-            initialFocus
+            defaultMonth={date || new Date()}
             fromDate={new Date()}
             locale={es}
+            initialFocus
             classNames={{
               day_selected: "bg-primary text-primary-foreground",
-              day_today: "bg-accent text-accent-foreground",
+              day_today: "font-bold",
             }}
           />
         </PopoverContent>
