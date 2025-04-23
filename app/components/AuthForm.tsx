@@ -30,12 +30,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col justify-center w-[35%] xl:w-[25%] p-10 space-y-10 shadow-2xl shadow-blue_b bg-white"
+      className="text-gray_b flex flex-col justify-center w-[35%] xl:w-[25%] p-10 space-y-10 shadow-2xl shadow-blue_b bg-white"
     >
       <div className="flex justify-center">
         <Image src={logo} alt="logo" width={100} height={100} />
       </div>
-      <h2 className="font-semibold text-3xl 2xl:text-4xl text-center">
+      <h2 className="font-semibold text-3xl 2xl:text-4xl text-center text-gray_b">
         {type === "login" ? "Iniciar Sesión" : "Registrarse"}
       </h2>
       <div className="flex flex-col  ">
@@ -49,10 +49,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
           onChange={handleChange}
           required
           placeholder="Escribe tu nombre de usuario..."
-          className="outline-none p-2 border-[1px] border-blue_l rounded-sm focus:border-blue_b transition-colors duration-200"
+          className="placeholder:text-gray_l outline-none p-2 border-[1px] border-blue_l rounded-sm focus:border-blue_b transition-colors duration-200"
         />
       </div>
-      <div>
+      <div className="text-gray_b">
         <label htmlFor="password">Contraseña</label>
         <div className="relative border-[1px] border-blue_l rounded-sm focus:border-blue_b transition-colors duration-200">
           <input
@@ -63,7 +63,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
             onChange={handleChange}
             required
             placeholder="Escribe tu contraseña..."
-            className="w-[90%]  outline-none p-2 pr-14 "
+            className="placeholder:text-gray_l w-full outline-none p-2 pr-14 "
           />
           <button
             type="button"
