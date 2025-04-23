@@ -227,7 +227,7 @@ const ClientesPage = () => {
             <tbody className={`bg-white text-gray_b divide-y divide-gray_xl `}>
               {currentCustomers.length > 0 ? (
                 currentCustomers.map((customer) => (
-                  <tr key={customer.id}>
+                  <tr key={customer.id} className="font-semibold">
                     <td className="px-4 py-2 border border-gray_xl">
                       {customer.name}
                     </td>
@@ -307,7 +307,30 @@ const ClientesPage = () => {
             setNewCustomer({ name: "", phone: "" });
           }}
           title={editingCustomer ? "Editar Cliente" : "Nuevo Cliente"}
-          onConfirm={editingCustomer ? handleUpdateCustomer : handleAddCustomer}
+          buttons={
+            <>
+              <Button
+                text={editingCustomer ? "Actualizar" : "Agregar"}
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={
+                  editingCustomer ? handleUpdateCustomer : handleAddCustomer
+                }
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingCustomer(null);
+                  setNewCustomer({ name: "", phone: "" });
+                }}
+              />
+            </>
+          }
         >
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
@@ -328,12 +351,21 @@ const ClientesPage = () => {
                 placeholder="Ingrese el número de teléfono..."
               />
             </div>
-            <div className="flex justify-end space-x-2 mt-10">
+          </div>
+        </Modal>
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Confirmar Eliminación"
+          buttons={
+            <>
               <Button
-                text="Guardar"
+                text="Eliminar"
                 colorText="text-white"
                 colorTextHover="text-white"
-                onClick={handleAddCustomer}
+                colorBg="bg-red-500"
+                colorBgHover="hover:bg-red-700"
+                onClick={handleConfirmDelete}
               />
               <Button
                 text="Cancelar"
@@ -341,38 +373,14 @@ const ClientesPage = () => {
                 colorTextHover="hover:text-white hover:dark:text-white"
                 colorBg="bg-gray_xl dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => setIsDeleteModalOpen(false)}
               />
-            </div>
-          </div>
-        </Modal>
-        <Modal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          title="Confirmar Eliminación"
-          onConfirm={handleConfirmDelete}
+            </>
+          }
         >
           <p>
             ¿Está seguro que desea eliminar al cliente {customerToDelete?.name}?
           </p>
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button
-              text="Eliminar"
-              colorText="text-white"
-              colorTextHover="text-white"
-              colorBg="bg-red-500"
-              colorBgHover="hover:bg-red-700"
-              onClick={handleConfirmDelete}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsDeleteModalOpen(false)}
-            />
-          </div>
         </Modal>
 
         <Notification

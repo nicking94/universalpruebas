@@ -230,17 +230,15 @@ const ProveedoresPage = () => {
             <tbody className={`bg-white text-gray_b divide-y divide-gray_xl`}>
               {currentItems.length > 0 ? (
                 currentItems.map((supplier) => (
-                  <tr key={supplier.id}>
-                    <td className="px-4 py-2 text-left font-semibold border border-gray_xl">
+                  <tr key={supplier.id} className="font-semibold">
+                    <td className="px-4 py-2 text-left  border border-gray_xl">
                       {supplier.companyName}
                     </td>
                     <td className="px-4 py-2  border border-gray_xl">
                       <div className="flex justify-center items-center space-x-4  ">
                         {supplier.contacts.length > 0 && (
                           <div className="text-sm">
-                            <p className="font-medium">
-                              {supplier.contacts[0].name}
-                            </p>
+                            <p>{supplier.contacts[0].name}</p>
                           </div>
                         )}
                         {supplier.contacts.length > 1 && (
@@ -253,9 +251,7 @@ const ProveedoresPage = () => {
                                 .slice(1)
                                 .map((contact, index) => (
                                   <div key={index} className="py-1">
-                                    <p className="font-medium">
-                                      {contact.name}
-                                    </p>
+                                    <p>{contact.name}</p>
                                   </div>
                                 ))}
                             </div>
@@ -263,7 +259,7 @@ const ProveedoresPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2 border border-gray_xl">
+                    <td className="px-4 py-2 border border-gray_xl ">
                       {supplier.lastVisit ? (
                         format(parseISO(supplier.lastVisit), "dd/MM/yyyy", {
                           locale: es,
@@ -274,7 +270,7 @@ const ProveedoresPage = () => {
                     </td>
                     <td className="px-4 py-2 border border-gray_xl">
                       {supplier.nextVisit ? (
-                        <span className="font-semibold">
+                        <span>
                           {format(parseISO(supplier.nextVisit), "dd/MM/yyyy", {
                             locale: es,
                           })}
@@ -283,7 +279,7 @@ const ProveedoresPage = () => {
                         <span className="text-gray_m">No programada</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 space-x-2 border border-gray_xl">
+                    <td className="px-4 py-2 space-x-4 border border-gray_xl">
                       <div className="flex justify-center gap-2">
                         <Button
                           icon={<Edit size={20} />}
@@ -350,6 +346,27 @@ const ProveedoresPage = () => {
             resetForm();
           }}
           title={editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}
+          buttons={
+            <div className="flex justify-end space-x-4 ">
+              <Button
+                text={editingSupplier ? "Actualizar" : "Guardar"}
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={handleSubmit}
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetForm();
+                }}
+              />
+            </div>
+          }
         >
           <div className="space-y-4">
             <Input
@@ -359,11 +376,11 @@ const ProveedoresPage = () => {
               placeholder="Ej: Distribuidora S.A."
             />
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               {contacts.map((contact, index) => (
                 <div
                   key={index}
-                  className="bg-blue_xl space-y-2 border border-blue_xl shadow-lg shadow-gray_l p-4 mb-8"
+                  className="bg-blue_xl space-y-4 border border-blue_xl shadow-md shadow-gray_l p-4 mb-8"
                 >
                   <div className="flex justify-between items-center">
                     <span className="bg-blue_m rounded-md px-2 py-1 text-white text-sm font-medium">
@@ -372,12 +389,12 @@ const ProveedoresPage = () => {
                     {contacts.length > 1 && (
                       <Button
                         type="button"
-                        text="Eliminar"
+                        icon={<Trash size={20} />}
                         px="px-3"
                         py="py-1"
                         minwidth="min-w-0"
                         colorBg="bg-red-500"
-                        colorBgHover="hover:bg-red-600"
+                        colorBgHover="hover:bg-red-700"
                         colorText="text-white"
                         colorTextHover="hover:text-white"
                         onClick={() => handleRemoveContact(index)}
@@ -413,13 +430,14 @@ const ProveedoresPage = () => {
                 text="Agregar otro proveedor"
                 colorText="text-blue_b dark:text-white"
                 colorTextHover="hover:text-blue_b dark:hover:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl dark:hover:bg-gray_l"
+                colorBg="bg-transparent "
+                colorBgHover="hover:bg-transparent"
+                px="px-0"
                 onClick={handleAddContact}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <CustomDatePicker
                   label="Última Visita"
@@ -442,31 +460,31 @@ const ProveedoresPage = () => {
               </div>
             </div>
           </div>
-
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button
-              text={editingSupplier ? "Actualizar" : "Guardar"}
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={handleSubmit}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => {
-                setIsModalOpen(false);
-                resetForm();
-              }}
-            />
-          </div>
         </Modal>
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
           title="Eliminar Proveedor"
+          buttons={
+            <div className="flex justify-end space-x-4 ">
+              <Button
+                text="Eliminar"
+                colorText="text-white"
+                colorTextHover="text-white"
+                colorBg="bg-red-500"
+                colorBgHover="hover:bg-red-700"
+                onClick={handleDelete}
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => setIsDeleteModalOpen(false)}
+              />
+            </div>
+          }
         >
           <p className="text-gray_m dark:text-white">
             ¿Está seguro de que desea eliminar el proveedor{" "}
@@ -475,24 +493,6 @@ const ProveedoresPage = () => {
             </span>
             ? Esta acción no se puede deshacer.
           </p>
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button
-              text="Eliminar"
-              colorText="text-white"
-              colorTextHover="text-white"
-              colorBg="bg-red-500"
-              colorBgHover="hover:bg-red-700"
-              onClick={handleDelete}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsDeleteModalOpen(false)}
-            />
-          </div>
         </Modal>
 
         <Notification

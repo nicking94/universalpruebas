@@ -38,6 +38,7 @@ export type SidebarProps = {
     label: string;
     href: string;
     icon?: React.ReactNode;
+    target?: string;
   }>;
 };
 export type MenuItemProps = {
@@ -62,6 +63,7 @@ export type ModalProps = {
   title?: string;
   children?: React.ReactNode;
   bgColor?: string;
+  buttons?: React.ReactNode;
 };
 
 export type InputProps = {

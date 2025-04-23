@@ -143,7 +143,8 @@ const ProductsPage = () => {
       originalProduct.costPrice !== updatedProduct.costPrice ||
       originalProduct.price !== updatedProduct.price ||
       originalProduct.expiration !== updatedProduct.expiration ||
-      originalProduct.unit !== updatedProduct.unit
+      originalProduct.unit !== updatedProduct.unit ||
+      originalProduct.barcode !== updatedProduct.barcode
     );
   };
   const showNotification = (
@@ -171,6 +172,17 @@ const ProductsPage = () => {
       !newProduct.unit
     ) {
       showNotification("Por favor, complete todos los campos", "error");
+      return;
+    }
+    const barcodeExists = products.some(
+      (p) =>
+        p.barcode === newProduct.barcode &&
+        p.barcode !== "" &&
+        (!editingProduct || p.id !== editingProduct.id)
+    );
+
+    if (barcodeExists) {
+      showNotification("El código de barras ya existe", "error");
       return;
     }
     try {
@@ -267,7 +279,8 @@ const ProductsPage = () => {
         !newProduct.name ||
           !newProduct.stock ||
           !newProduct.costPrice ||
-          !newProduct.price
+          !newProduct.price ||
+          !newProduct.unit
       );
     }
   }, [newProduct, editingProduct]);
@@ -409,8 +422,8 @@ const ProductsPage = () => {
                             : "text-gray_b bg-white"
                         }`}
                       >
-                        <td className="font-semibold px-2 text-start uppercase border border-gray_xl">
-                          <div className="flex items-center gap-1 h-full">
+                        <td className="font-semibold px-4 py-2 text-start uppercase border border-gray_xl">
+                          <div className="flex items-center gap-2 h-full">
                             {expiredToday && (
                               <AlertTriangle
                                 className="text-yellow-300 dark:text-yellow-500"
@@ -474,7 +487,7 @@ const ProductsPage = () => {
                             <span className="ml-2 text-red-800">(Vencido)</span>
                           )}
                         </td>
-                        <td className="px-4 py-2 flex justify-center gap-4">
+                        <td className="px-4 py-2 flex justify-center gap-2">
                           <Button
                             icon={<Edit size={20} />}
                             colorText="text-gray_b"
@@ -532,8 +545,27 @@ const ProductsPage = () => {
           onClose={handleCloseModal}
           title={editingProduct ? "Editar Producto" : "Añadir Producto"}
           bgColor="bg-white dark:bg-gray_b"
+          buttons={
+            <>
+              <Button
+                text={editingProduct ? "Actualizar" : "Guardar"}
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={handleConfirmAddProduct}
+                disabled={editingProduct ? isSaveDisabled : false}
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={handleCloseModal}
+              />
+            </>
+          }
         >
-          <form className="flex flex-col gap-4">
+          <form className="flex flex-col gap-2">
             <div className="w-full flex items-center space-x-4">
               <div className="w-full">
                 <label className="block text-gray_m dark:text-white text-sm font-semibold">
@@ -541,9 +573,9 @@ const ProductsPage = () => {
                 </label>
                 <BarcodeScanner
                   value={newProduct.barcode || ""}
-                  onChange={(value) =>
-                    setNewProduct({ ...newProduct, barcode: value })
-                  }
+                  onChange={(value) => {
+                    setNewProduct({ ...newProduct, barcode: value });
+                  }}
                   onScanComplete={(code) => {
                     const existingProduct = products.find(
                       (p) => p.barcode === code
@@ -552,14 +584,18 @@ const ProductsPage = () => {
                       setNewProduct({
                         ...existingProduct,
                         id: editingProduct ? existingProduct.id : Date.now(),
+                        barcode: existingProduct.barcode,
                       });
                       setEditingProduct(existingProduct);
-                      showNotification(
-                        "Producto encontrado, puedes editar los datos",
-                        "success"
-                      );
+                      showNotification("Producto encontrado", "success");
+                    } else if (editingProduct) {
+                      setNewProduct({
+                        ...newProduct,
+                        barcode: code,
+                      });
                     }
                   }}
+                  placeholder="Escanear o ingresar código manualmente"
                 />
               </div>
               <Input
@@ -629,23 +665,6 @@ const ProductsPage = () => {
               isClearable={true}
             />
           </form>
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button
-              text={editingProduct ? "Actualizar" : "Guardar"}
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={handleConfirmAddProduct}
-              disabled={editingProduct ? isSaveDisabled : false}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={handleCloseModal}
-            />
-          </div>
         </Modal>
         <Modal
           isOpen={isConfirmModalOpen}
@@ -653,32 +672,44 @@ const ProductsPage = () => {
           title="Eliminar Producto"
           bgColor="bg-white dark:bg-gray_b"
           onConfirm={handleConfirmDelete}
+          buttons={
+            <>
+              <Button
+                text="Si"
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={handleConfirmDelete}
+              />
+              <Button
+                text="No"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => setIsConfirmModalOpen(false)}
+              />
+            </>
+          }
         >
           <p>¿Desea eliminar el producto {productToDelete?.name}?</p>
-          <div className="flex justify-end space-x-2">
-            <Button
-              text="Si"
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={handleConfirmDelete}
-            />
-            <Button
-              text="No"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsConfirmModalOpen(false)}
-            />
-          </div>
         </Modal>
         <Modal
           isOpen={isPriceModalOpen}
           onClose={() => setIsPriceModalOpen(false)}
           title="Consultar Precio de Producto"
           bgColor="bg-white dark:bg-gray_b"
+          buttons={
+            <Button
+              text="Cerrar"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={() => setIsPriceModalOpen(false)}
+            />
+          }
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <div>
               <label className="block text-gray_m dark:text-white text-sm font-semibold">
                 Código de Barras
@@ -695,7 +726,7 @@ const ProductsPage = () => {
 
             {scannedProduct && (
               <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                       Producto
@@ -747,16 +778,6 @@ const ProductsPage = () => {
                 </div>
               </div>
             )}
-          </div>
-          <div className="flex justify-end mt-4">
-            <Button
-              text="Cerrar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsPriceModalOpen(false)}
-            />
           </div>
         </Modal>
 

@@ -35,6 +35,7 @@ const menuItems = [
     label: "Soporte técnico",
     href: "https://wa.me/5492613077147",
     icon: <Headphones />,
+    target: "_blank",
   },
 ];
 
@@ -44,12 +45,17 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
   const pathname = usePathname();
   const [activeItem, setActiveItem] = useState<string>("");
 
-  const handleItemClick = (label: string, href?: string) => {
+  const handleItemClick = (label: string, href?: string, target?: string) => {
     setActiveItem((prev) => (prev === label ? "" : label));
 
-    if (href) router.push(href);
+    if (href) {
+      if (target === "_blank") {
+        window.open(href, "_blank");
+      } else {
+        router.push(href);
+      }
+    }
   };
-
   useEffect(() => {
     const findActiveItem = (items: MenuItemProps[]): string => {
       for (const item of items) {
@@ -87,7 +93,9 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
           {items.map((item) => (
             <div key={item.label} className="w-full">
               <button
-                onClick={() => handleItemClick(item.label, item.href)}
+                onClick={() =>
+                  handleItemClick(item.label, item.href, item.target)
+                }
                 className={` ${
                   activeItem === item.label
                     ? " shadow-md shadow-gray_xl dark:shadow-gray_m bg-gray_xl dark:bg-gray_b"

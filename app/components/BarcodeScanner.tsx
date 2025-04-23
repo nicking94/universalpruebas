@@ -29,23 +29,25 @@ export default function BarcodeScanner({
     const now = Date.now();
 
     onChange(newValue);
+    if (newValue.length >= 8) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
 
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    const isScannerInput = now - lastInputTimeRef.current < 30;
+      const isScannerInput = now - lastInputTimeRef.current < 30;
 
-    timeoutRef.current = setTimeout(
-      () => {
-        if (newValue.length >= 8 && onScanComplete) {
-          onScanComplete(newValue);
-          if (inputRef.current) {
-            inputRef.current.focus();
+      timeoutRef.current = setTimeout(
+        () => {
+          if (onScanComplete) {
+            onScanComplete(newValue);
+            if (inputRef.current) {
+              inputRef.current.focus();
+            }
           }
-        }
-      },
-      isScannerInput ? 50 : 500
-    );
+        },
+        isScannerInput ? 50 : 500
+      );
+    }
 
     lastInputTimeRef.current = now;
   };

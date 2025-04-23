@@ -1,10 +1,17 @@
+"use client";
 import React, { useState, useEffect } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale/es";
-import { Calendar, X } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon, X } from "lucide-react";
 import { DatepickerProps } from "../lib/types/types";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import es from "date-fns/locale/es";
 
 const CustomDatePicker: React.FC<DatepickerProps> = ({
   value,
@@ -14,81 +21,98 @@ const CustomDatePicker: React.FC<DatepickerProps> = ({
   label = "Fecha de vencimiento",
   placeholderText = "Seleccionar fecha de vencimiento...",
 }) => {
-  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (value) {
       try {
-        const parsedDate = parseISO(value);
-        setStartDate(parsedDate);
+        const [year, month, day] = value.split("-").map(Number);
+        const localDate = new Date(year, month - 1, day);
+        setDate(localDate);
       } catch (error) {
         console.error("Error parsing date:", error);
-        setStartDate(null);
+        setDate(undefined);
       }
     } else {
-      setStartDate(null);
+      setDate(undefined);
     }
   }, [value]);
 
-  const handleClear = () => {
-    handleDateChange(null);
-  };
-  const handleDateChange = (date: Date | null) => {
-    setStartDate(date);
-    if (date) {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      onChange(formattedDate);
+  const handleDateChange = (selectedDate?: Date) => {
+    if (selectedDate) {
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+      const day = String(selectedDate.getDate()).padStart(2, "0");
+
+      setDate(selectedDate);
+      onChange(`${year}-${month}-${day}`);
     } else {
+      setDate(undefined);
       onChange(undefined);
     }
+    setIsOpen(false);
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleDateChange(undefined);
   };
 
   return (
-    <div className="w-full">
-      <label
-        htmlFor="datepicker"
-        className="block text-gray_m dark:text-white text-sm font-semibold mb-1"
-      >
-        {label}
-      </label>
-      <div className="relative w-full">
-        <DatePicker
-          id="datepicker"
-          selected={startDate}
-          onChange={handleDateChange}
-          dateFormat="dd-MM-yyyy"
-          locale={es}
-          placeholderText={placeholderText}
-          className="pl-10 border border-gray_xl focus:shadow-lg focus:shadow-gray_xl dark:focus:shadow-gray_m w-full bg-white p-2 rounded-sm placeholder:text-gray_l outline-none text-gray_b"
-          wrapperClassName="w-full"
-          isClearable={false}
-        />
-        {!startDate && (
+    <div className="flex flex-col w-full gap-1 mt-1">
+      {label && (
+        <label className="block text-sm font-medium leading-none text-gray_m dark:text-white">
+          {label}
+        </label>
+      )}
+
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !date && "text-muted-foreground",
+              error && "border-destructive"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {date ? (
+              format(date, "PPP", { locale: es })
+            ) : (
+              <span>{placeholderText}</span>
+            )}
+            {isClearable && date && (
+              <X
+                className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
+                onClick={handleClear}
+              />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
-            size={20}
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              const datepickerElement = document.querySelector("#datepicker");
-              if (datepickerElement instanceof HTMLInputElement) {
-                datepickerElement.focus();
-              } else if (datepickerElement instanceof HTMLElement) {
-                (datepickerElement as HTMLInputElement).focus();
-              }
+            mode="single"
+            selected={date}
+            onSelect={handleDateChange}
+            initialFocus
+            fromDate={new Date()}
+            locale={es}
+            classNames={{
+              day_selected: "bg-primary text-primary-foreground",
+              day_today: "bg-accent text-accent-foreground",
             }}
           />
-        )}
-        {isClearable && startDate && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="cursor-pointer absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-blue_b"
-          >
-            <X size={20} />
-          </button>
-        )}
-      </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+        </PopoverContent>
+      </Popover>
+
+      {error && (
+        <p className="text-sm text-destructive flex items-center gap-1">
+          <X className="h-4 w-4" />
+          {error}
+        </p>
+      )}
     </div>
   );
 };

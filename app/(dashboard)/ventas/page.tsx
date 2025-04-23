@@ -13,7 +13,7 @@ import {
   UnitOption,
 } from "@/app/lib/types/types";
 import { Info, Plus, ShoppingCart, Trash } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import { parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -68,13 +68,15 @@ const VentasPage = () => {
     { value: "L", label: "L" },
     { value: "ml", label: "Ml" },
   ];
-  const calculatePrice = (product: Product): number => {
+  const calculatePrice = useCallback((product: Product): number => {
     const pricePerKg = product.price;
     const quantity = product.quantity;
     const unit = product.unit;
+
     if (unit === "Unid.") {
       return pricePerKg * quantity;
     }
+
     let quantityInKg: number;
 
     switch (unit) {
@@ -93,17 +95,18 @@ const VentasPage = () => {
     }
 
     return parseFloat((pricePerKg * quantityInKg).toFixed(2));
-  };
-  const calculateCombinedTotal = (
-    products: Product[],
-    manualAmount: number
-  ) => {
-    const productsTotal = products.reduce(
-      (sum, p) => sum + calculatePrice(p),
-      0
-    );
-    return productsTotal + manualAmount;
-  };
+  }, []);
+
+  const calculateCombinedTotal = useCallback(
+    (products: Product[], manualAmount: number) => {
+      const productsTotal = products.reduce(
+        (sum, p) => sum + calculatePrice(p),
+        0
+      );
+      return productsTotal + manualAmount;
+    },
+    [calculatePrice]
+  );
   const updateStockAfterSale = (
     productId: number,
     soldQuantity: number,
@@ -758,7 +761,12 @@ const VentasPage = () => {
         total: total,
       };
     });
-  }, [newSale.products, newSale.manualAmount, newSale.paymentMethods.length]);
+  }, [
+    newSale.products,
+    newSale.manualAmount,
+    newSale.paymentMethods.length,
+    calculateCombinedTotal,
+  ]);
 
   const handleProductSelect = (
     selectedOptions: readonly {
@@ -916,7 +924,7 @@ const VentasPage = () => {
         <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Ventas</h1>
 
         <div className="flex justify-between mb-2">
-          <div className="flex w-full max-w-[20rem] gap-4">
+          <div className="flex w-full max-w-[20rem] gap-2">
             <Select
               value={monthOptions.find(
                 (option) => option.value === selectedMonth
@@ -1077,60 +1085,90 @@ const VentasPage = () => {
               onClose={handleCloseInfoModal}
               title="Detalles de la venta"
               bgColor="bg-white dark:bg-gray_b text-gray_m dark:text-white "
+              buttons={
+                <div className="flex justify-end">
+                  <Button
+                    text="Cerrar"
+                    colorText="text-gray_b dark:text-white"
+                    colorTextHover="hover:text-white hover:dark:text-white"
+                    colorBg="bg-gray_xl dark:bg-gray_m"
+                    colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                    onClick={() => handleCloseInfoModal()}
+                  />
+                </div>
+              }
             >
-              <div className="space-y-2 p-2">
-                <p className="flex text-lg justify-between">
-                  <strong>Total:</strong>
-                  {formatPrice(selectedSale.total)}
-                </p>
-                <p className="flex text-lg justify-between">
-                  <strong>Fecha:</strong>{" "}
-                  {format(
-                    parseISO(selectedSale.date),
-                    "dd 'de' MMMM 'de' yyyy",
-                    { locale: es }
-                  )}
-                </p>
-                <p className="flex text-lg justify-between">
-                  <strong>Forma de Pago:</strong>
-                  <div>
-                    {selectedSale.paymentMethods.map((payment, i) => (
-                      <div key={i}>
-                        {payment.method}: {formatPrice(payment.amount)}
-                      </div>
-                    ))}
-                  </div>
-                </p>
+              <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
+                {/* Sección de Resumen (Total, Fecha, Pago) */}
+                <div className="space-y-3 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+                    Resumen de Venta
+                  </h3>
 
-                <p className="text-center border-t-2 pt-4">
-                  <strong>Productos:</strong>
-                </p>
-                <div>
-                  <ul className="list-disc pl-5">
+                  <div className="flex justify-between text-base text-gray_b">
+                    <span className="font-medium ">Total:</span>
+                    <span className="font-semibold">
+                      {formatPrice(selectedSale.total)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-base text-gray_b">
+                    <span className="font-medium ">Fecha:</span>
+                    <span>
+                      {format(
+                        parseISO(selectedSale.date),
+                        "dd 'de' MMMM 'de' yyyy",
+                        { locale: es }
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-base text-gray_b">
+                    <span className="font-medium ">Forma de Pago:</span>
+                    <div className="text-right">
+                      {selectedSale.paymentMethods.map((payment, i) => (
+                        <div key={i} className="text-sm">
+                          {payment.method}:{" "}
+                          <span className="font-medium">
+                            {formatPrice(payment.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+                    Detalles de Productos
+                  </h3>
+
+                  <ul className="divide-y divide-gray-200">
                     {selectedSale.products.map((product, index) => (
                       <li
-                        className="flex justify-between uppercase px-10 border-b-1 border-gray_xl text-sm xl:text-md"
                         key={index}
+                        className="py-3 flex justify-between items-center"
                       >
-                        <span className=" font-semibold">{product.name}</span>
-                        <span className="lowercase">
-                          <span className="text-sm font-light mr-1">x</span>
-                          {product.quantity} {product.unit}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray_b truncate uppercase">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-gray_l">
+                            {product.barcode
+                              ? `Código: ${product.barcode}`
+                              : "Sin código"}
+                          </p>
+                        </div>
+                        <div className="ml-4 flex-shrink-0">
+                          <span className="text-sm font-medium text-gray_b ">
+                            {product.quantity} {product.unit.toLowerCase()} ×{" "}
+                            {formatPrice(product.price)}
+                          </span>
+                        </div>
                       </li>
                     ))}
                   </ul>
                 </div>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  text="Cerrar"
-                  colorText="text-gray_b dark:text-white"
-                  colorTextHover="hover:text-white hover:dark:text-white"
-                  colorBg="bg-gray_xl dark:bg-gray_m"
-                  colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-                  onClick={() => handleCloseInfoModal()}
-                />
               </div>
             </Modal>
           )}
@@ -1152,14 +1190,28 @@ const VentasPage = () => {
 
         <Modal
           isOpen={isOpenModal}
-          onConfirm={handleConfirmAddSale}
           onClose={handleCloseModal}
           title="Nueva Venta"
+          buttons={
+            <div className="flex justify-end space-x-4 ">
+              <Button
+                text={"Cobrar"}
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={handleConfirmAddSale}
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={handleCloseModal}
+              />
+            </div>
+          }
         >
-          <form
-            onSubmit={handleConfirmAddSale}
-            className="flex flex-col gap-4 pb-6"
-          >
+          <form onSubmit={handleConfirmAddSale} className="flex flex-col gap-2">
             <div className="w-full flex items-center space-x-4">
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray_m dark:text-white">
@@ -1394,7 +1446,7 @@ const VentasPage = () => {
                 <button
                   type="button"
                   onClick={addPaymentMethod}
-                  className="text-sm text-blue-500 hover:text-blue-700 mt-1 flex items-center"
+                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
                 >
                   <Plus size={16} className="mr-1" /> Agregar otro método de
                   pago
@@ -1457,7 +1509,7 @@ const VentasPage = () => {
                 </div>
               </div>
             )}
-            <div className="p-2 bg-gray_b text-white text-center">
+            <div className="p-2 bg-gray_b dark:bg-gray_m text-white text-center mt-4">
               <p className="font-semibold text-3xl">
                 TOTAL:{" "}
                 {newSale.total.toLocaleString("es-AR", {
@@ -1475,48 +1527,32 @@ const VentasPage = () => {
               )}
             </div>
           </form>
-
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button
-              text={"Cobrar"}
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={handleConfirmAddSale}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={handleCloseModal}
-            />
-          </div>
         </Modal>
 
         <Modal
           isOpen={isConfirmModalOpen}
           title="Eliminar Venta"
           onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleDeleteSale}
+          buttons={
+            <div className="flex justify-end space-x-4">
+              <Button
+                text="Si"
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={handleDeleteSale}
+              />
+              <Button
+                text="No"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => setIsConfirmModalOpen(false)}
+              />
+            </div>
+          }
         >
           <p>¿Está seguro de que desea eliminar esta venta?</p>
-          <div className="flex justify-end space-x-2">
-            <Button
-              text="Si"
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={handleDeleteSale}
-            />
-            <Button
-              text="No"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsConfirmModalOpen(false)}
-            />
-          </div>
         </Modal>
 
         <Notification

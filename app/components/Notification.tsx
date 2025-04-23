@@ -33,7 +33,7 @@ const Notification: React.FC<NotificationProps> = ({
 
   return (
     <div
-      className={`min-w-[10rem] flex justify-center absolute bottom-4 right-10 z-50 rounded-sm shadow-lg p-3 text-white transition-all duration-300 ${
+      className={`min-w-[10rem] flex justify-center absolute bottom-4 right-10 z-50 rounded-sm shadow-lg p-3 text-white transition-all duration-200 ${
         typeClasses[type]
       } ${
         animateOut

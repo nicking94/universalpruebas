@@ -43,7 +43,7 @@ const Pagination: React.FC<PaginationProps> = ({
   );
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-2">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-2">
       <div className="flex items-center gap-2">
         <label
           htmlFor="items-per-page"

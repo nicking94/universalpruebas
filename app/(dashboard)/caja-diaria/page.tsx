@@ -602,8 +602,24 @@ const CajaDiariaPage = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         title="Detalles del Día"
+        buttons={
+          <div className="flex justify-end mt-4">
+            <Button
+              text="Cerrar"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={() => {
+                setIsDetailModalOpen(false);
+                setFilterType("TODOS");
+                setFilterPaymentMethod("TODOS");
+              }}
+            />
+          </div>
+        }
       >
-        <div className="mb-4 grid grid-cols-2 gap-4">
+        <div className="mb-4 grid grid-cols-2 gap-2">
           <div className="bg-green-100 p-3 rounded-lg">
             <h3 className="font-semibold text-green-800">Total Ingresos</h3>
             <p className="text-xl font-bold text-green-800">
@@ -617,7 +633,7 @@ const CajaDiariaPage = () => {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray_b dark:text-white">
               Tipo
@@ -759,20 +775,6 @@ const CajaDiariaPage = () => {
             </tbody>
           </table>
         </div>
-        <div className="flex justify-end mt-4">
-          <Button
-            text="Cerrar"
-            colorText="text-gray_b dark:text-white"
-            colorTextHover="hover:text-white hover:dark:text-white"
-            colorBg="bg-gray_xl dark:bg-gray_m"
-            colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-            onClick={() => {
-              setIsDetailModalOpen(false);
-              setFilterType("TODOS");
-              setFilterPaymentMethod("TODOS");
-            }}
-          />
-        </div>
       </Modal>
     );
   };
@@ -866,8 +868,8 @@ const CajaDiariaPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-2">
-                <p className="text-gray_m">No hay caja abierta para hoy</p>
+              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-4">
+                <p className="text-gray_m mb-2">No hay caja abierta para hoy</p>
                 <Button
                   text="Abrir Caja"
                   colorText="text-white"
@@ -876,7 +878,7 @@ const CajaDiariaPage = () => {
                 />
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
               {" "}
               <div className="bg-green-100 text-green-800 p-4 rounded-lg">
                 <h3 className="font-bold">Ingresos Totales</h3>
@@ -898,7 +900,7 @@ const CajaDiariaPage = () => {
               </div>
             </div>
             <div className="flex justify-between mb-2">
-              <div className="flex gap-4">
+              <div className="flex gap-2">
                 <Select
                   options={monthOptions}
                   value={monthOptions.find((m) => m.value === selectedMonth)}
@@ -979,7 +981,7 @@ const CajaDiariaPage = () => {
                             {day.closed ? "Cerrada" : "Abierta"}
                           </span>
                         </td>
-                        <td className="px-4 py-2 flex justify-center items-center gap-2">
+                        <td className="px-4 py-2 flex justify-center items-center gap-2 border-x border-gray_xl">
                           <Button
                             icon={<Info size={20} />}
                             colorText="text-gray_b"
@@ -1052,7 +1054,7 @@ const CajaDiariaPage = () => {
           title="Nuevo Movimiento"
           onConfirm={addMovement}
         >
-          <div className="flex flex-col gap-4 pb-6">
+          <div className="flex flex-col gap-2">
             <div className="w-full flex justify-between space-x-4">
               <div className="flex flex-col w-full">
                 <label className="block text-gray_m dark:text-white text-sm font-semibold">
@@ -1087,7 +1089,7 @@ const CajaDiariaPage = () => {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label className="block text-sm font-medium text-gray_m dark:text-white">
                 Métodos de Pago
               </label>
@@ -1141,9 +1143,10 @@ const CajaDiariaPage = () => {
                 <button
                   type="button"
                   onClick={addPaymentMethod}
-                  className="text-sm text-blue-500 hover:text-blue-700 flex items-center"
+                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
                 >
-                  <Plus size={16} className="mr-1" /> Agregar otro método
+                  <Plus size={16} className="mr-1" /> Agregar otro método de
+                  pago
                 </button>
               )}
             </div>
@@ -1169,38 +1172,25 @@ const CajaDiariaPage = () => {
               </p>
             </div>
           </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button
-              text="Guardar"
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={addMovement}
-              disabled={
-                paymentMethods.reduce((sum, m) => sum + m.amount, 0) !==
-                  parseFloat(amount || "0") || parseFloat(amount || "0") <= 0
-              }
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => {
-                setIsOpenModal(false);
-                setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
-              }}
-            />
-          </div>
         </Modal>
         <Modal
           isOpen={isOpenCashModal}
           onClose={() => setIsOpenCashModal(false)}
           title="Apertura de Caja"
           onConfirm={openCash}
+          buttons={
+            <div className="flex justify-end space-x-4">
+              <Button
+                text="Abrir Caja"
+                icon={<Check />}
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={openCash}
+              />
+            </div>
+          }
         >
-          <div className="flex flex-col gap-4 pb-6">
+          <div className="flex flex-col gap-2">
             <p className="text-gray_m dark:text-white">
               Para comenzar, ingrese el monto inicial en caja.
             </p>
@@ -1213,15 +1203,6 @@ const CajaDiariaPage = () => {
               onChange={(e) => setInitialAmount(e.target.value)}
             />
           </div>
-          <div className="flex justify-end space-x-2">
-            <Button
-              text="Abrir Caja"
-              icon={<Check />}
-              colorText="text-white"
-              colorTextHover="text-white"
-              onClick={openCash}
-            />
-          </div>
         </Modal>
         <DetailModal />
         <Modal
@@ -1230,7 +1211,7 @@ const CajaDiariaPage = () => {
           title="Cierre de Caja"
           onConfirm={closeCash}
         >
-          <div className="flex flex-col gap-4 pb-6">
+          <div className="flex flex-col gap-2">
             <Input
               label="Monto Contado en Efectivo"
               type="number"
@@ -1240,53 +1221,35 @@ const CajaDiariaPage = () => {
               onChange={(e) => setActualCashCount(e.target.value)}
             />
           </div>
-          <div className="flex justify-end space-x-2">
-            <Button
-              text="Cerrar Caja"
-              icon={<X />}
-              colorText="text-white"
-              colorTextHover="text-white"
-              colorBg="bg-red-500"
-              colorBgHover="hover:bg-red-700"
-              onClick={closeCash}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsCloseCashModal(false)}
-            />
-          </div>
         </Modal>
         <Modal
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
           title="Eliminar Movimiento"
+          buttons={
+            <>
+              <Button
+                text="Eliminar"
+                colorText="text-white"
+                colorTextHover="text-white"
+                colorBg="bg-red-500"
+                colorBgHover="hover:bg-red-700"
+                onClick={handleDeleteMovement}
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => setIsConfirmModalOpen(false)}
+              />
+            </>
+          }
         >
           <p className="text-gray_m dark:text-white">
             ¿Está seguro de que desea eliminar este movimiento?
           </p>
-
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button
-              text="Eliminar"
-              colorText="text-white"
-              colorTextHover="text-white"
-              colorBg="bg-red-500"
-              colorBgHover="hover:bg-red-700"
-              onClick={handleDeleteMovement}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsConfirmModalOpen(false)}
-            />
-          </div>
         </Modal>
         <Modal
           isOpen={isDeleteCashModalOpen}
@@ -1298,24 +1261,6 @@ const CajaDiariaPage = () => {
             ¿Está seguro de que desea eliminar esta caja? Esta acción no se
             puede deshacer.
           </p>
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button
-              text="Eliminar"
-              colorText="text-white"
-              colorTextHover="text-white"
-              colorBg="bg-red-500"
-              colorBgHover="hover:bg-red-700"
-              onClick={deleteDailyCash}
-            />
-            <Button
-              text="Cancelar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-              onClick={() => setIsDeleteCashModalOpen(false)}
-            />
-          </div>
         </Modal>
 
         <Notification

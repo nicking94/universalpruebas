@@ -554,7 +554,7 @@ const FiadosPage = () => {
                   const oldestSale = sortedSales[0];
 
                   return (
-                    <tr key={customerName}>
+                    <tr key={customerName} className="font-semibold">
                       <td className="px-4 py-2 border border-gray_xl text-start">
                         {customerName}
                       </td>
@@ -626,6 +626,32 @@ const FiadosPage = () => {
           isOpen={isInfoModalOpen}
           onClose={() => setIsInfoModalOpen(false)}
           title={`Información de ${currentCustomerInfo?.name}`}
+          buttons={
+            <div className="flex justify-between w-full">
+              <Button
+                text="Eliminar todos"
+                colorText="text-white"
+                colorTextHover="text-white"
+                colorBg="bg-red-500"
+                colorBgHover="hover:bg-red-700"
+                onClick={() => {
+                  setCustomerToDelete(currentCustomerInfo?.name || null);
+                  setIsDeleteModalOpen(true);
+                }}
+                disabled={
+                  !currentCustomerInfo || currentCustomerInfo.balance <= 0
+                }
+              />
+              <Button
+                text="Cerrar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => setIsInfoModalOpen(false)}
+              />
+            </div>
+          }
         >
           <div className="space-y-10">
             <p
@@ -663,7 +689,7 @@ const FiadosPage = () => {
                     const remainingBalance = sale.total - totalPayments;
 
                     return (
-                      <tr key={sale.id}>
+                      <tr key={sale.id} className="font-semibold">
                         <td className="px-2 py-3">
                           {format(new Date(sale.date), "dd/MM/yyyy", {
                             locale: es,
@@ -699,7 +725,7 @@ const FiadosPage = () => {
                             remainingBalance > 0
                               ? "justify-center"
                               : "justify-end"
-                          } items-center px-2 py-3 space-x-2`}
+                          } items-center px-2 py-3 space-x-4`}
                         >
                           {remainingBalance > 0 ? (
                             <>
@@ -740,33 +766,6 @@ const FiadosPage = () => {
                 </tbody>
               </table>
             </div>
-
-            <div className="flex justify-between">
-              <Button
-                text="Eliminar todos"
-                colorText="text-white"
-                colorTextHover="text-white"
-                colorBg="bg-red-500"
-                colorBgHover="hover:bg-red-700"
-                onClick={() => {
-                  setCustomerToDelete(currentCustomerInfo?.name || null);
-                  setIsDeleteModalOpen(true);
-                }}
-                disabled={
-                  !currentCustomerInfo || currentCustomerInfo.balance <= 0
-                }
-              />
-              <div className="flex space-x-2">
-                <Button
-                  text="Cerrar"
-                  colorText="text-gray_b dark:text-white"
-                  colorTextHover="hover:text-white hover:dark:text-white"
-                  colorBg="bg-gray_xl dark:bg-gray_m"
-                  colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-                  onClick={() => setIsInfoModalOpen(false)}
-                />
-              </div>
-            </div>
           </div>
         </Modal>
 
@@ -774,7 +773,32 @@ const FiadosPage = () => {
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           title="Registrar Pago"
-          onConfirm={handlePayment}
+          buttons={
+            <>
+              <Button
+                text="Registrar"
+                colorText="text-white"
+                colorTextHover="text-white"
+                onClick={handlePayment}
+                disabled={
+                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
+                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) >
+                    calculateRemainingBalance(currentCreditSale!)
+                }
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => {
+                  setIsPaymentModalOpen(false);
+                  setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+                }}
+              />
+            </>
+          }
         >
           <div className="space-y-4">
             <div>
@@ -799,7 +823,7 @@ const FiadosPage = () => {
               </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label className="block text-sm font-medium">
                 Métodos de Pago
               </label>
@@ -853,14 +877,14 @@ const FiadosPage = () => {
                 <button
                   type="button"
                   onClick={addPaymentMethod}
-                  className="text-sm text-blue-500 hover:text-blue-700 flex items-center"
+                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
                 >
                   <Plus size={16} className="mr-1" /> Agregar otro método
                 </button>
               )}
             </div>
 
-            <div className="pt-2">
+            <div className="p-2 bg-gray_b dark:bg-gray_m text-white text-center mt-4">
               <p className="font-semibold">
                 Total a pagar:{" "}
                 {paymentMethods
@@ -877,31 +901,6 @@ const FiadosPage = () => {
                 </p>
               )}
             </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button
-                text="Registrar"
-                colorText="text-white"
-                colorTextHover="text-white"
-                onClick={handlePayment}
-                disabled={
-                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
-                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) >
-                    calculateRemainingBalance(currentCreditSale!)
-                }
-              />
-              <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-                onClick={() => {
-                  setIsPaymentModalOpen(false);
-                  setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
-                }}
-              />
-            </div>
           </div>
         </Modal>
 
@@ -909,6 +908,26 @@ const FiadosPage = () => {
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
           title="Eliminar Fiados"
+          buttons={
+            <>
+              <Button
+                text="Si"
+                colorText="text-white"
+                colorTextHover="text-white"
+                colorBg="bg-red-500"
+                colorBgHover="hover:bg-red-700"
+                onClick={handleDeleteCustomerCredits}
+              />
+              <Button
+                text="No"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => setIsDeleteModalOpen(false)}
+              />
+            </>
+          }
         >
           <div className="space-y-4">
             <p>
@@ -925,24 +944,6 @@ const FiadosPage = () => {
                 }
               )}
             </p>
-            <div className="flex justify-end space-x-2">
-              <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-                onClick={() => setIsDeleteModalOpen(false)}
-              />
-              <Button
-                text="Eliminar"
-                colorText="text-white"
-                colorTextHover="text-white"
-                colorBg="bg-red-500"
-                colorBgHover="hover:bg-red-700"
-                onClick={handleDeleteCustomerCredits}
-              />
-            </div>
           </div>
         </Modal>
 
