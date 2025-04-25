@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
@@ -143,4 +144,12 @@ input[type="number"] {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* calendar */
+.react-datepicker-wrapper {
+  width: 100% !important;
+}
+.react-datepicker__input-container {
+  width: 100% !important;
 }

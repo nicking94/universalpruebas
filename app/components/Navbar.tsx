@@ -19,7 +19,7 @@ const Navbar: React.FC<NavbarProps> = ({
           isSidebarOpen ? "ml-64" : "ml-30"
         } transition-all duration-200 flex items-center justify-between h-10`}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <Image className=" rounded-full w-8 h-8" src={logo} alt="User Logo" />
           <h1 className="text-lg italic">Universal App | Kioskos</h1>
         </div>

@@ -619,7 +619,7 @@ const CajaDiariaPage = () => {
           </div>
         }
       >
-        <div className="mb-4 grid grid-cols-2 gap-2">
+        <div className="mb-4 grid grid-cols-2 gap-4">
           <div className="bg-green-100 p-3 rounded-lg">
             <h3 className="font-semibold text-green-800">Total Ingresos</h3>
             <p className="text-xl font-bold text-green-800">
@@ -633,7 +633,7 @@ const CajaDiariaPage = () => {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray_b dark:text-white">
               Tipo
@@ -868,7 +868,7 @@ const CajaDiariaPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-4">
+              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-6">
                 <p className="text-gray_m mb-2">No hay caja abierta para hoy</p>
                 <Button
                   text="Abrir Caja"
@@ -878,7 +878,7 @@ const CajaDiariaPage = () => {
                 />
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               {" "}
               <div className="bg-green-100 text-green-800 p-4 rounded-lg">
                 <h3 className="font-bold">Ingresos Totales</h3>
@@ -900,7 +900,7 @@ const CajaDiariaPage = () => {
               </div>
             </div>
             <div className="flex justify-between mb-2">
-              <div className="flex gap-2">
+              <div className="flex gap-4">
                 <Select
                   options={monthOptions}
                   value={monthOptions.find((m) => m.value === selectedMonth)}
@@ -981,7 +981,7 @@ const CajaDiariaPage = () => {
                             {day.closed ? "Cerrada" : "Abierta"}
                           </span>
                         </td>
-                        <td className="px-4 py-2 flex justify-center items-center gap-2 border-x border-gray_xl">
+                        <td className="px-4 py-2 flex justify-center items-center gap-4 border-x border-gray_xl">
                           <Button
                             icon={<Info size={20} />}
                             colorText="text-gray_b"
@@ -1054,7 +1054,7 @@ const CajaDiariaPage = () => {
           title="Nuevo Movimiento"
           onConfirm={addMovement}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             <div className="w-full flex justify-between space-x-4">
               <div className="flex flex-col w-full">
                 <label className="block text-gray_m dark:text-white text-sm font-semibold">
@@ -1089,12 +1089,12 @@ const CajaDiariaPage = () => {
               )}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <label className="block text-sm font-medium text-gray_m dark:text-white">
                 Métodos de Pago
               </label>
               {paymentMethods.map((method, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={index} className="flex items-center gap-4">
                   <Select
                     value={paymentOptions.find(
                       (option) => option.value === method.method
@@ -1190,7 +1190,7 @@ const CajaDiariaPage = () => {
             </div>
           }
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             <p className="text-gray_m dark:text-white">
               Para comenzar, ingrese el monto inicial en caja.
             </p>
@@ -1211,7 +1211,7 @@ const CajaDiariaPage = () => {
           title="Cierre de Caja"
           onConfirm={closeCash}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             <Input
               label="Monto Contado en Efectivo"
               type="number"

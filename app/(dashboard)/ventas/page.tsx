@@ -924,7 +924,7 @@ const VentasPage = () => {
         <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Ventas</h1>
 
         <div className="flex justify-between mb-2">
-          <div className="flex w-full max-w-[20rem] gap-2">
+          <div className="flex w-full max-w-[20rem] gap-4">
             <Select
               value={monthOptions.find(
                 (option) => option.value === selectedMonth
@@ -1039,7 +1039,7 @@ const VentasPage = () => {
                       </td>
 
                       <td className="px-4 py-2 border border-gray_xl">
-                        <div className="flex justify-center items-center gap-2 h-full">
+                        <div className="flex justify-center items-center gap-4 h-full">
                           <Button
                             icon={<Info size={20} />}
                             colorText="text-gray_b"
@@ -1211,7 +1211,7 @@ const VentasPage = () => {
             </div>
           }
         >
-          <form onSubmit={handleConfirmAddSale} className="flex flex-col gap-2">
+          <form onSubmit={handleConfirmAddSale} className="flex flex-col gap-4">
             <div className="w-full flex items-center space-x-4">
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray_m dark:text-white">
@@ -1381,7 +1381,7 @@ const VentasPage = () => {
                 </label>
 
                 {newSale.paymentMethods.map((payment, index) => (
-                  <div key={index} className="flex items-center gap-2 mb-2">
+                  <div key={index} className="flex items-center gap-4 mb-2">
                     <Select
                       value={paymentOptions.find(
                         (option) => option.value === payment.method
@@ -1453,7 +1453,7 @@ const VentasPage = () => {
                 </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <input
                 type="checkbox"
                 id="creditCheckbox"

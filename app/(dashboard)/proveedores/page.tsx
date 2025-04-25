@@ -280,7 +280,7 @@ const ProveedoresPage = () => {
                       )}
                     </td>
                     <td className="px-4 py-2 space-x-4 border border-gray_xl">
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-4">
                         <Button
                           icon={<Edit size={20} />}
                           colorText="text-gray_b"
@@ -368,7 +368,7 @@ const ProveedoresPage = () => {
             </div>
           }
         >
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Input
               label="Nombre de la Empresa"
               value={companyName}
@@ -376,11 +376,11 @@ const ProveedoresPage = () => {
               placeholder="Ej: Distribuidora S.A."
             />
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {contacts.map((contact, index) => (
                 <div
                   key={index}
-                  className="bg-blue_xl space-y-4 border border-blue_xl shadow-md shadow-gray_l p-4 mb-8"
+                  className="bg-blue_xl space-y-6 border border-blue_xl shadow-md shadow-gray_l p-4 mb-8"
                 >
                   <div className="flex justify-between items-center">
                     <span className="bg-blue_m rounded-md px-2 py-1 text-white text-sm font-medium">
@@ -437,7 +437,7 @@ const ProveedoresPage = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <CustomDatePicker
                   label="Última Visita"
@@ -445,7 +445,7 @@ const ProveedoresPage = () => {
                   value={lastVisit}
                   onChange={setLastVisit}
                   isClearable
-                  error={null}
+                  error={undefined}
                 />
               </div>
               <div>
@@ -455,7 +455,7 @@ const ProveedoresPage = () => {
                   value={nextVisit}
                   onChange={setNextVisit}
                   isClearable
-                  error={null}
+                  error={undefined}
                 />
               </div>
             </div>

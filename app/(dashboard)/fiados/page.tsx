@@ -800,10 +800,10 @@ const FiadosPage = () => {
             </>
           }
         >
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <p>Cliente: {currentCreditSale?.customerName || "Sin nombre"}</p>
-              <p className="flex items-center gap-2">
+              <p className="flex items-center gap-4">
                 <span>Deuda pendiente:</span>
                 <span
                   className={`px-2 py-1 rounded ${
@@ -823,12 +823,12 @@ const FiadosPage = () => {
               </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <label className="block text-sm font-medium">
                 Métodos de Pago
               </label>
               {paymentMethods.map((method, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={index} className="flex items-center gap-4">
                   <Select
                     value={paymentOptions.find(
                       (option) => option.value === method.method
@@ -929,7 +929,7 @@ const FiadosPage = () => {
             </>
           }
         >
-          <div className="space-y-4">
+          <div className="space-y-6">
             <p>
               ¿Está seguro que desea eliminar TODOS los fiados de{" "}
               {customerToDelete}?

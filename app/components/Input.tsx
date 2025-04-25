@@ -24,7 +24,7 @@ const Input: React.FC<InputProps> = ({
       >
         {label}
       </label>
-      <div className="flex gap-2">
+      <div className="flex gap-4">
         <input
           ref={ref}
           autoFocus={autoFocus}

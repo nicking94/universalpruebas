@@ -333,7 +333,7 @@ const ProductsPage = () => {
           <div className="w-full">
             <SearchBar onSearch={handleSearch} />
           </div>
-          <div className="w-full flex justify-end gap-2 ">
+          <div className="w-full flex justify-end gap-4 ">
             <Button
               text="Ver Precio [F5]"
               colorText="text-white"
@@ -423,7 +423,7 @@ const ProductsPage = () => {
                         }`}
                       >
                         <td className="font-semibold px-4 py-2 text-start uppercase border border-gray_xl">
-                          <div className="flex items-center gap-2 h-full">
+                          <div className="flex items-center gap-4 h-full">
                             {expiredToday && (
                               <AlertTriangle
                                 className="text-yellow-300 dark:text-yellow-500"
@@ -487,7 +487,7 @@ const ProductsPage = () => {
                             <span className="ml-2 text-red-800">(Vencido)</span>
                           )}
                         </td>
-                        <td className="px-4 py-2 flex justify-center gap-2">
+                        <td className="px-4 py-2 flex justify-center gap-4">
                           <Button
                             icon={<Edit size={20} />}
                             colorText="text-gray_b"
@@ -565,8 +565,8 @@ const ProductsPage = () => {
             </>
           }
         >
-          <form className="flex flex-col gap-2">
-            <div className="w-full flex items-center space-x-4">
+          <form className="flex flex-col gap-4">
+            <div className="w-full flex items-center space-x-4 ">
               <div className="w-full">
                 <label className="block text-gray_m dark:text-white text-sm font-semibold">
                   Código de Barras
@@ -657,6 +657,7 @@ const ProductsPage = () => {
                 onChange={handlePriceChange}
               />
             </div>
+
             <CustomDatePicker
               value={newProduct.expiration}
               onChange={(newDate) => {
@@ -709,7 +710,7 @@ const ProductsPage = () => {
             />
           }
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             <div>
               <label className="block text-gray_m dark:text-white text-sm font-semibold">
                 Código de Barras
@@ -726,7 +727,7 @@ const ProductsPage = () => {
 
             {scannedProduct && (
               <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                       Producto

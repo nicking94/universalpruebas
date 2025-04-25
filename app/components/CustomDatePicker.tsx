@@ -1,22 +1,22 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
+
+import React, { useState } from "react";
+import DatePicker from "react-datepicker";
 import { Calendar as CalendarIcon, X } from "lucide-react";
-import { DatepickerProps } from "../lib/types/types";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import es from "date-fns/locale/es";
-import { registerLocale } from "react-datepicker";
+import { parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import "react-datepicker/dist/react-datepicker.css";
 
-registerLocale("es", es);
+interface DatePickerProps {
+  value?: string;
+  onChange: (date?: string) => void;
+  error?: string;
+  isClearable?: boolean;
+  label?: string;
+  placeholderText?: string;
+}
 
-const CustomDatePicker: React.FC<DatepickerProps> = ({
+const CustomDatePicker: React.FC<DatePickerProps> = ({
   value,
   onChange,
   error,
@@ -24,95 +24,60 @@ const CustomDatePicker: React.FC<DatepickerProps> = ({
   label = "Fecha de vencimiento",
   placeholderText = "Seleccionar fecha de vencimiento...",
 }) => {
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [isOpen, setIsOpen] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(
+    value ? parseISO(value) : null
+  );
 
-  useEffect(() => {
-    if (value) {
-      try {
-        const [year, month, day] = value.split("-").map(Number);
-        const localDate = new Date(year, month - 1, day);
-        setDate(localDate);
-      } catch (error) {
-        console.error("Error parsing date:", error);
-        setDate(undefined);
-      }
-    } else {
-      setDate(undefined);
-    }
-  }, [value]);
-
-  const handleDateChange = (selectedDate?: Date) => {
-    if (selectedDate) {
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
-      const day = String(selectedDate.getDate()).padStart(2, "0");
-
-      setDate(selectedDate);
-      onChange(`${year}-${month}-${day}`);
-    } else {
-      setDate(undefined);
-      onChange(undefined);
-    }
-    setIsOpen(false);
-  };
-
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    handleDateChange(undefined);
+  const handleChange = (date: Date | null) => {
+    setStartDate(date);
+    onChange(date ? date.toISOString() : undefined);
   };
 
   return (
-    <div className="flex flex-col w-full gap-1 mt-1">
+    <div className="flex flex-col w-full">
       {label && (
-        <label className="block text-sm font-medium leading-none text-gray_m dark:text-white">
+        <label className="block text-sm font-medium leading-none text-gray_m dark:text-white mb-1">
           {label}
         </label>
       )}
 
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground",
-              error && "border-destructive"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date ? (
-              format(date, "PPP", { locale: es })
-            ) : (
-              <span>{placeholderText}</span>
-            )}
-            {isClearable && date && (
-              <X
-                className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
-                onClick={handleClear}
-              />
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={handleDateChange}
-            defaultMonth={date || new Date()}
-            fromDate={new Date()}
-            locale={es}
-            initialFocus
-            classNames={{
-              day_selected: "bg-primary text-primary-foreground",
-              day_today: "font-bold",
+      <div className="relative w-full">
+        <DatePicker
+          selected={startDate}
+          onChange={handleChange}
+          dateFormat="dd-MM-yyyy"
+          minDate={new Date()}
+          locale={es}
+          placeholderText={placeholderText}
+          isClearable={false}
+          className={`
+            w-full rounded-md border border-input bg-background 
+            text-sm ring-offset-background focus-visible:outline-none 
+         pl-10 pr-10 py-2
+            ${error ? "border-red-500" : "border-gray-300"}
+            dark:bg-gray-800 dark:border-gray-600 dark:text-white
+          `}
+        />
+
+        {/* Icono de calendario */}
+        <div className="absolute top-2.5 left-3 text-gray-400 pointer-events-none">
+          <CalendarIcon className="h-4 w-4" />
+        </div>
+
+        {/* Botón para limpiar personalizado */}
+        {isClearable && startDate && (
+          <X
+            className="absolute right-3 top-2.5 h-4 w-4 opacity-50 hover:opacity-100 cursor-pointer text-gray-500"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChange(null);
             }}
           />
-        </PopoverContent>
-      </Popover>
+        )}
+      </div>
 
       {error && (
-        <p className="text-sm text-destructive flex items-center gap-1">
+        <p className="text-sm text-red-600 flex items-center gap-1 dark:text-red-400 mt-1">
           <X className="h-4 w-4" />
           {error}
         </p>

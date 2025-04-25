@@ -238,7 +238,7 @@ const ClientesPage = () => {
                       {new Date(customer.createdAt).toLocaleDateString("es-AR")}
                     </td>
                     <td className="px-4 py-2 border border-gray_xl">
-                      <div className="flex justify-center items-center gap-2 h-full">
+                      <div className="flex justify-center items-center gap-4 h-full">
                         <Button
                           icon={<Edit size={20} />}
                           colorText="text-gray_b"
@@ -332,7 +332,7 @@ const ClientesPage = () => {
             </>
           }
         >
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center space-x-4">
               <Input
                 label="Nombre del cliente"

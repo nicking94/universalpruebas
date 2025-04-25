@@ -89,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
             onClick={toggleSidebar}
           />
         </div>
-        <nav className=" space-y-4 py-6 ">
+        <nav className=" space-y-6 py-6 ">
           {items.map((item) => (
             <div key={item.label} className="w-full">
               <button
@@ -114,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
       <div className={`w-full px-4 pb-4 ${!isSidebarOpen ? "hidden" : ""}`}>
         <button
           onClick={() => router.push("/import-export")}
-          className="cursor-pointer w-full flex justify-center items-center gap-2 py-2 rounded-sm bg-blue_b text-white hover:bg-blue_m transition-all"
+          className="cursor-pointer w-full flex justify-center items-center gap-4 py-2 rounded-sm bg-blue_b text-white hover:bg-blue_m transition-all"
         >
           <Repeat size={14} />
           <span className="text-[0.6rem] 2xl:text-[.8rem] font-semibold">
