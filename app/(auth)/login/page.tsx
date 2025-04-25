@@ -28,8 +28,6 @@ const LoginPage = () => {
       }, 2000);
       return;
     }
-
-    // Guardar el estado de autenticación en la base de datos
     await db.auth.put({ id: 1, isAuthenticated: true });
 
     setNotificationMessage("Inicio de sesión exitoso");
