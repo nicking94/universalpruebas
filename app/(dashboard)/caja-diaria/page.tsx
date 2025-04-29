@@ -179,6 +179,20 @@ const CajaDiariaPage = () => {
   };
 
   const openCash = async () => {
+    const allCashes = await db.dailyCashes.toArray();
+    const openPreviousCashes = allCashes.filter(
+      (cash) =>
+        !cash.closed && cash.date < new Date().toISOString().split("T")[0]
+    );
+
+    if (openPreviousCashes.length > 0) {
+      showNotification(
+        `Hay ${openPreviousCashes.length} caja(s) de días anteriores sin cerrar. 
+        Por favor ciérrelas antes de abrir una nueva.`,
+        "error"
+      );
+      return;
+    }
     if (!initialAmount) {
       showNotification("Debe ingresar un monto inicial", "error");
       return;
@@ -518,38 +532,48 @@ const CajaDiariaPage = () => {
     if (!movementToDelete) return;
 
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const dailyCash = await db.dailyCashes.get({ date: today });
+      const allCashes = await db.dailyCashes.toArray();
+      const cashWithMovement = allCashes.find((cash) =>
+        cash.movements.some((m) => m.id === movementToDelete.id)
+      );
 
-      if (dailyCash) {
-        const updatedMovements = dailyCash.movements.filter(
-          (m) => m.id !== movementToDelete.id
-        );
-
-        const updatedCash = {
-          ...dailyCash,
-          movements: updatedMovements,
-          totalIncome:
-            movementToDelete.type === "INGRESO"
-              ? (dailyCash.totalIncome || 0) - movementToDelete.amount
-              : dailyCash.totalIncome,
-          totalExpense:
-            movementToDelete.type === "EGRESO"
-              ? (dailyCash.totalExpense || 0) - movementToDelete.amount
-              : dailyCash.totalExpense,
-        };
-
-        await db.dailyCashes.update(dailyCash.id, updatedCash);
-
-        setDailyCashes((prev) =>
-          prev.map((dc) => (dc.id === dailyCash.id ? updatedCash : dc))
-        );
-        setCurrentDailyCash(updatedCash);
-        setSelectedDayMovements(updatedMovements);
-
-        setIsConfirmModalOpen(false);
-        showNotification("Movimiento eliminado correctamente", "success");
+      if (!cashWithMovement) {
+        showNotification("No se encontró la caja del movimiento", "error");
+        return;
       }
+
+      const updatedMovements = cashWithMovement.movements.filter(
+        (m) => m.id !== movementToDelete.id
+      );
+
+      const updatedCash = {
+        ...cashWithMovement,
+        movements: updatedMovements,
+        totalIncome:
+          movementToDelete.type === "INGRESO"
+            ? (cashWithMovement.totalIncome || 0) - movementToDelete.amount
+            : cashWithMovement.totalIncome,
+        totalExpense:
+          movementToDelete.type === "EGRESO"
+            ? (cashWithMovement.totalExpense || 0) - movementToDelete.amount
+            : cashWithMovement.totalExpense,
+      };
+
+      await db.dailyCashes.update(cashWithMovement.id, updatedCash);
+      setDailyCashes((prev) =>
+        prev.map((dc) => (dc.id === cashWithMovement.id ? updatedCash : dc))
+      );
+
+      if (currentDailyCash && currentDailyCash.id === cashWithMovement.id) {
+        setCurrentDailyCash(updatedCash);
+      }
+
+      setSelectedDayMovements(updatedMovements);
+      setFilterType("TODOS");
+      setFilterPaymentMethod("TODOS");
+
+      setIsConfirmModalOpen(false);
+      showNotification("Movimiento eliminado correctamente", "success");
     } catch (error) {
       console.error("Error al eliminar movimiento:", error);
       showNotification("Error al eliminar movimiento", "error");
@@ -584,6 +608,27 @@ const CajaDiariaPage = () => {
 
     fetchData();
   }, []);
+  useEffect(() => {
+    const checkAndCloseOldCashes = async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const allCashes = await db.dailyCashes.toArray();
+
+      for (const cash of allCashes) {
+        if (cash.date < today && !cash.closed) {
+          // Cerrar automáticamente cajas de días anteriores
+          const updatedCash = {
+            ...cash,
+            closed: true,
+            closingAmount: 0, // O calcular el monto esperado
+            closingDate: new Date().toISOString(),
+          };
+          await db.dailyCashes.update(cash.id, updatedCash);
+        }
+      }
+    };
+
+    checkAndCloseOldCashes();
+  }, []);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -601,7 +646,7 @@ const CajaDiariaPage = () => {
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        title="Detalles del Día"
+        title="Detalles del día"
         buttons={
           <div className="flex justify-end mt-4">
             <Button
@@ -750,18 +795,20 @@ const CajaDiariaPage = () => {
                     <td className="px-4 py-2 text-sm text-gray-500">
                       {movement.description || "-"}
                     </td>
-                    <td className="flex justify-center items-center px-4 py-2 whitespace-nowrap text-sm">
-                      <Button
-                        icon={<Trash size={20} />}
-                        colorText="text-gray_b"
-                        colorTextHover="hover:text-white"
-                        colorBg="bg-transparent"
-                        colorBgHover="hover:bg-red-500"
-                        px="px-1"
-                        py="py-1"
-                        minwidth="min-w-0"
-                        onClick={() => handleDeleteClick(movement)}
-                      />
+                    <td className="px-4 py-2 whitespace-nowrap text-sm h-full">
+                      <div className="flex justify-center items-center h-full">
+                        <Button
+                          icon={<Trash size={20} />}
+                          colorText="text-gray_b"
+                          colorTextHover="hover:text-white"
+                          colorBg="bg-transparent"
+                          colorBgHover="hover:bg-red-500"
+                          px="px-1"
+                          py="py-1"
+                          minwidth="min-w-0"
+                          onClick={() => handleDeleteClick(movement)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -935,16 +982,16 @@ const CajaDiariaPage = () => {
               <table className=" table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
                 <thead className="text-white bg-blue_b">
                   <tr>
-                    <th className="text-xs xl:text-lg px-4 py-2 text-start">
+                    <th className="text-sm 2xl:text-lg px-4 py-2 text-start">
                       Fecha
                     </th>
-                    <th className="text-xs xl:text-lg px-4 py-2">Ingresos</th>
-                    <th className="text-xs xl:text-lg px-4 py-2">Egresos</th>
-                    <th className="text-xs xl:text-lg px-4 py-2">Ganancia</th>
-                    <th className="text-xs xl:text-lg px-4 py-2">
+                    <th className="text-sm 2xl:text-lg px-4 py-2">Ingresos</th>
+                    <th className="text-sm 2xl:text-lg px-4 py-2">Egresos</th>
+                    <th className="text-sm 2xl:text-lg px-4 py-2">Ganancia</th>
+                    <th className="text-sm 2xl:text-lg px-4 py-2">
                       Estado de caja
                     </th>{" "}
-                    <th className="w-40 max-w-[10rem] text-xs xl:text-lg px-4 py-2">
+                    <th className="w-40 max-w-[10rem] text-sm 2xl:text-lg px-4 py-2">
                       Acciones
                     </th>
                   </tr>
@@ -990,7 +1037,9 @@ const CajaDiariaPage = () => {
                             px="px-1"
                             py="py-1"
                             minwidth="min-w-0"
-                            onClick={() => openDetailModal(day.movements)}
+                            onClick={() => {
+                              openDetailModal(day.movements);
+                            }}
                           />
 
                           <Button
@@ -1089,12 +1138,17 @@ const CajaDiariaPage = () => {
               )}
             </div>
 
-            <div className="space-y-6">
+            <div>
               <label className="block text-sm font-medium text-gray_m dark:text-white">
                 Métodos de Pago
               </label>
               {paymentMethods.map((method, index) => (
-                <div key={index} className="flex items-center gap-4">
+                <div
+                  key={index}
+                  className={`flex items-center gap-4 ${
+                    paymentMethods.length > 1 ? "space-y-6" : ""
+                  }`}
+                >
                   <Select
                     value={paymentOptions.find(
                       (option) => option.value === method.method
@@ -1132,7 +1186,9 @@ const CajaDiariaPage = () => {
                     <button
                       type="button"
                       onClick={() => removePaymentMethod(index)}
-                      className="text-red-500 hover:text-red-700"
+                      className={`text-red-500 hover:text-red-700 ${
+                        paymentMethods.length > 1 ? "-mt-6 pr-2" : ""
+                      }`}
                     >
                       <Trash size={16} />
                     </button>
@@ -1143,7 +1199,9 @@ const CajaDiariaPage = () => {
                 <button
                   type="button"
                   onClick={addPaymentMethod}
-                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
+                  className={`cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200 ${
+                    paymentMethods.length === 1 ? "mt-4" : "-mt-2"
+                  }`}
                 >
                   <Plus size={16} className="mr-1" /> Agregar otro método de
                   pago
@@ -1176,7 +1234,7 @@ const CajaDiariaPage = () => {
         <Modal
           isOpen={isOpenCashModal}
           onClose={() => setIsOpenCashModal(false)}
-          title="Apertura de Caja"
+          title="Apertura de caja"
           onConfirm={openCash}
           buttons={
             <div className="flex justify-end space-x-4">
@@ -1186,6 +1244,14 @@ const CajaDiariaPage = () => {
                 colorText="text-white"
                 colorTextHover="text-white"
                 onClick={openCash}
+              />
+              <Button
+                text="Abrir más tarde"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:text-white hover:dark:text-white"
+                colorBg="bg-gray_xl dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                onClick={() => setIsOpenCashModal(false)}
               />
             </div>
           }

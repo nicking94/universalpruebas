@@ -216,9 +216,9 @@ const ClientesPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
           <table className="table-auto w-full text-center border-collapse">
-            <thead className="text-white bg-blue_b">
+            <thead className="text-white bg-blue_b text-sm 2xl:text-lg">
               <tr>
-                <th className="px-4 py-2">Nombre</th>
+                <th className="px-4 py-2 text-start">Nombre</th>
                 <th className="px-4 py-2">Teléfono</th>
                 <th className="px-4 py-2">Fecha de Registro</th>
                 <th className="px-4 py-2 w-40 max-w-[10rem]">Acciones</th>
@@ -228,7 +228,7 @@ const ClientesPage = () => {
               {currentCustomers.length > 0 ? (
                 currentCustomers.map((customer) => (
                   <tr key={customer.id} className="font-semibold">
-                    <td className="px-4 py-2 border border-gray_xl">
+                    <td className="px-4 py-2 border border-gray_xl text-start">
                       {customer.name}
                     </td>
                     <td className="px-4 py-2 border border-gray_xl">

@@ -89,9 +89,9 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
             onClick={toggleSidebar}
           />
         </div>
-        <nav className=" space-y-6 py-6 ">
+        <nav className="space-y-1 2xl:space-y-6 py-2 2xl:py-6 ">
           {items.map((item) => (
-            <div key={item.label} className="w-full">
+            <div key={item.label} className="w-full text-md">
               <button
                 onClick={() =>
                   handleItemClick(item.label, item.href, item.target)

@@ -218,7 +218,7 @@ const ProveedoresPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
           <table className="w-full text-center border-collapse">
-            <thead className="text-white bg-blue_b">
+            <thead className="text-white bg-blue_b text-sm 2xl:text-lg">
               <tr>
                 <th className="px-4 py-2 text-left">Empresa</th>
                 <th className="px-4 py-2">Proveedores</th>

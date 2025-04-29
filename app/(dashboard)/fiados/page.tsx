@@ -533,7 +533,7 @@ const FiadosPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)] ">
           <table className="table-auto w-full text-center border-collapse">
-            <thead className="text-white bg-blue_b">
+            <thead className="text-white bg-blue_b text-sm 2xl:text-lg">
               <tr>
                 <th className="px-4 py-2 text-start">Cliente</th>
                 <th className="px-4 py-2">Fecha</th>
@@ -671,7 +671,7 @@ const FiadosPage = () => {
             <div className="max-h-64 overflow-y-auto">
               <h3 className="font-semibold mb-2">Detalle de fiados:</h3>
               <table className="bg-white text-gray_b w-full text-center border-collapse">
-                <thead className="bg-blue_b text-white">
+                <thead className="bg-blue_b text-white text-sm 2xl:text-lg">
                   <tr>
                     <th className="px-2 py-1">Fecha</th>
                     <th className="px-2 py-1">Total</th>

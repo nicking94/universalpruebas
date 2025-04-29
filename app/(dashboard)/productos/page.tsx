@@ -355,12 +355,12 @@ const ProductsPage = () => {
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
             <thead className="text-white bg-blue_b">
               <tr>
-                <th className="px-4 py-2 text-start text-xs xl:text-lg ">
+                <th className="px-4 py-2 text-start text-sm 2xl:text-lg ">
                   Producto
                 </th>
                 <th
                   onClick={toggleSortOrder}
-                  className="text-xs xl:text-lg cursor-pointer flex justify-center items-center px-4 py-2"
+                  className="text-sm 2xl:text-lg cursor-pointer flex justify-center items-center px-4 py-2"
                 >
                   Stock
                   <button className="ml-2 cursor-pointer">
@@ -371,14 +371,14 @@ const ProductsPage = () => {
                     )}
                   </button>
                 </th>
-                <th className="text-xs xl:text-lg px-4 py-2 ">
+                <th className="text-sm 2xl:text-lg px-4 py-2 ">
                   Precio de costo
                 </th>
-                <th className="text-xs xl:text-lg px-4 py-2 ">
+                <th className="text-sm 2xl:text-lg px-4 py-2 ">
                   Precio de venta
                 </th>
-                <th className="text-xs xl:text-lg px-4 py-2 ">Vencimiento</th>
-                <th className="w-40 max-w-[10rem] text-xs xl:text-lg px-4 py-2">
+                <th className="text-sm 2xl:text-lg px-4 py-2 ">Vencimiento</th>
+                <th className="w-40 max-w-[10rem] text-sm 2xl:text-lg px-4 py-2">
                   Acciones
                 </th>
               </tr>

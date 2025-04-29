@@ -35,7 +35,7 @@ const LoginPage = () => {
     setIsOpenNotification(true);
     setTimeout(() => {
       setIsOpenNotification(false);
-      router.push("/productos");
+      router.push("/caja-diaria");
     }, 2000);
   };
 
