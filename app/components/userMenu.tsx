@@ -59,7 +59,8 @@ const UserMenu: React.FC<UserMenuProps> = ({
           </button>
           <a
             className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray-100 dark:hover:bg-gray_b transition-all duration-200 rounded-b-md"
-            href="#"
+            href="https://www.youtube.com/watch?v=q6U8XRMTxJg&list=PLANJYSrB0A_HqQIHQs9ZIrwLOvMVGrA6W"
+            target="_blank"
           >
             <HelpCircle className="mr-2" />
             Tutoriales
