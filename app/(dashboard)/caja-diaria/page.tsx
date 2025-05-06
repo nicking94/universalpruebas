@@ -648,7 +648,7 @@ const CajaDiariaPage = () => {
         onClose={() => setIsDetailModalOpen(false)}
         title="Detalles del día"
         buttons={
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-4 ">
             <Button
               text="Cerrar"
               colorText="text-gray_b dark:text-white"
@@ -684,15 +684,22 @@ const CajaDiariaPage = () => {
               Tipo
             </label>
             <Select
-              options={[{ value: "TODOS", label: "Todos" }, ...paymentOptions]}
+              options={[
+                { value: "TODOS", label: "Todos" },
+                { value: "INGRESO", label: "Ingreso" },
+                { value: "EGRESO", label: "Egreso" },
+              ]}
               value={
-                filterPaymentMethod === "TODOS"
+                filterType === "TODOS"
                   ? { value: "TODOS", label: "Todos" }
-                  : paymentOptions.find((m) => m.value === filterPaymentMethod)
+                  : {
+                      value: filterType,
+                      label: filterType === "INGRESO" ? "Ingreso" : "Egreso",
+                    }
               }
               onChange={(option) =>
                 option &&
-                setFilterPaymentMethod(option.value as PaymentMethod | "TODOS")
+                setFilterType(option.value as "TODOS" | "INGRESO" | "EGRESO")
               }
               className="w-full"
             />
