@@ -198,6 +198,7 @@ export type DailyCashMovement = {
   supplierId?: number;
   supplierName?: string;
 };
+
 export type DailyCash = {
   id: number;
   date: string;

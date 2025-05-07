@@ -9,6 +9,7 @@ import {
   Headphones,
   Users,
   Truck,
+  LineChart,
   // Truck,
 } from "lucide-react";
 import Button from "./Button";
@@ -31,6 +32,7 @@ const menuItems = [
   { label: "Fiados", href: "/fiados", icon: <Wallet /> },
 
   { label: "Proveedores", href: "/proveedores", icon: <Truck /> },
+  { label: "Métricas", href: "/metricas", icon: <LineChart /> },
   {
     label: "Soporte técnico",
     href: "https://wa.me/5492613077147",
@@ -71,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
     <aside
       className={`fixed top-0 left-0  flex flex-col justify-between  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-200  ${
         isSidebarOpen ? "w-64" : "w-30"
-      }`}
+      } overflow-y-auto`}
     >
       <div>
         <div className="bg-blue_b dark:bg-gray_b text-white  flex items-center justify-between p-2 shadow-sm shadow-gray_xl dark:shadow-gray_b">

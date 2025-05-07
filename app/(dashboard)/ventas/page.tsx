@@ -116,17 +116,25 @@ const VentasPage = () => {
     if (!product) {
       throw new Error(`Producto con ID ${productId} no encontrado`);
     }
-    const stockInGrams = convertToGrams(product.stock, product.unit);
+
+    const stockInGrams = convertToGrams(Number(product.stock), product.unit);
     const soldQuantityInGrams = convertToGrams(soldQuantity, unit);
 
     if (stockInGrams < soldQuantityInGrams) {
-      throw new Error(`Stock insuficiente para el producto ${product.name}`);
+      const availableStock = convertStockToUnit(stockInGrams, product.unit);
+      throw new Error(
+        `Stock insuficiente para ${product.name}. ` +
+          `Solicitado: ${soldQuantity} ${unit}, ` +
+          `Disponible: ${availableStock.quantity.toFixed(2)} ${
+            availableStock.unit
+          }`
+      );
     }
 
     const newStockInGrams = stockInGrams - soldQuantityInGrams;
     const updatedStock = convertStockToUnit(newStockInGrams, product.unit);
 
-    return updatedStock;
+    return updatedStock.quantity;
   };
 
   const convertToGrams = (quantity: number, unit: string): number => {
@@ -246,8 +254,7 @@ const VentasPage = () => {
           sale.paymentMethods.forEach((payment) => {
             const paymentProductAmount = productRatio * payment.amount;
             const profit =
-              (product.price - product.costPrice) *
-              (payment.amount / productAmount);
+              (product.price - product.costPrice) * product.quantity;
 
             let quantity = product.quantity;
             if (product.unit === "Unid.") {
@@ -269,6 +276,8 @@ const VentasPage = () => {
               paymentMethod: payment.method,
               productId: product.id,
               productName: product.name,
+              costPrice: product.costPrice,
+              sellPrice: product.price,
               quantity: quantity,
               unit: product.unit,
               profit: profit,
@@ -579,7 +588,7 @@ const VentasPage = () => {
           product.quantity,
           product.unit
         );
-        await db.products.update(product.id, { stock: updatedStock.quantity });
+        await db.products.update(product.id, { stock: updatedStock });
       }
 
       let customerId = selectedCustomer?.value;
@@ -781,6 +790,15 @@ const VentasPage = () => {
           const product = products.find((p) => p.id === option.value);
           if (!product) return null;
 
+          // Verificar stock antes de agregar
+          if (Number(product.stock) <= 0) {
+            showNotification(
+              `El producto ${product.name} no tiene stock disponible`,
+              "error"
+            );
+            return null;
+          }
+
           const existingProduct = prevState.products.find(
             (p) => p.id === product.id
           );
@@ -793,6 +811,7 @@ const VentasPage = () => {
                 unit: product.unit,
                 stock: Number(product.stock),
                 price: Number(product.price),
+                costPrice: Number(product.costPrice),
               };
         })
         .filter(Boolean) as Product[];
@@ -825,12 +844,29 @@ const VentasPage = () => {
     unit: Product["unit"]
   ) => {
     setNewSale((prevState) => {
+      const product = products.find((p) => p.id === productId);
+      if (!product) return prevState;
+
+      // Convertir stock y cantidad solicitada a gramos para comparación
+      const stockInGrams = convertToGrams(Number(product.stock), product.unit);
+      const requestedInGrams = convertToGrams(quantity, unit);
+
+      // Verificar si la cantidad solicitada supera el stock
+      if (requestedInGrams > stockInGrams) {
+        showNotification(
+          `No hay suficiente stock para ${product.name}. Stock disponible: ${product.stock} ${product.unit}`,
+          "error"
+        );
+        return prevState;
+      }
+
       const updatedProducts = prevState.products.map((p) => {
         if (p.id === productId) {
           return { ...p, quantity, unit };
         }
         return p;
       });
+
       const newTotal = calculateCombinedTotal(
         updatedProducts,
         prevState.manualAmount || 0

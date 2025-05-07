@@ -362,22 +362,8 @@ const CajaDiariaPage = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
-  const getMonthlySummary = () => {
-    const dailySummaries = getDailySummary();
-
-    return dailySummaries.reduce(
-      (acc, day) => ({
-        ingresos: acc.ingresos + day.ingresos,
-        egresos: acc.egresos + day.egresos,
-        ganancia: acc.ganancia + day.ganancia,
-        gananciaNeta: acc.gananciaNeta + (day.gananciaNeta || 0),
-      }),
-      { ingresos: 0, egresos: 0, ganancia: 0, gananciaNeta: 0 }
-    );
-  };
-
   const dailySummaries = getDailySummary();
-  const monthlySummary = getMonthlySummary();
+
   const addMovement = async () => {
     const totalPayment = paymentMethods.reduce((sum, m) => sum + m.amount, 0);
     const amountNumber = parseFloat(amount);
@@ -932,27 +918,7 @@ const CajaDiariaPage = () => {
                 />
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              {" "}
-              <div className="bg-green-100 text-green-800 p-4 rounded-lg">
-                <h3 className="font-bold">Ingresos Totales</h3>
-                <p className="text-2xl">
-                  {formatCurrency(monthlySummary.ingresos)}
-                </p>
-              </div>
-              <div className="bg-red-100 text-red-800 p-4 rounded-lg">
-                <h3 className="font-bold">Egresos Totales</h3>
-                <p className="text-2xl">
-                  {formatCurrency(monthlySummary.egresos)}
-                </p>
-              </div>
-              <div className="bg-purple-100 text-purple-800 p-4 rounded-lg">
-                <h3 className="font-bold">Ganancia</h3>
-                <p className="text-2xl">
-                  {formatCurrency(monthlySummary.gananciaNeta || 0)}
-                </p>
-              </div>
-            </div>
+
             <div className="flex justify-between mb-2">
               <div className="flex gap-4">
                 <Select

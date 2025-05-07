@@ -391,11 +391,14 @@ const FiadosPage = () => {
           paid: true,
         } as Partial<CreditSale>);
       }
-      const updatedPayments = await db.payments
-        .where("saleId")
-        .equals(currentCreditSale.id)
-        .toArray();
-      setPayments(updatedPayments);
+
+      const allSales = await db.sales.toArray();
+      const sales = allSales.filter((sale) => sale.credit === true);
+      const allPayments = await db.payments.toArray();
+
+      setCreditSales(sales as CreditSale[]);
+      setPayments(allPayments);
+
       if (newRemainingBalance <= 0.1) {
         const saleToRegister: CreditSale = {
           ...currentCreditSale,
@@ -419,7 +422,9 @@ const FiadosPage = () => {
           ...currentCustomerInfo,
           balance:
             updatedSales.reduce((total, sale) => total + (sale.total || 0), 0) -
-            updatedPayments.reduce((sum, p) => sum + p.amount, 0),
+            allPayments
+              .filter((p) => updatedSales.some((s) => s.id === p.saleId))
+              .reduce((sum, p) => sum + p.amount, 0),
           sales: updatedSales.map((s) => ({
             ...s,
             credit: true,
@@ -776,6 +781,7 @@ const FiadosPage = () => {
           buttons={
             <>
               <Button
+                hotkey="Enter"
                 text="Registrar"
                 colorText="text-white"
                 colorTextHover="text-white"
@@ -787,6 +793,7 @@ const FiadosPage = () => {
                 }
               />
               <Button
+                hotkey="Escape"
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:text-white hover:dark:text-white"

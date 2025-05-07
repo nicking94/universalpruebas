@@ -22,6 +22,7 @@ import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
 import Select from "react-select";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
+import { isValid } from "date-fns";
 
 type UnitOption = {
   value: Product["unit"];
@@ -81,17 +82,22 @@ const ProductsPage = () => {
   const sortedProducts = useMemo(() => {
     const filtered = products.filter(
       (product) =>
-        product.name?.toLowerCase().includes(searchQuery) ||
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.barcode?.includes(searchQuery)
     );
+
     return [...filtered].sort((a, b) => {
-      const expirationA = a.expiration
-        ? parseISO(a.expiration).getTime()
-        : Infinity;
-      const expirationB = b.expiration
-        ? parseISO(b.expiration).getTime()
-        : Infinity;
+      // Verificar y manejar fechas undefined
+      const expirationA =
+        a.expiration && isValid(parseISO(a.expiration))
+          ? startOfDay(parseISO(a.expiration)).getTime()
+          : Infinity;
+      const expirationB =
+        b.expiration && isValid(parseISO(b.expiration))
+          ? startOfDay(parseISO(b.expiration)).getTime()
+          : Infinity;
       const today = startOfDay(new Date()).getTime();
+
       const isExpiredA = expirationA < today;
       const isExpiredB = expirationB < today;
       const isExpiringSoonA =
@@ -174,16 +180,19 @@ const ProductsPage = () => {
       showNotification("Por favor, complete todos los campos", "error");
       return;
     }
-    const barcodeExists = products.some(
-      (p) =>
-        p.barcode === newProduct.barcode &&
-        p.barcode !== "" &&
-        (!editingProduct || p.id !== editingProduct.id)
-    );
 
-    if (barcodeExists) {
-      showNotification("El código de barras ya existe", "error");
-      return;
+    // Solo verificar duplicados si el barcode no está vacío
+    if (newProduct.barcode !== "") {
+      const barcodeExists = products.some(
+        (p) =>
+          p.barcode === newProduct.barcode &&
+          (!editingProduct || p.id !== editingProduct.id)
+      );
+
+      if (barcodeExists) {
+        showNotification("El código de barras ya existe", "error");
+        return;
+      }
     }
     try {
       if (editingProduct) {
@@ -468,10 +477,13 @@ const ProductsPage = () => {
                           {formatPrice(product.price)}
                         </td>
                         <td className="font-semibold px-4 py-2 border border-gray_xl">
-                          {expirationDate
-                            ? format(expirationDate, "dd/MM/yyyy", {
-                                locale: es,
-                              })
+                          {product.expiration &&
+                          isValid(parseISO(product.expiration))
+                            ? format(
+                                parseISO(product.expiration),
+                                "dd/MM/yyyy",
+                                { locale: es }
+                              )
                             : "Sin fecha"}
                           {isExpiringSoon && (
                             <span className=" ml-2 text-red-500">
@@ -659,7 +671,7 @@ const ProductsPage = () => {
             </div>
 
             <CustomDatePicker
-              value={newProduct.expiration}
+              value={newProduct.expiration || ""}
               onChange={(newDate) => {
                 setNewProduct({ ...newProduct, expiration: newDate });
               }}
