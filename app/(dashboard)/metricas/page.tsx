@@ -29,7 +29,6 @@ import {
 } from "chart.js";
 import { Bar, Pie, Line } from "react-chartjs-2";
 
-// Registrar componentes de Chart.js
 ChartJS.register(
   BarElement,
   CategoryScale,
@@ -49,8 +48,6 @@ const Metrics = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-
-  // Obtener años disponibles para filtrar
   useEffect(() => {
     const fetchData = async () => {
       const storedDailyCashes = await db.dailyCashes.toArray();
@@ -59,8 +56,6 @@ const Metrics = () => {
       const today = new Date().toISOString().split("T")[0];
       const todayCash = storedDailyCashes.find((dc) => dc.date === today);
       setCurrentDailyCash(todayCash || null);
-
-      // Extraer años únicos de los datos
       const years = new Set<number>();
       storedDailyCashes.forEach((cash) => {
         const date = parseISO(cash.date);
@@ -72,7 +67,6 @@ const Metrics = () => {
     fetchData();
   }, []);
 
-  // Obtener movimientos de productos para el ranking
   const getProductMovements = (period: "day" | "month" | "year") => {
     let filteredCashes = dailyCashes;
 
@@ -103,8 +97,6 @@ const Metrics = () => {
             amount: 0,
             profit: 0,
           };
-
-          // Asegúrate de que costPrice y sellPrice están definidos
           const costPrice = movement.costPrice || 0;
           const sellPrice = movement.sellPrice || 0;
           const quantity = movement.quantity || 0;
@@ -143,9 +135,6 @@ const Metrics = () => {
         return sum;
       }, 0);
   };
-
-  // Obtener resumen mensual
-  // Obtener resumen mensual
   const getMonthlySummary = () => {
     return dailyCashes
       .filter((cash) => {
@@ -160,16 +149,12 @@ const Metrics = () => {
           const egresos = cash.movements
             .filter((m) => m.type === "EGRESO")
             .reduce((sum, m) => sum + m.amount, 0);
-
-          // Sumar utilidad real de cada movimiento de ingreso (usando profit si existe)
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              // Priorizar el campo profit si existe
               if (m.profit !== undefined) {
                 return sum + m.profit;
               }
-              // Si no hay profit, calcularlo
               const costPrice = m.costPrice || 0;
               const sellPrice = m.sellPrice || 0;
               const quantity = m.quantity || 0;
@@ -185,8 +170,6 @@ const Metrics = () => {
         { ingresos: 0, egresos: 0, ganancia: 0 }
       );
   };
-
-  // Obtener resumen anual
   const getAnnualSummary = () => {
     return dailyCashes
       .filter((cash) => {
@@ -201,8 +184,6 @@ const Metrics = () => {
           const egresos = cash.movements
             .filter((m) => m.type === "EGRESO")
             .reduce((sum, m) => sum + m.amount, 0);
-
-          // Sumar utilidad real de cada movimiento de ingreso
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
@@ -221,9 +202,6 @@ const Metrics = () => {
         { ingresos: 0, egresos: 0, ganancia: 0 }
       );
   };
-
-  // Obtener datos diarios para el gráfico mensual
-  // Obtener datos diarios para el gráfico mensual
   const getDailyDataForMonth = () => {
     const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1));
     const monthEnd = endOfMonth(new Date(selectedYear, selectedMonth - 1));
@@ -243,9 +221,7 @@ const Metrics = () => {
         const ganancia = dailyCash.movements
           .filter((m) => m.type === "INGRESO")
           .reduce((sum, m) => {
-            // Priorizar profit si existe
             if (m.profit !== undefined) return sum + m.profit;
-            // Calcular si no existe
             const costPrice = m.costPrice || 0;
             const sellPrice = m.sellPrice || 0;
             const quantity = m.quantity || 0;
@@ -259,7 +235,6 @@ const Metrics = () => {
     });
   };
 
-  // Obtener datos mensuales para el gráfico anual
   const getMonthlyDataForYear = () => {
     return Array.from({ length: 12 }, (_, i) => {
       const monthData = dailyCashes
@@ -313,7 +288,6 @@ const Metrics = () => {
   const topProductsMonthly = getProductMovements("month").slice(0, 5);
   const topProductsYearly = getProductMovements("year").slice(0, 5);
 
-  // Configuración de gráficos
   const monthlyBarChartData = {
     labels: dailyMonthData.map((data) => data.date),
     datasets: [
@@ -447,7 +421,6 @@ const Metrics = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Resumen Diario */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
@@ -523,8 +496,6 @@ const Metrics = () => {
               )}
             </div>
           </div>
-
-          {/* Resumen Mensual */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="bg-purple-100 dark:bg-purple-900 p-2 rounded-full">
@@ -592,8 +563,6 @@ const Metrics = () => {
               )}
             </div>
           </div>
-
-          {/* Resumen Anual */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="bg-indigo-100 dark:bg-indigo-900 p-2 rounded-full">
@@ -662,10 +631,7 @@ const Metrics = () => {
             </div>
           </div>
         </div>
-
-        {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Gráfico de ingresos/egresos mensuales */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4">
               Ingresos vs Egresos -{" "}
@@ -706,8 +672,6 @@ const Metrics = () => {
               }}
             />
           </div>
-
-          {/* Gráfico de ganancia mensual */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4">
               Ganancia Diaria -{" "}
@@ -749,10 +713,7 @@ const Metrics = () => {
             />
           </div>
         </div>
-
-        {/* Gráficos anuales y distribución */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Gráfico de ingresos/egresos anuales */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4">
               Ingresos vs Egresos - {selectedYear}
@@ -788,8 +749,6 @@ const Metrics = () => {
               }}
             />
           </div>
-
-          {/* Gráfico de distribución mensual */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4">
               Distribución Mensual -{" "}

@@ -601,11 +601,10 @@ const CajaDiariaPage = () => {
 
       for (const cash of allCashes) {
         if (cash.date < today && !cash.closed) {
-          // Cerrar automáticamente cajas de días anteriores
           const updatedCash = {
             ...cash,
             closed: true,
-            closingAmount: 0, // O calcular el monto esperado
+            closingAmount: 0,
             closingDate: new Date().toISOString(),
           };
           await db.dailyCashes.update(cash.id, updatedCash);

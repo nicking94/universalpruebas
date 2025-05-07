@@ -45,8 +45,6 @@ const Modal: React.FC<ModalProps> = ({
         <div className="overflow-y-auto max-h-[66vh] py-10 flex-1">
           {children}
         </div>
-
-        {/* Área de botones personalizados */}
         <div className="flex justify-end space-x-4 ">
           {buttons ? (
             buttons

@@ -58,13 +58,9 @@ const CustomDatePicker: React.FC<DatePickerProps> = ({
             dark:bg-gray-800 dark:border-gray-600 dark:text-white
           `}
         />
-
-        {/* Icono de calendario */}
         <div className="absolute top-2.5 left-3 text-gray-400 pointer-events-none">
           <CalendarIcon className="h-4 w-4" />
         </div>
-
-        {/* Botón para limpiar personalizado */}
         {isClearable && startDate && (
           <X
             className="absolute right-3 top-2.5 h-4 w-4 opacity-50 hover:opacity-100 cursor-pointer text-gray-500"

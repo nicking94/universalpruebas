@@ -789,8 +789,6 @@ const VentasPage = () => {
         .map((option) => {
           const product = products.find((p) => p.id === option.value);
           if (!product) return null;
-
-          // Verificar stock antes de agregar
           if (Number(product.stock) <= 0) {
             showNotification(
               `El producto ${product.name} no tiene stock disponible`,
@@ -846,12 +844,8 @@ const VentasPage = () => {
     setNewSale((prevState) => {
       const product = products.find((p) => p.id === productId);
       if (!product) return prevState;
-
-      // Convertir stock y cantidad solicitada a gramos para comparación
       const stockInGrams = convertToGrams(Number(product.stock), product.unit);
       const requestedInGrams = convertToGrams(quantity, unit);
-
-      // Verificar si la cantidad solicitada supera el stock
       if (requestedInGrams > stockInGrams) {
         showNotification(
           `No hay suficiente stock para ${product.name}. Stock disponible: ${product.stock} ${product.unit}`,
@@ -1137,7 +1131,6 @@ const VentasPage = () => {
               }
             >
               <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
-                {/* Sección de Resumen (Total, Fecha, Pago) */}
                 <div className="space-y-3 p-4 bg-gray-50 rounded-md border border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
                     Resumen de Venta

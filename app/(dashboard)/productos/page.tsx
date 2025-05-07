@@ -87,7 +87,6 @@ const ProductsPage = () => {
     );
 
     return [...filtered].sort((a, b) => {
-      // Verificar y manejar fechas undefined
       const expirationA =
         a.expiration && isValid(parseISO(a.expiration))
           ? startOfDay(parseISO(a.expiration)).getTime()
@@ -181,7 +180,6 @@ const ProductsPage = () => {
       return;
     }
 
-    // Solo verificar duplicados si el barcode no está vacío
     if (newProduct.barcode !== "") {
       const barcodeExists = products.some(
         (p) =>
