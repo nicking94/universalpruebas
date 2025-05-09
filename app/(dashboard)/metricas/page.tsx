@@ -120,21 +120,6 @@ const Metrics = () => {
       .sort((a, b) => b.quantity - a.quantity);
   };
 
-  const getDailySummary = () => {
-    if (!currentDailyCash || !currentDailyCash.movements) return 0;
-
-    return currentDailyCash.movements
-      .filter((m) => m.type === "INGRESO")
-      .reduce((sum, m) => {
-        if (m.sellPrice && m.costPrice && m.quantity) {
-          return (
-            sum +
-            (Number(m.sellPrice) - Number(m.costPrice)) * Number(m.quantity)
-          );
-        }
-        return sum;
-      }, 0);
-  };
   const getMonthlySummary = () => {
     return dailyCashes
       .filter((cash) => {
@@ -154,15 +139,10 @@ const Metrics = () => {
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              // Priorizar profit calculado si existe
               if (m.profit !== undefined) return sum + m.profit;
-
-              // Si no, calcular basado en costPrice/sellPrice si existen
               if (m.costPrice && m.sellPrice && m.quantity) {
                 return sum + (m.sellPrice - m.costPrice) * m.quantity;
               }
-
-              // Si no hay datos suficientes, considerar ganancia 0
               return sum;
             }, 0);
 
@@ -286,13 +266,10 @@ const Metrics = () => {
       };
     });
   };
-
-  const dailySummary = getDailySummary();
   const monthlySummary = getMonthlySummary();
   const annualSummary = getAnnualSummary();
   const dailyMonthData = getDailyDataForMonth();
   const monthlyYearData = getMonthlyDataForYear();
-  const topProductsDaily = getProductMovements("day").slice(0, 5);
   const topProductsMonthly = getProductMovements("month").slice(0, 5);
   const topProductsYearly = getProductMovements("year").slice(0, 5);
 
@@ -428,82 +405,7 @@ const Metrics = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-blue-500 dark:text-blue-300"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-              Resumen Diario
-            </h2>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                <span className="text-sm font-medium">Ingresos</span>
-                <span className="font-bold">
-                  {formatCurrency(
-                    currentDailyCash?.movements
-                      .filter((m) => m.type === "INGRESO")
-                      .reduce((sum, m) => sum + m.amount, 0) || 0
-                  )}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
-                <span className="text-sm font-medium">Egresos</span>
-                <span className="font-bold">
-                  {formatCurrency(
-                    currentDailyCash?.movements
-                      .filter((m) => m.type === "EGRESO")
-                      .reduce((sum, m) => sum + m.amount, 0) || 0
-                  )}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                <span className="text-sm font-medium">Ganancia</span>
-                <span className="font-bold">
-                  {currentDailyCash ? formatCurrency(dailySummary) : "N/D"}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <h3 className="font-medium text-sm mb-2">
-                Productos más vendidos hoy
-              </h3>
-              {topProductsDaily.length > 0 ? (
-                <div className="space-y-2">
-                  {topProductsDaily.map((product, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center text-sm"
-                    >
-                      <span className="truncate">{product.name}</span>
-                      <span className="font-medium">
-                        {product.quantity} un.
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No hay datos de ventas hoy
-                </p>
-              )}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="bg-purple-100 dark:bg-purple-900 p-2 rounded-full">
@@ -524,21 +426,21 @@ const Metrics = () => {
             </h2>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-green-100 dark:bg-green-500/30 rounded-lg">
                 <span className="text-sm font-medium">Ingresos</span>
                 <span className="font-bold">
                   {formatCurrency(monthlySummary.ingresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-500/30 rounded-lg">
                 <span className="text-sm font-medium">Egresos</span>
                 <span className="font-bold">
                   {formatCurrency(monthlySummary.egresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-500/30 rounded-lg">
                 <span className="text-sm font-medium">Ganancia</span>
                 <span className="font-bold">
                   {formatCurrency(monthlySummary.ganancia)}
@@ -546,9 +448,9 @@ const Metrics = () => {
               </div>
             </div>
 
-            <div className="mt-4">
-              <h3 className="font-medium text-sm mb-2">
-                Productos más vendidos este mes
+            <div className="mt-4 ">
+              <h3 className=" p-2 font-medium text-md bg-gray_l dark:bg-gray_m text-white mb-2 text-center">
+                5 Productos más vendidos este mes
               </h3>
               {topProductsMonthly.length > 0 ? (
                 <div className="space-y-2">
@@ -591,21 +493,21 @@ const Metrics = () => {
             </h2>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-green-100 dark:bg-green-500/30 rounded-lg">
                 <span className="text-sm font-medium">Ingresos</span>
                 <span className="font-bold">
                   {formatCurrency(annualSummary.ingresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-500/30 rounded-lg">
                 <span className="text-sm font-medium">Egresos</span>
                 <span className="font-bold">
                   {formatCurrency(annualSummary.egresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-500/30 rounded-lg">
                 <span className="text-sm font-medium">Ganancia</span>
                 <span className="font-bold">
                   {formatCurrency(annualSummary.ganancia)}
@@ -614,8 +516,8 @@ const Metrics = () => {
             </div>
 
             <div className="mt-4">
-              <h3 className="font-medium text-sm mb-2">
-                Productos más vendidos este año
+              <h3 className=" p-2 font-medium text-md bg-gray_l dark:bg-gray_m text-white mb-2 text-center">
+                5 Productos más vendidos este año
               </h3>
               {topProductsYearly.length > 0 ? (
                 <div className="space-y-2">
@@ -642,7 +544,7 @@ const Metrics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4">
-              Ingresos vs Egresos -{" "}
+              Ingresos | Egresos -{" "}
               {format(
                 new Date(selectedYear, selectedMonth - 1, 1),
                 "MMMM yyyy",
@@ -724,7 +626,7 @@ const Metrics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
             <h2 className="text-lg font-semibold mb-4">
-              Ingresos vs Egresos - {selectedYear}
+              Ingresos | Egresos - Año {selectedYear}
             </h2>
             <Bar
               data={annualBarChartData}

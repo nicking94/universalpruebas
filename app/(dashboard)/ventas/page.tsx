@@ -631,7 +631,7 @@ const VentasPage = () => {
       const saleToSave: CreditSale = {
         id: Date.now(),
         products: newSale.products,
-        paymentMethods: newSale.paymentMethods,
+        paymentMethods: isCredit ? [] : newSale.paymentMethods,
         total: newSale.total,
         date: new Date().toISOString(),
         barcode: newSale.barcode,
@@ -1071,12 +1071,16 @@ const VentasPage = () => {
                       </td>
 
                       <td className="font-semibold px-4 py-2 border border-gray_xl">
-                        {paymentMethods.map((payment, i) => (
-                          <div key={i} className="text-xs">
-                            {payment?.method || "Método no especificado"}:{" "}
-                            {formatPrice(payment?.amount || 0)}
-                          </div>
-                        ))}
+                        {sale.credit ? (
+                          <span className="text-orange-500">VENTA FIADA</span>
+                        ) : (
+                          paymentMethods.map((payment, i) => (
+                            <div key={i} className="text-xs">
+                              {payment?.method || "Método no especificado"}:{" "}
+                              {formatPrice(payment?.amount || 0)}
+                            </div>
+                          ))
+                        )}
                       </td>
 
                       <td className="px-4 py-2 border border-gray_xl">
@@ -1164,17 +1168,23 @@ const VentasPage = () => {
                   </div>
 
                   <div className="flex justify-between text-base text-gray_b">
-                    <span className="font-medium ">Forma de Pago:</span>
-                    <div className="text-right">
-                      {selectedSale.paymentMethods.map((payment, i) => (
-                        <div key={i} className="text-sm">
-                          {payment.method}:{" "}
-                          <span className="font-medium">
-                            {formatPrice(payment.amount)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <span className="font-medium">Forma de Pago:</span>
+                    {selectedSale.credit ? (
+                      <span className="text-orange-500 font-semibold">
+                        VENTA FIADA
+                      </span>
+                    ) : (
+                      <div className="text-right">
+                        {selectedSale.paymentMethods.map((payment, i) => (
+                          <div key={i} className="text-sm">
+                            {payment.method}:{" "}
+                            <span className="font-medium">
+                              {formatPrice(payment.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1420,77 +1430,91 @@ const VentasPage = () => {
                   Métodos de Pago
                 </label>
 
-                {newSale.paymentMethods.map((payment, index) => (
-                  <div key={index} className="flex items-center gap-4 mb-2">
-                    <Select
-                      value={paymentOptions.find(
-                        (option) => option.value === payment.method
-                      )}
-                      onChange={(selected) =>
-                        selected &&
-                        handlePaymentMethodChange(
-                          index,
-                          "method",
-                          selected.value
-                        )
-                      }
-                      options={paymentOptions}
-                      className="w-60 max-w-60 text-gray_b"
-                    />
+                {isCredit ? (
+                  <div className="p-2 bg-orange-100 text-orange-800 rounded-md">
+                    <p className="font-semibold">
+                      VENTA FIADA - Métodos de pago deshabilitados
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {newSale.paymentMethods.map((payment, index) => (
+                      <div key={index} className="flex items-center gap-4 mb-2">
+                        <Select
+                          value={paymentOptions.find(
+                            (option) => option.value === payment.method
+                          )}
+                          onChange={(selected) =>
+                            selected &&
+                            handlePaymentMethodChange(
+                              index,
+                              "method",
+                              selected.value
+                            )
+                          }
+                          options={paymentOptions}
+                          className="w-60 max-w-60 text-gray_b"
+                          isDisabled={isCredit}
+                        />
 
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        value={
-                          payment.amount > 0
-                            ? new Intl.NumberFormat("es-AR").format(
-                                payment.amount
-                              )
-                            : ""
-                        }
-                        onChange={(e) =>
-                          handlePaymentAmountChange(index, e.target.value)
-                        }
-                        className="w-32"
-                        placeholder="Monto"
-                      />
-                      {index === newSale.paymentMethods.length - 1 &&
-                        newSale.paymentMethods.reduce(
-                          (sum, m) => sum + m.amount,
-                          0
-                        ) >
-                          newSale.total + 0.1 && (
-                          <span className="text-xs text-red-500 ml-2">
-                            Exceso: $
-                            {(
-                              newSale.paymentMethods.reduce(
-                                (sum, m) => sum + m.amount,
-                                0
-                              ) - newSale.total
-                            ).toFixed(2)}
-                          </span>
+                        <div className="relative">
+                          <Input
+                            type="text"
+                            value={
+                              payment.amount > 0
+                                ? new Intl.NumberFormat("es-AR").format(
+                                    payment.amount
+                                  )
+                                : ""
+                            }
+                            onChange={(e) =>
+                              handlePaymentAmountChange(index, e.target.value)
+                            }
+                            className="w-32"
+                            placeholder="Monto"
+                            disabled={isCredit}
+                          />
+                          {index === newSale.paymentMethods.length - 1 &&
+                            newSale.paymentMethods.reduce(
+                              (sum, m) => sum + m.amount,
+                              0
+                            ) >
+                              newSale.total + 0.1 && (
+                              <span className="text-xs text-red-500 ml-2">
+                                Exceso: $
+                                {(
+                                  newSale.paymentMethods.reduce(
+                                    (sum, m) => sum + m.amount,
+                                    0
+                                  ) - newSale.total
+                                ).toFixed(2)}
+                              </span>
+                            )}
+                        </div>
+
+                        {newSale.paymentMethods.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removePaymentMethod(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash size={16} />
+                          </button>
                         )}
-                    </div>
-
-                    {newSale.paymentMethods.length > 1 && (
+                      </div>
+                    ))}
+                    {!isCredit && (
                       <button
                         type="button"
-                        onClick={() => removePaymentMethod(index)}
-                        className="text-red-500 hover:text-red-700"
+                        onClick={addPaymentMethod}
+                        className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
                       >
-                        <Trash size={16} />
+                        <Plus size={16} className="mr-1" /> Agregar otro método
+                        de pago
                       </button>
                     )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addPaymentMethod}
-                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
-                >
-                  <Plus size={16} className="mr-1" /> Agregar otro método de
-                  pago
-                </button>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-4">
