@@ -1425,8 +1425,14 @@ const VentasPage = () => {
                 />
               </div>
 
-              <div className="w-full flex flex-col mt-8">
-                <label className="block text-gray_m dark:text-white text-sm font-semibold">
+              <div
+                className={`w-full flex flex-col ${isCredit ? "mt-5" : "mt-8"}`}
+              >
+                <label
+                  className={`${
+                    isCredit ? "hidden" : "block"
+                  } text-gray_m dark:text-white text-sm font-semibold`}
+                >
                   Métodos de Pago
                 </label>
 
