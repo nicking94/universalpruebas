@@ -146,19 +146,24 @@ const Metrics = () => {
           const ingresos = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => sum + m.amount, 0);
+
           const egresos = cash.movements
             .filter((m) => m.type === "EGRESO")
             .reduce((sum, m) => sum + m.amount, 0);
+
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (m.profit !== undefined) {
-                return sum + m.profit;
+              // Priorizar profit calculado si existe
+              if (m.profit !== undefined) return sum + m.profit;
+
+              // Si no, calcular basado en costPrice/sellPrice si existen
+              if (m.costPrice && m.sellPrice && m.quantity) {
+                return sum + (m.sellPrice - m.costPrice) * m.quantity;
               }
-              const costPrice = m.costPrice || 0;
-              const sellPrice = m.sellPrice || 0;
-              const quantity = m.quantity || 0;
-              return sum + (sellPrice - costPrice) * quantity;
+
+              // Si no hay datos suficientes, considerar ganancia 0
+              return sum;
             }, 0);
 
           return {
@@ -187,10 +192,13 @@ const Metrics = () => {
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (m.sellPrice && m.costPrice && m.quantity) {
-                return sum + (m.sellPrice - m.costPrice) * m.quantity;
+              if (m.profit !== undefined) {
+                return sum + m.profit;
               }
-              return sum;
+              const costPrice = m.costPrice || 0;
+              const sellPrice = m.sellPrice || 0;
+              const quantity = m.quantity || 0;
+              return sum + (sellPrice - costPrice) * quantity;
             }, 0);
 
           return {
@@ -466,7 +474,7 @@ const Metrics = () => {
               <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
                 <span className="text-sm font-medium">Ganancia</span>
                 <span className="font-bold">
-                  {formatCurrency(dailySummary)}
+                  {currentDailyCash ? formatCurrency(dailySummary) : "N/D"}
                 </span>
               </div>
             </div>

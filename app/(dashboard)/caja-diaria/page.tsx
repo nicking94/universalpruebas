@@ -977,19 +977,19 @@ const CajaDiariaPage = () => {
                         key={index}
                         className="text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_xl"
                       >
-                        <td className="font-semibold px-4 py-2 border border-gray_xl text-start">
+                        <td className="font-semibold px-4 py-2  border-x border-gray_xltext-start">
                           {format(parseISO(day.date), "dd/MM/yyyy")}
                         </td>
-                        <td className="font-semibold text-green-600 px-4 py-2 border border-gray_xl">
+                        <td className="font-semibold text-green-600 px-4 py-2  border-x border-gray_xl">
                           {formatCurrency(day.ingresos)}
                         </td>
-                        <td className="font-semibold text-red-600 px-4 py-2 border border-gray_xl">
+                        <td className="font-semibold text-red-600 px-4 py-2  border-x border-gray_xl">
                           {formatCurrency(day.egresos)}
                         </td>
-                        <td className="font-semibold text-purple-600 px-4 py-2 border border-gray_xl">
+                        <td className="font-semibold text-purple-600 px-4 py-2">
                           {formatCurrency(day.gananciaNeta || 0)}
                         </td>
-                        <td className="px-4 py-2 border border-gray_xl">
+                        <td className="px-4 py-2 border-x border-gray_xl ">
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
                               day.closed

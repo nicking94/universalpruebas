@@ -236,16 +236,19 @@ const VentasPage = () => {
   const addIncomeToDailyCash = async (
     sale: Sale & { manualAmount?: number; credit?: boolean; paid?: boolean }
   ) => {
-    if (sale.credit && !sale.paid) {
-      return;
-    }
-
     try {
       const today = new Date().toISOString().split("T")[0];
       let dailyCash = await db.dailyCashes.get({ date: today });
 
       const movements: DailyCashMovement[] = [];
       const totalSaleAmount = sale.total;
+
+      // Para pagos de fiados, buscar la venta original
+      let originalSale: Sale | undefined;
+      if (sale.credit && sale.paid) {
+        originalSale = await db.sales.get(sale.id);
+      }
+
       if (sale.products.length > 0) {
         sale.products.forEach((product) => {
           const productAmount = calculatePrice(product);
@@ -253,33 +256,39 @@ const VentasPage = () => {
 
           sale.paymentMethods.forEach((payment) => {
             const paymentProductAmount = productRatio * payment.amount;
-            const profit =
-              (product.price - product.costPrice) * product.quantity;
 
-            let quantity = product.quantity;
-            if (product.unit === "Unid.") {
+            // Usar datos de la venta original si es pago de fiado
+            const currentProduct =
+              originalSale?.products.find((p) => p.id === product.id) ||
+              product;
+            const profit =
+              (currentProduct.price - currentProduct.costPrice) *
+              currentProduct.quantity;
+
+            let quantity = currentProduct.quantity;
+            if (currentProduct.unit === "Unid.") {
               quantity = Math.round(
-                product.quantity * (payment.amount / productAmount)
+                currentProduct.quantity * (payment.amount / productAmount)
               );
-            } else {
-              quantity = product.quantity;
             }
 
             movements.push({
               id: Date.now(),
               amount: paymentProductAmount,
-              description: `Venta de ${product.name} - ${quantity.toFixed(2)} ${
-                product.unit
+              description: `Venta de ${
+                currentProduct.name
+              } - ${quantity.toFixed(2)} ${currentProduct.unit}${
+                sale.credit ? " (PAGO FIADO)" : ""
               }`,
               type: "INGRESO",
               date: new Date().toISOString(),
               paymentMethod: payment.method,
-              productId: product.id,
-              productName: product.name,
-              costPrice: product.costPrice,
-              sellPrice: product.price,
+              productId: currentProduct.id,
+              productName: currentProduct.name,
+              costPrice: currentProduct.costPrice,
+              sellPrice: currentProduct.price,
               quantity: quantity,
-              unit: product.unit,
+              unit: currentProduct.unit,
               profit: profit,
               isCreditPayment: sale.credit,
               originalSaleId: sale.id,
@@ -1571,6 +1580,7 @@ const VentasPage = () => {
                 colorText="text-white"
                 colorTextHover="text-white"
                 onClick={handleDeleteSale}
+                hotkey="Enter"
               />
               <Button
                 text="No"
@@ -1579,6 +1589,7 @@ const VentasPage = () => {
                 colorBg="bg-gray_xl dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
                 onClick={() => setIsConfirmModalOpen(false)}
+                hotkey="Escape"
               />
             </div>
           }
