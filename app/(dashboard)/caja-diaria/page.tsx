@@ -29,9 +29,10 @@ const CajaDiariaPage = () => {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [type, setType] = useState<"success" | "error" | "info">("success");
   const [isOpenModal, setIsOpenModal] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [movementToDelete, setMovementToDelete] =
-    useState<DailyCashMovement | null>(null);
+  //omitido
+  // const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  // const [movementToDelete, setMovementToDelete] =
+  //   useState<DailyCashMovement | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDayMovements, setSelectedDayMovements] = useState<
     DailyCashMovement[]
@@ -48,11 +49,11 @@ const CajaDiariaPage = () => {
     PaymentMethod | "TODOS"
   >("TODOS");
 
-  //pruebas
-  const [dailyCashToDelete, setDailyCashToDelete] = useState<DailyCash | null>(
-    null
-  );
-  const [isDeleteCashModalOpen, setIsDeleteCashModalOpen] = useState(false);
+  //omitido
+  // const [dailyCashToDelete, setDailyCashToDelete] = useState<DailyCash | null>(
+  //   null
+  // );
+  // const [isDeleteCashModalOpen, setIsDeleteCashModalOpen] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<{
     value: number;
@@ -64,27 +65,27 @@ const CajaDiariaPage = () => {
     { value: "TRANSFERENCIA", label: "Transferencia" },
     { value: "TARJETA", label: "Tarjeta" },
   ];
+  //omitido
+  // const deleteDailyCash = async () => {
+  //   if (!dailyCashToDelete) return;
 
-  const deleteDailyCash = async () => {
-    if (!dailyCashToDelete) return;
+  //   try {
+  //     await db.dailyCashes.delete(dailyCashToDelete.id);
 
-    try {
-      await db.dailyCashes.delete(dailyCashToDelete.id);
+  //     setDailyCashes((prev) =>
+  //       prev.filter((dc) => dc.id !== dailyCashToDelete.id)
+  //     );
+  //     if (currentDailyCash && currentDailyCash.id === dailyCashToDelete.id) {
+  //       setCurrentDailyCash(null);
+  //     }
 
-      setDailyCashes((prev) =>
-        prev.filter((dc) => dc.id !== dailyCashToDelete.id)
-      );
-      if (currentDailyCash && currentDailyCash.id === dailyCashToDelete.id) {
-        setCurrentDailyCash(null);
-      }
-
-      setIsDeleteCashModalOpen(false);
-      showNotification("Caja eliminada correctamente", "success");
-    } catch (error) {
-      console.error("Error al eliminar caja:", error);
-      showNotification("Error al eliminar caja", "error");
-    }
-  };
+  //     setIsDeleteCashModalOpen(false);
+  //     showNotification("Caja eliminada correctamente", "success");
+  //   } catch (error) {
+  //     console.error("Error al eliminar caja:", error);
+  //     showNotification("Error al eliminar caja", "error");
+  //   }
+  // };
 
   const [description, setDescription] = useState("");
   const [movementType, setMovementType] = useState<"INGRESO" | "EGRESO">(
@@ -514,57 +515,60 @@ const CajaDiariaPage = () => {
       return updated;
     });
   };
-  const handleDeleteMovement = async () => {
-    if (!movementToDelete) return;
+  //omitido
+  // const handleDeleteMovement = async () => {
 
-    try {
-      const allCashes = await db.dailyCashes.toArray();
-      const cashWithMovement = allCashes.find((cash) =>
-        cash.movements.some((m) => m.id === movementToDelete.id)
-      );
+  //   if (!movementToDelete) return;
 
-      if (!cashWithMovement) {
-        showNotification("No se encontró la caja del movimiento", "error");
-        return;
-      }
+  //   try {
 
-      const updatedMovements = cashWithMovement.movements.filter(
-        (m) => m.id !== movementToDelete.id
-      );
+  //     const allCashes = await db.dailyCashes.toArray();
+  //     const cashWithMovement = allCashes.find((cash) =>
+  //       cash.movements.some((m) => m.id === movementToDelete.id)
+  //     );
 
-      const updatedCash = {
-        ...cashWithMovement,
-        movements: updatedMovements,
-        totalIncome:
-          movementToDelete.type === "INGRESO"
-            ? (cashWithMovement.totalIncome || 0) - movementToDelete.amount
-            : cashWithMovement.totalIncome,
-        totalExpense:
-          movementToDelete.type === "EGRESO"
-            ? (cashWithMovement.totalExpense || 0) - movementToDelete.amount
-            : cashWithMovement.totalExpense,
-      };
+  //     if (!cashWithMovement) {
+  //       showNotification("No se encontró la caja del movimiento", "error");
+  //       return;
+  //     }
 
-      await db.dailyCashes.update(cashWithMovement.id, updatedCash);
-      setDailyCashes((prev) =>
-        prev.map((dc) => (dc.id === cashWithMovement.id ? updatedCash : dc))
-      );
+  //     const updatedMovements = cashWithMovement.movements.filter(
+  //       (m) => m.id !== movementToDelete.id
+  //     );
 
-      if (currentDailyCash && currentDailyCash.id === cashWithMovement.id) {
-        setCurrentDailyCash(updatedCash);
-      }
+  //     const updatedCash = {
+  //       ...cashWithMovement,
+  //       movements: updatedMovements,
+  //       totalIncome:
+  //         movementToDelete.type === "INGRESO"
+  //           ? (cashWithMovement.totalIncome || 0) - movementToDelete.amount
+  //           : cashWithMovement.totalIncome,
+  //       totalExpense:
+  //         movementToDelete.type === "EGRESO"
+  //           ? (cashWithMovement.totalExpense || 0) - movementToDelete.amount
+  //           : cashWithMovement.totalExpense,
+  //     };
 
-      setSelectedDayMovements(updatedMovements);
-      setFilterType("TODOS");
-      setFilterPaymentMethod("TODOS");
+  //     await db.dailyCashes.update(cashWithMovement.id, updatedCash);
+  //     setDailyCashes((prev) =>
+  //       prev.map((dc) => (dc.id === cashWithMovement.id ? updatedCash : dc))
+  //     );
 
-      setIsConfirmModalOpen(false);
-      showNotification("Movimiento eliminado correctamente", "success");
-    } catch (error) {
-      console.error("Error al eliminar movimiento:", error);
-      showNotification("Error al eliminar movimiento", "error");
-    }
-  };
+  //     if (currentDailyCash && currentDailyCash.id === cashWithMovement.id) {
+  //       setCurrentDailyCash(updatedCash);
+  //     }
+
+  //     setSelectedDayMovements(updatedMovements);
+  //     setFilterType("TODOS");
+  //     setFilterPaymentMethod("TODOS");
+
+  //     setIsConfirmModalOpen(false);
+  //     showNotification("Movimiento eliminado correctamente", "success");
+  //   } catch (error) {
+  //     console.error("Error al eliminar movimiento:", error);
+  //     showNotification("Error al eliminar movimiento", "error");
+  //   }
+  // };
   useEffect(() => {
     const fetchSuppliers = async () => {
       const allSuppliers = await db.suppliers.toArray();
@@ -621,11 +625,11 @@ const CajaDiariaPage = () => {
   const DetailModal = () => {
     const filteredMovements = getFilteredMovements();
     const { totalIngresos, totalEgresos } = calculateFilteredTotals();
-
-    const handleDeleteClick = (movement: DailyCashMovement) => {
-      setMovementToDelete(movement);
-      setIsConfirmModalOpen(true);
-    };
+    //omitido
+    // const handleDeleteClick = (movement: DailyCashMovement) => {
+    //   setMovementToDelete(movement);
+    //   setIsConfirmModalOpen(true);
+    // };
 
     return (
       <Modal
@@ -648,6 +652,7 @@ const CajaDiariaPage = () => {
             />
           </div>
         }
+        minheight="min-h-[23rem]"
       >
         <div className="mb-4 grid grid-cols-2 gap-4">
           <div className="bg-green-100 p-3 rounded-lg">
@@ -734,9 +739,10 @@ const CajaDiariaPage = () => {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Descripción
                 </th>
-                <th className=" w-40 max-w-[10rem] px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider ">
+                {/* omitido */}
+                {/* <th className=" w-40 max-w-[10rem] px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider ">
                   Acciones
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className={`bg-white divide-y divide-gray_xl`}>
@@ -787,7 +793,8 @@ const CajaDiariaPage = () => {
                     <td className="px-4 py-2 text-sm text-gray-500">
                       {movement.description || "-"}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm h-full">
+                    {/* omitido */}
+                    {/* <td className="px-4 py-2 whitespace-nowrap text-sm h-full">
                       <div className="flex justify-center items-center h-full">
                         <Button
                           icon={<Trash size={20} />}
@@ -801,7 +808,7 @@ const CajaDiariaPage = () => {
                           onClick={() => handleDeleteClick(movement)}
                         />
                       </div>
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               ) : (
@@ -1013,8 +1020,8 @@ const CajaDiariaPage = () => {
                               openDetailModal(day.movements);
                             }}
                           />
-
-                          <Button
+                          {/* omitido */}
+                          {/* <Button
                             icon={<Trash size={20} />}
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
@@ -1032,7 +1039,7 @@ const CajaDiariaPage = () => {
                                 setIsDeleteCashModalOpen(true);
                               }
                             }}
-                          />
+                          /> */}
                         </td>
                       </tr>
                     ))
@@ -1260,7 +1267,8 @@ const CajaDiariaPage = () => {
             />
           </div>
         </Modal>
-        <Modal
+        {/* omitido */}
+        {/* <Modal
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
           title="Eliminar Movimiento"
@@ -1288,8 +1296,8 @@ const CajaDiariaPage = () => {
           <p className="text-gray_m dark:text-white">
             ¿Está seguro de que desea eliminar este movimiento?
           </p>
-        </Modal>
-        <Modal
+        </Modal> */}
+        {/* <Modal
           isOpen={isDeleteCashModalOpen}
           onClose={() => setIsDeleteCashModalOpen(false)}
           title="Eliminar Caja"
@@ -1299,7 +1307,7 @@ const CajaDiariaPage = () => {
             ¿Está seguro de que desea eliminar esta caja? Esta acción no se
             puede deshacer.
           </p>
-        </Modal>
+        </Modal> */}
 
         <Notification
           isOpen={isNotificationOpen}

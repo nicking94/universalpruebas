@@ -3,6 +3,12 @@ export type Theme = {
   value: string;
 };
 
+export type User = {
+  id: number;
+  username: string;
+  password: string;
+};
+
 export type AuthData = {
   username: string;
   password: string;
@@ -64,6 +70,7 @@ export type ModalProps = {
   children?: React.ReactNode;
   bgColor?: string;
   buttons?: React.ReactNode;
+  minheight?: string;
 };
 
 export type InputProps = {

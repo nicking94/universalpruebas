@@ -700,11 +700,11 @@ const VentasPage = () => {
       setSaleToDelete(null);
     }
   };
-
-  const handleOpenDeleteConfirmation = (sale: Sale) => {
-    setSaleToDelete(sale);
-    setIsConfirmModalOpen(true);
-  };
+  // omitido
+  // const handleOpenDeleteConfirmation = (sale: Sale) => {
+  //   setSaleToDelete(sale);
+  //   setIsConfirmModalOpen(true);
+  // };
   useEffect(() => {
     if (newSale.paymentMethods.length === 1) {
       setNewSale((prev) => ({
@@ -1096,7 +1096,8 @@ const VentasPage = () => {
                             minwidth="min-w-0"
                             onClick={() => handleOpenInfoModal(sale)}
                           />
-                          <Button
+                          {/* omitido */}
+                          {/* <Button
                             icon={<Trash size={20} />}
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
@@ -1106,7 +1107,7 @@ const VentasPage = () => {
                             py="py-1"
                             minwidth="min-w-0"
                             onClick={() => handleOpenDeleteConfirmation(sale)}
-                          />
+                          /> */}
                         </div>
                       </td>
                     </tr>
@@ -1260,6 +1261,7 @@ const VentasPage = () => {
               />
             </div>
           }
+          minheight="min-h-[26rem]"
         >
           <form onSubmit={handleConfirmAddSale} className="flex flex-col gap-4">
             <div className="w-full flex items-center space-x-4">
@@ -1502,7 +1504,7 @@ const VentasPage = () => {
                           <button
                             type="button"
                             onClick={() => removePaymentMethod(index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="cursor-pointer text-red-500 hover:text-red-700"
                           >
                             <Trash size={16} />
                           </button>

@@ -11,6 +11,7 @@ const Modal: React.FC<ModalProps> = ({
   onClose,
   onConfirm,
   buttons,
+  minheight = "auto",
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -42,7 +43,9 @@ const Modal: React.FC<ModalProps> = ({
       >
         <h2 className="text-xl font-bold  ">{title}</h2>
 
-        <div className="overflow-y-auto max-h-[66vh] py-10 flex-1">
+        <div
+          className={`overflow-y-auto ${minheight} max-h-[66vh] py-10 flex-1`}
+        >
           {children}
         </div>
         <div className="flex justify-end space-x-4 ">

@@ -1,10 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthForm from "@/app/components/AuthForm";
 import Notification from "@/app/components/Notification";
-import { AuthData } from "@/app/lib/types/types";
-import { LOGIN_INFO } from "@/app/lib/constants/constants";
+import { AuthData, User } from "@/app/lib/types/types";
+import { USERS } from "@/app/lib/constants/constants";
 import { db } from "../../database/db";
 
 const LoginPage = () => {
@@ -15,11 +15,31 @@ const LoginPage = () => {
     "success" | "error" | "info"
   >("error");
 
+  // Opcional: cargar usuarios en la base de datos al montar el componente
+  useEffect(() => {
+    const initializeUsers = async () => {
+      const count = await db.users.count();
+      if (count === 0) {
+        const usersToAdd: User[] = USERS.map((user) => ({
+          id: user.id,
+          username: user.username,
+          password: user.password,
+        }));
+        await db.users.bulkAdd(usersToAdd);
+      }
+    };
+    initializeUsers();
+  }, []);
+
   const handleLogin = async (data: AuthData) => {
-    if (
-      data.username !== LOGIN_INFO.username ||
-      data.password !== LOGIN_INFO.password
-    ) {
+    // Buscar el usuario en la base de datos
+    const user = await db.users
+      .where("username")
+      .equals(data.username)
+      .and((user) => user.password === data.password)
+      .first();
+
+    if (!user) {
       setNotificationMessage("Usuario o contraseña incorrectos");
       setNotificationType("error");
       setIsOpenNotification(true);
@@ -28,7 +48,9 @@ const LoginPage = () => {
       }, 2000);
       return;
     }
-    await db.auth.put({ id: 1, isAuthenticated: true });
+
+    // Guardar el estado de autenticación con el ID del usuario
+    await db.auth.put({ id: 1, isAuthenticated: true, userId: user.id });
 
     setNotificationMessage("Inicio de sesión exitoso");
     setNotificationType("success");

@@ -7,12 +7,17 @@ import {
   Customer,
   Supplier,
   Payment,
+  User,
 } from "../lib/types/types";
 
 class MyDatabase extends Dexie {
   theme!: Table<Theme, number>;
   products!: Table<Product, number>;
-  auth!: Table<{ id: number; isAuthenticated: boolean }, number>;
+  users!: Table<User, number>;
+  auth!: Table<
+    { id: number; isAuthenticated: boolean; userId?: number },
+    number
+  >;
   sales!: Table<Sale, number>;
   dailyCashes!: Table<DailyCash, number>;
   dailyCashMovements!: Table<{ id: number; dailyCashId: number }, number>;
@@ -22,9 +27,10 @@ class MyDatabase extends Dexie {
 
   constructor() {
     super("MyDatabase");
-    this.version(3).stores({
+    this.version(4).stores({
       theme: "id",
       products: "++id, name, barcode, stock",
+      users: "id, username",
       auth: "id",
       sales:
         "++id, date, *paymentMethod, customerName, customerId, paid, credit",
