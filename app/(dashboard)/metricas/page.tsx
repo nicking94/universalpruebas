@@ -41,6 +41,12 @@ ChartJS.register(
 );
 
 const Metrics = () => {
+  const [monthlyRankingUnit, setMonthlyRankingUnit] = useState<
+    "unidad" | "kg" | "litro"
+  >("unidad");
+  const [yearlyRankingUnit, setYearlyRankingUnit] = useState<
+    "unidad" | "kg" | "litro"
+  >("unidad");
   const [dailyCashes, setDailyCashes] = useState<DailyCash[]>([]);
   const [currentDailyCash, setCurrentDailyCash] = useState<DailyCash | null>(
     null
@@ -48,6 +54,7 @@ const Metrics = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [availableYears, setAvailableYears] = useState<number[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       const storedDailyCashes = await db.dailyCashes.toArray();
@@ -67,7 +74,16 @@ const Metrics = () => {
     fetchData();
   }, []);
 
-  const getProductMovements = (period: "day" | "month" | "year") => {
+  const unitOptions = [
+    { value: "unidad", label: "Unidad" },
+    { value: "kg", label: "Kilogramo" },
+    { value: "litro", label: "Litro" },
+  ];
+
+  const getProductMovements = (
+    period: "day" | "month" | "year",
+    unit: "unidad" | "kg" | "litro"
+  ) => {
     let filteredCashes = dailyCashes;
 
     if (period === "month") {
@@ -86,36 +102,66 @@ const Metrics = () => {
 
     const productMap = new Map<
       string,
-      { quantity: number; amount: number; profit: number }
+      {
+        quantity: number;
+        amount: number;
+        profit: number;
+        unit: string;
+      }
     >();
 
     filteredCashes.forEach((cash) => {
       cash.movements.forEach((movement) => {
-        if (movement.type === "INGRESO" && movement.productName) {
+        if (
+          movement.type === "INGRESO" &&
+          movement.productName &&
+          movement.unit
+        ) {
+          // Filtrar por unidad seleccionada
+          if (unit === "unidad" && movement.unit !== "Unid.") return;
+          if (unit === "kg" && !["Kg", "gr"].includes(movement.unit)) return;
+          if (unit === "litro" && !["L", "ml"].includes(movement.unit)) return;
+
           const existing = productMap.get(movement.productName) || {
             quantity: 0,
             amount: 0,
             profit: 0,
+            unit: movement.unit,
           };
+
+          let quantityToAdd = movement.quantity || 0;
+          if (unit === "kg") {
+            if (movement.unit === "gr" && movement.quantity !== undefined) {
+              quantityToAdd = movement.quantity / 1000;
+            }
+          } else if (unit === "litro") {
+            if (movement.unit === "ml" && movement.quantity !== undefined) {
+              quantityToAdd = movement.quantity / 1000;
+            }
+          }
+
           const costPrice = movement.costPrice || 0;
           const sellPrice = movement.sellPrice || 0;
-          const quantity = movement.quantity || 0;
 
           productMap.set(movement.productName, {
-            quantity: existing.quantity + quantity,
+            quantity: existing.quantity + quantityToAdd,
             amount: existing.amount + movement.amount,
-            profit: existing.profit + (sellPrice - costPrice) * quantity,
+            profit:
+              existing.profit +
+              (sellPrice - costPrice) * (movement.quantity || 0),
+            unit: unit === "kg" ? "Kg" : unit === "litro" ? "L" : "Unid.",
           });
         }
       });
     });
 
     return Array.from(productMap.entries())
-      .map(([name, { quantity, amount, profit }]) => ({
+      .map(([name, { quantity, amount, profit, unit }]) => ({
         name,
         quantity,
         amount,
         profit,
+        unit,
       }))
       .sort((a, b) => b.quantity - a.quantity);
   };
@@ -270,8 +316,14 @@ const Metrics = () => {
   const annualSummary = getAnnualSummary();
   const dailyMonthData = getDailyDataForMonth();
   const monthlyYearData = getMonthlyDataForYear();
-  const topProductsMonthly = getProductMovements("month").slice(0, 5);
-  const topProductsYearly = getProductMovements("year").slice(0, 5);
+  const topProductsMonthly = getProductMovements(
+    "month",
+    monthlyRankingUnit
+  ).slice(0, 5);
+  const topProductsYearly = getProductMovements(
+    "year",
+    yearlyRankingUnit
+  ).slice(0, 5);
 
   const monthlyBarChartData = {
     labels: dailyMonthData.map((data) => data.date),
@@ -448,10 +500,34 @@ const Metrics = () => {
               </div>
             </div>
 
-            <div className="mt-4 ">
-              <h3 className=" p-2 font-medium text-md bg-gray_l dark:bg-gray_m text-white mb-2 text-center">
-                5 Productos más vendidos este mes
-              </h3>
+            <div className="mt-4">
+              <div className="flex bg-gray_l dark:bg-gray_m text-white items-center mb-2 px-2">
+                <h3 className="w-full p-2 font-medium text-md ">
+                  5 Productos por{" "}
+                  {monthlyRankingUnit === "unidad"
+                    ? "unidad"
+                    : monthlyRankingUnit === "kg"
+                    ? "kilogramo"
+                    : "litro"}{" "}
+                  más vendidos este mes
+                </h3>
+                <select
+                  value={monthlyRankingUnit}
+                  onChange={(e) =>
+                    setMonthlyRankingUnit(
+                      e.target.value as "unidad" | "kg" | "litro"
+                    )
+                  }
+                  className="text-black bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
+                >
+                  {unitOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {topProductsMonthly.length > 0 ? (
                 <div className="space-y-2">
                   {topProductsMonthly.map((product, index) => (
@@ -461,7 +537,7 @@ const Metrics = () => {
                     >
                       <span className="truncate">{product.name}</span>
                       <span className="font-medium">
-                        {product.quantity} un.
+                        {product.quantity.toFixed(2)} {product.unit}
                       </span>
                     </div>
                   ))}
@@ -516,9 +592,32 @@ const Metrics = () => {
             </div>
 
             <div className="mt-4">
-              <h3 className=" p-2 font-medium text-md bg-gray_l dark:bg-gray_m text-white mb-2 text-center">
-                5 Productos más vendidos este año
-              </h3>
+              <div className="flex bg-gray_l dark:bg-gray_m text-white items-center mb-2 px-2">
+                <h3 className="w-full p-2 font-medium text-md ">
+                  5 Productos por{" "}
+                  {yearlyRankingUnit === "unidad"
+                    ? "unidad"
+                    : yearlyRankingUnit === "kg"
+                    ? "kilogramo"
+                    : "litro"}{" "}
+                  más vendidos este año
+                </h3>
+                <select
+                  value={yearlyRankingUnit}
+                  onChange={(e) =>
+                    setYearlyRankingUnit(
+                      e.target.value as "unidad" | "kg" | "litro"
+                    )
+                  }
+                  className="text-black bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
+                >
+                  {unitOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {topProductsYearly.length > 0 ? (
                 <div className="space-y-2">
                   {topProductsYearly.map((product, index) => (
@@ -528,7 +627,7 @@ const Metrics = () => {
                     >
                       <span className="truncate">{product.name}</span>
                       <span className="font-medium">
-                        {product.quantity} un.
+                        {product.quantity.toFixed(2)} {product.unit}
                       </span>
                     </div>
                   ))}

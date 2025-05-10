@@ -574,6 +574,7 @@ const ProductsPage = () => {
               />
             </>
           }
+          minheight="min-h-[25rem]"
         >
           <form className="flex flex-col gap-4">
             <div className="w-full flex items-center space-x-4 ">

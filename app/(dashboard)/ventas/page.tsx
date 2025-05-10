@@ -96,6 +96,34 @@ const VentasPage = () => {
 
     return parseFloat((pricePerKg * quantityInKg).toFixed(2));
   }, []);
+  const calculateProfit = (product: Product): number => {
+    const profitPerKg = product.price - product.costPrice;
+    const quantity = product.quantity;
+    const unit = product.unit;
+
+    if (unit === "Unid.") {
+      return profitPerKg * quantity;
+    }
+
+    let quantityInKg: number;
+
+    switch (unit) {
+      case "gr":
+        quantityInKg = quantity / 1000;
+        break;
+      case "Kg":
+        quantityInKg = quantity;
+        break;
+      case "L":
+      case "ml":
+        quantityInKg = unit === "L" ? quantity : quantity / 1000;
+        break;
+      default:
+        return profitPerKg * quantity;
+    }
+
+    return parseFloat((profitPerKg * quantityInKg).toFixed(2));
+  };
 
   const calculateCombinedTotal = useCallback(
     (products: Product[], manualAmount: number) => {
@@ -256,14 +284,10 @@ const VentasPage = () => {
 
           sale.paymentMethods.forEach((payment) => {
             const paymentProductAmount = productRatio * payment.amount;
-
-            // Usar datos de la venta original si es pago de fiado
             const currentProduct =
               originalSale?.products.find((p) => p.id === product.id) ||
               product;
-            const profit =
-              (currentProduct.price - currentProduct.costPrice) *
-              currentProduct.quantity;
+            const profit = calculateProfit(currentProduct);
 
             let quantity = currentProduct.quantity;
             if (currentProduct.unit === "Unid.") {
@@ -666,7 +690,7 @@ const VentasPage = () => {
       showNotification("Venta agregada correctamente", "success");
     } catch (error) {
       console.error("Error al agregar venta:", error);
-      showNotification("Error al agregar venta | stock", "error");
+      showNotification("Error al agregar venta", "error");
     }
   };
 
@@ -1211,9 +1235,16 @@ const VentasPage = () => {
                           </p>
                         </div>
                         <div className="ml-4 flex-shrink-0">
-                          <span className="text-sm font-medium text-gray_b ">
+                          <span className="text-sm font-medium text-gray_b">
                             {product.quantity} {product.unit.toLowerCase()} ×{" "}
-                            {formatPrice(product.price)}
+                            {formatPrice(
+                              calculatePrice({
+                                ...product,
+                                quantity: 1,
+                                unit: product.unit,
+                              })
+                            )}{" "}
+                            = {formatPrice(calculatePrice(product))}
                           </span>
                         </div>
                       </li>
