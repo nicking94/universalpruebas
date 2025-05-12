@@ -3,8 +3,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthForm from "@/app/components/AuthForm";
 import Notification from "@/app/components/Notification";
+import { AuthData, User } from "@/app/lib/types/types";
+import { USERS } from "@/app/lib/constants/constants";
 import { db } from "../../database/db";
-import { AuthData } from "@/app/lib/types/types";
 
 const LoginPage = () => {
   const router = useRouter();
@@ -17,17 +18,14 @@ const LoginPage = () => {
   // Opcional: cargar usuarios en la base de datos al montar el componente
   useEffect(() => {
     const initializeUsers = async () => {
-      try {
-        const response = await fetch("/api/init-users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        const data = await response.json();
-        if (!data.success) {
-          console.error("Error al inicializar usuarios");
-        }
-      } catch (error) {
-        console.error("Error de conexión:", error);
+      const count = await db.users.count();
+      if (count === 0) {
+        const usersToAdd: User[] = USERS.map((user) => ({
+          id: user.id,
+          username: user.username,
+          password: user.password,
+        }));
+        await db.users.bulkAdd(usersToAdd);
       }
     };
     initializeUsers();
