@@ -63,7 +63,6 @@ const ProveedoresPage = () => {
     setIsLoadingProducts(true);
 
     try {
-      // Obtener todos los productos y los asignados en paralelo
       const [allProducts, assignedProductKeys] = await Promise.all([
         db.products.toArray(),
         db.supplierProducts
@@ -93,7 +92,6 @@ const ProveedoresPage = () => {
     }
   };
 
-  // Función para asignar un producto
   const assignProduct = async (product: Product) => {
     if (!selectedSupplierForProducts) return;
 
@@ -103,8 +101,6 @@ const ProveedoresPage = () => {
         productId: product.id,
       });
       fetchSupplierProductCounts();
-
-      // Actualizar los estados de manera más eficiente
       setAssignedProducts((prev) => [...prev, product]);
       setAvailableProducts((prev) => prev.filter((p) => p.id !== product.id));
       setSelectedProduct(null);
@@ -126,8 +122,6 @@ const ProveedoresPage = () => {
         .equals([selectedSupplierForProducts.id, product.id])
         .delete();
       fetchSupplierProductCounts();
-
-      // Actualizar los estados de manera más eficiente
       setAssignedProducts((prev) => prev.filter((p) => p.id !== product.id));
       setAvailableProducts((prev) => [...prev, product]);
 
@@ -520,29 +514,44 @@ const ProveedoresPage = () => {
                     {filteredAvailableProducts.map((product) => (
                       <div
                         key={product.id}
-                        className={`p-2 border rounded cursor-pointer hover:bg-gray-100 ${
+                        className={`p-2 border rounded flex justify-between items-center ${
                           selectedProduct?.id === product.id
                             ? "bg-blue-100"
                             : ""
                         }`}
-                        onClick={() => setSelectedProduct(product)}
                       >
-                        <div className="flex justify-between">
-                          <span className="font-medium">{product.name}</span>
-                          <span className="text-sm text-gray-500">
-                            {product.barcode || "Sin código"}
-                          </span>
+                        <div
+                          className="flex-grow cursor-pointer"
+                          onClick={() => setSelectedProduct(product)}
+                        >
+                          <div className="flex justify-between">
+                            <span className="font-medium">{product.name}</span>
+                            <span className="text-sm text-gray-500">
+                              {product.barcode || "Sin código"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>
+                              Stock: {product.stock} {product.unit}
+                            </span>
+                            <span className="font-semibold">
+                              {new Intl.NumberFormat("es-AR", {
+                                style: "currency",
+                                currency: "ARS",
+                              }).format(product.price)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span>
-                            Stock: {product.stock} {product.unit}
-                          </span>
-                          <span className="font-semibold">
-                            {new Intl.NumberFormat("es-AR", {
-                              style: "currency",
-                              currency: "ARS",
-                            }).format(product.price)}
-                          </span>
+                        <div className="ml-4">
+                          <Button
+                            icon={<Plus size={20} />}
+                            colorText="text-white"
+                            colorTextHover="text-white"
+                            onClick={() => assignProduct(product)}
+                            px="px-1"
+                            py="py-1"
+                            minwidth="min-w-[2rem]"
+                          />
                         </div>
                       </div>
                     ))}
@@ -551,27 +560,11 @@ const ProveedoresPage = () => {
                   <p className="text-gray-500">No hay productos disponibles</p>
                 )}
               </div>
-
-              <div className="flex justify-end">
-                <Button
-                  icon={<Plus size={20} />}
-                  text="Agregar Producto"
-                  colorText="text-white"
-                  colorTextHover="text-white"
-                  onClick={() => {
-                    if (selectedProduct) {
-                      assignProduct(selectedProduct);
-                      setSelectedProduct(null);
-                    }
-                  }}
-                  disabled={!selectedProduct}
-                />
-              </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h3 className="font-semibold">Productos asignados</h3>
-              <div className="border rounded-lg p-2 h-[40vh] overflow-y-auto">
+              <div className="border rounded-lg p-2 h-[45.5vh] overflow-y-auto">
                 {assignedProducts.length > 0 ? (
                   <div className="space-y-2">
                     {assignedProducts.map((product) => (
@@ -592,15 +585,15 @@ const ProveedoresPage = () => {
                           </div>
 
                           <Button
-                            minwidth="min-w-[5rem]"
+                            minwidth="min-w-[2rem]"
                             icon={<Trash size={20} />}
                             colorText="text-white"
                             colorTextHover="text-white"
                             colorBg="bg-red-500"
                             colorBgHover="hover:bg-red-700"
                             onClick={() => unassignProduct(product)}
-                            px="px-2"
-                            py="py-2"
+                            px="px-1"
+                            py="py-1"
                           />
                         </div>
                       </div>
@@ -701,7 +694,7 @@ const ProveedoresPage = () => {
                 </div>
               ))}
               <Button
-                icon={<Plus size={16} />}
+                icon={<Plus size={20} />}
                 text="Agregar otro proveedor"
                 colorText="text-blue_b dark:text-white"
                 colorTextHover="hover:text-blue_b dark:hover:text-white"
