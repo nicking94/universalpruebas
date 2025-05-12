@@ -36,7 +36,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
         <Image src={logo} alt="logo" width={100} height={100} />
       </div>
       <h2 className="font-semibold text-3xl 2xl:text-4xl text-center text-gray_b">
-        {type === "login" ? "Iniciar Sesión" : "Registrarse"}
+        Iniciar sesión
       </h2>
       <div className="flex flex-col  ">
         <label htmlFor="username">Usuario</label>
