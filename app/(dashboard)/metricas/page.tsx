@@ -518,7 +518,7 @@ const Metrics = () => {
                       e.target.value as "unidad" | "kg" | "litro"
                     )
                   }
-                  className="text-black bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
+                  className="text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
                 >
                   {unitOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -533,9 +533,11 @@ const Metrics = () => {
                   {topProductsMonthly.map((product, index) => (
                     <div
                       key={index}
-                      className="flex justify-between items-center text-sm"
+                      className="py-2 flex justify-between items-center text-sm"
                     >
-                      <span className="truncate">{product.name}</span>
+                      <span className="truncate uppercase">
+                        - {product.name}
+                      </span>
                       <span className="font-medium">
                         {product.quantity.toFixed(2)} {product.unit}
                       </span>
@@ -609,7 +611,7 @@ const Metrics = () => {
                       e.target.value as "unidad" | "kg" | "litro"
                     )
                   }
-                  className="text-black bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
+                  className="text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
                 >
                   {unitOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -623,9 +625,11 @@ const Metrics = () => {
                   {topProductsYearly.map((product, index) => (
                     <div
                       key={index}
-                      className="flex justify-between items-center text-sm"
+                      className="py-2 flex justify-between items-center text-sm"
                     >
-                      <span className="truncate">{product.name}</span>
+                      <span className="truncate uppercase">
+                        - {product.name}
+                      </span>
                       <span className="font-medium">
                         {product.quantity.toFixed(2)} {product.unit}
                       </span>

@@ -1075,7 +1075,7 @@ const VentasPage = () => {
                               .join(" | ")}
                       </td>
 
-                      <td className="font-semibold px-4 py-2 border border-gray_xl">
+                      <td className=" px-4 py-2 border border-gray_xl">
                         {sale.credit ? (
                           <span className="text-orange-500">
                             FIADO - $
@@ -1090,11 +1090,11 @@ const VentasPage = () => {
                         )}
                       </td>
 
-                      <td className="font-semibold px-4 py-2 border border-gray_xl">
+                      <td className=" px-4 py-2 border border-gray_xl">
                         {format(saleDate, "dd/MM/yyyy", { locale: es })}
                       </td>
 
-                      <td className="font-semibold px-4 py-2 border border-gray_xl">
+                      <td className=" px-4 py-2 border border-gray_xl">
                         {sale.credit ? (
                           <span className="text-orange-500">VENTA FIADA</span>
                         ) : (

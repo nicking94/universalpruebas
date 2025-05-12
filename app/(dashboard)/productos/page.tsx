@@ -495,13 +495,13 @@ const ProductsPage = () => {
                             ? `${product.stock} ${product.unit}`
                             : "Agotado"}
                         </td>
-                        <td className="font-semibold px-4 py-2 border border-gray_xl">
+                        <td className=" px-4 py-2 border border-gray_xl">
                           {formatPrice(product.costPrice)}
                         </td>
-                        <td className="font-semibold px-4 py-2 border border-gray_xl">
+                        <td className="px-4 py-2 border border-gray_xl">
                           {formatPrice(product.price)}
                         </td>
-                        <td className="font-semibold px-4 py-2 border border-gray_xl">
+                        <td className="px-4 py-2 border border-gray_xl">
                           {product.expiration &&
                           isValid(parseISO(product.expiration))
                             ? format(

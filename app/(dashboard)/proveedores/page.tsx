@@ -44,7 +44,6 @@ const ProveedoresPage = () => {
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [assignedProducts, setAssignedProducts] = useState<Product[]>([]);
   const [productSearchQuery, setProductSearchQuery] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [supplierProductCounts, setSupplierProductCounts] = useState<{
     [supplierId: number]: number;
@@ -59,7 +58,6 @@ const ProveedoresPage = () => {
   const openProductAssignmentModal = async (supplier: Supplier) => {
     setSelectedSupplierForProducts(supplier);
     setProductSearchQuery("");
-    setSelectedProduct(null);
     setIsLoadingProducts(true);
 
     try {
@@ -103,7 +101,6 @@ const ProveedoresPage = () => {
       fetchSupplierProductCounts();
       setAssignedProducts((prev) => [...prev, product]);
       setAvailableProducts((prev) => prev.filter((p) => p.id !== product.id));
-      setSelectedProduct(null);
       setProductSearchQuery("");
 
       showNotification(`"${product.name}" asignado correctamente`, "success");
@@ -344,8 +341,8 @@ const ProveedoresPage = () => {
             <tbody className={`bg-white text-gray_b divide-y divide-gray_xl`}>
               {currentItems.length > 0 ? (
                 currentItems.map((supplier) => (
-                  <tr key={supplier.id} className="font-semibold">
-                    <td className="px-4 py-2 text-left  border border-gray_xl">
+                  <tr key={supplier.id}>
+                    <td className="uppercase px-4 py-2 text-left  border border-gray_xl font-semibold">
                       {supplier.companyName}
                     </td>
                     <td className="px-4 py-2  border border-gray_xl">
@@ -472,7 +469,6 @@ const ProveedoresPage = () => {
           onClose={() => {
             setIsProductAssignmentModalOpen(false);
             setProductSearchQuery("");
-            setSelectedProduct(null);
           }}
           title={`Productos de ${
             selectedSupplierForProducts?.companyName || ""
@@ -488,7 +484,6 @@ const ProveedoresPage = () => {
               onClick={() => {
                 setIsProductAssignmentModalOpen(false);
                 setProductSearchQuery("");
-                setSelectedProduct(null);
               }}
             />
           }
@@ -514,16 +509,9 @@ const ProveedoresPage = () => {
                     {filteredAvailableProducts.map((product) => (
                       <div
                         key={product.id}
-                        className={`p-2 border rounded flex justify-between items-center ${
-                          selectedProduct?.id === product.id
-                            ? "bg-blue-100"
-                            : ""
-                        }`}
+                        className={`p-2 border rounded hover:bg-gray-100 dark:hover:bg-gray_m flex justify-between items-center `}
                       >
-                        <div
-                          className="flex-grow cursor-pointer"
-                          onClick={() => setSelectedProduct(product)}
-                        >
+                        <div className="flex-grow ">
                           <div className="flex justify-between">
                             <span className="font-medium">{product.name}</span>
                             <span className="text-sm text-gray-500">
@@ -570,7 +558,7 @@ const ProveedoresPage = () => {
                     {assignedProducts.map((product) => (
                       <div
                         key={product.id}
-                        className="p-2 border rounded hover:bg-gray-100"
+                        className="p-2 border hover:bg-gray-100 dark:hover:bg-gray_m rounded"
                       >
                         <div className="flex justify-between items-center">
                           <div>

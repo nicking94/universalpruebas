@@ -559,8 +559,8 @@ const FiadosPage = () => {
                   const oldestSale = sortedSales[0];
 
                   return (
-                    <tr key={customerName} className="font-semibold">
-                      <td className="px-4 py-2 border border-gray_xl text-start">
+                    <tr key={customerName}>
+                      <td className="font-semibold px-4 py-2 border border-gray_xl text-start">
                         {customerName}
                       </td>
                       <td className="px-4 py-2 border border-gray_xl">
@@ -569,7 +569,7 @@ const FiadosPage = () => {
                         })}
                       </td>
                       <td
-                        className={`px-4 py-2 border border-gray_xl ${
+                        className={`font-semibold px-4 py-2 border border-gray_xl ${
                           customerBalance <= 0
                             ? "text-green-600"
                             : "text-red-600"
@@ -644,7 +644,7 @@ const FiadosPage = () => {
                   setIsDeleteModalOpen(true);
                 }}
                 disabled={
-                  !currentCustomerInfo || currentCustomerInfo.balance <= 0
+                  !currentCustomerInfo || currentCustomerInfo.balance < 0
                 }
               />
               <Button

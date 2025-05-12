@@ -227,8 +227,8 @@ const ClientesPage = () => {
             <tbody className={`bg-white text-gray_b divide-y divide-gray_xl `}>
               {currentCustomers.length > 0 ? (
                 currentCustomers.map((customer) => (
-                  <tr key={customer.id} className="font-semibold">
-                    <td className="px-4 py-2 border border-gray_xl text-start">
+                  <tr key={customer.id}>
+                    <td className="font-semibold px-4 py-2 border border-gray_xl text-start">
                       {customer.name}
                     </td>
                     <td className="px-4 py-2 border border-gray_xl">
@@ -366,6 +366,7 @@ const ClientesPage = () => {
                 colorBg="bg-red-500"
                 colorBgHover="hover:bg-red-700"
                 onClick={handleConfirmDelete}
+                hotkey="Enter"
               />
               <Button
                 text="Cancelar"
@@ -374,6 +375,7 @@ const ClientesPage = () => {
                 colorBg="bg-gray_xl dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
                 onClick={() => setIsDeleteModalOpen(false)}
+                hotkey="Escape"
               />
             </>
           }
