@@ -8,6 +8,7 @@ import {
   Supplier,
   Payment,
   User,
+  SupplierProduct,
 } from "../lib/types/types";
 
 class MyDatabase extends Dexie {
@@ -24,6 +25,7 @@ class MyDatabase extends Dexie {
   payments!: Table<Payment, number>;
   customers!: Table<Customer, string>;
   suppliers!: Table<Supplier, number>;
+  supplierProducts!: Table<SupplierProduct, [number, number]>;
 
   constructor() {
     super("MyDatabase");
@@ -39,6 +41,7 @@ class MyDatabase extends Dexie {
       payments: "++id, saleId, date, method",
       customers: "&id, name",
       suppliers: "++id, companyName, lastVisit, nextVisit, createdAt",
+      supplierProducts: "[supplierId+productId], supplierId, productId",
     });
   }
 }

@@ -8,9 +8,9 @@ import Modal from "@/app/components/Modal";
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
-import { Supplier, SupplierContact } from "@/app/lib/types/types";
+import { Product, Supplier, SupplierContact } from "@/app/lib/types/types";
 import SearchBar from "@/app/components/SearchBar";
-import { Plus, Trash, Edit, Truck } from "lucide-react";
+import { Plus, Trash, Edit, Truck, Package } from "lucide-react";
 import Pagination from "@/app/components/Pagination";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 
@@ -37,6 +37,125 @@ const ProveedoresPage = () => {
   const [lastVisit, setLastVisit] = useState<string | undefined>(undefined);
   const [nextVisit, setNextVisit] = useState<string | undefined>(undefined);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [isProductAssignmentModalOpen, setIsProductAssignmentModalOpen] =
+    useState(false);
+  const [selectedSupplierForProducts, setSelectedSupplierForProducts] =
+    useState<Supplier | null>(null);
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [assignedProducts, setAssignedProducts] = useState<Product[]>([]);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [supplierProductCounts, setSupplierProductCounts] = useState<{
+    [supplierId: number]: number;
+  }>({});
+
+  const filteredAvailableProducts = availableProducts.filter(
+    (product) =>
+      product.name.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
+      (product.barcode && product.barcode.includes(productSearchQuery))
+  );
+  // Función para abrir el modal de asignación de productos
+  const openProductAssignmentModal = async (supplier: Supplier) => {
+    setSelectedSupplierForProducts(supplier);
+    setProductSearchQuery("");
+    setSelectedProduct(null);
+    setIsLoadingProducts(true);
+
+    try {
+      // Obtener todos los productos y los asignados en paralelo
+      const [allProducts, assignedProductKeys] = await Promise.all([
+        db.products.toArray(),
+        db.supplierProducts
+          .where("supplierId")
+          .equals(supplier.id)
+          .primaryKeys(),
+      ]);
+
+      const assignedProductIds = assignedProductKeys.map(
+        ([, productId]) => productId
+      );
+      const assignedProds = allProducts.filter((p) =>
+        assignedProductIds.includes(p.id)
+      );
+      const availableProds = allProducts.filter(
+        (p) => !assignedProductIds.includes(p.id)
+      );
+
+      setAssignedProducts(assignedProds);
+      setAvailableProducts(availableProds);
+      setIsProductAssignmentModalOpen(true);
+    } catch (error) {
+      console.error("Error al cargar productos:", error);
+      showNotification("Error al cargar productos", "error");
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
+
+  // Función para asignar un producto
+  const assignProduct = async (product: Product) => {
+    if (!selectedSupplierForProducts) return;
+
+    try {
+      await db.supplierProducts.add({
+        supplierId: selectedSupplierForProducts.id,
+        productId: product.id,
+      });
+      fetchSupplierProductCounts();
+
+      // Actualizar los estados de manera más eficiente
+      setAssignedProducts((prev) => [...prev, product]);
+      setAvailableProducts((prev) => prev.filter((p) => p.id !== product.id));
+      setSelectedProduct(null);
+      setProductSearchQuery("");
+
+      showNotification(`"${product.name}" asignado correctamente`, "success");
+    } catch (error) {
+      console.error("Error al asignar producto:", error);
+      showNotification(`Error al asignar "${product.name}"`, "error");
+    }
+  };
+
+  const unassignProduct = async (product: Product) => {
+    if (!selectedSupplierForProducts) return;
+
+    try {
+      await db.supplierProducts
+        .where("[supplierId+productId]")
+        .equals([selectedSupplierForProducts.id, product.id])
+        .delete();
+      fetchSupplierProductCounts();
+
+      // Actualizar los estados de manera más eficiente
+      setAssignedProducts((prev) => prev.filter((p) => p.id !== product.id));
+      setAvailableProducts((prev) => [...prev, product]);
+
+      showNotification(
+        `"${product.name}" desasignado correctamente`,
+        "success"
+      );
+    } catch (error) {
+      console.error("Error al desasignar producto:", error);
+      showNotification(`Error al desasignar "${product.name}"`, "error");
+    }
+  };
+  const fetchSupplierProductCounts = async () => {
+    const allSuppliers = await db.suppliers.toArray();
+    const counts: { [supplierId: number]: number } = {};
+    for (const supplier of allSuppliers) {
+      const count = await db.supplierProducts
+        .where("supplierId")
+        .equals(supplier.id)
+        .count();
+      counts[supplier.id] = count;
+    }
+    setSupplierProductCounts(counts);
+  };
+
+  useEffect(() => {
+    fetchSupplierProductCounts();
+  }, [suppliers]);
 
   useEffect(() => {
     const fetchSuppliers = async () => {
@@ -224,6 +343,7 @@ const ProveedoresPage = () => {
                 <th className="px-4 py-2">Proveedores</th>
                 <th className="px-4 py-2">Última Visita</th>
                 <th className="px-4 py-2">Próxima Visita</th>
+                <th className="px-4 py-2">Productos</th>
                 <th className="w-40 max-w-[10rem] px-4 py-2">Acciones</th>
               </tr>
             </thead>
@@ -279,8 +399,22 @@ const ProveedoresPage = () => {
                         <span className="text-gray_m">No programada</span>
                       )}
                     </td>
+                    <td className="px-4 py-2 border border-gray_xl">
+                      {supplierProductCounts[supplier.id] || 0} productos
+                    </td>
                     <td className="px-4 py-2 space-x-4 border border-gray_xl">
                       <div className="flex justify-center gap-4">
+                        <Button
+                          icon={<Package size={20} />}
+                          colorText="text-gray_b"
+                          colorTextHover="hover:text-white"
+                          colorBg="bg-transparent"
+                          colorBgHover="hover:bg-blue-500"
+                          px="px-1"
+                          py="py-1"
+                          minwidth="min-w-0"
+                          onClick={() => openProductAssignmentModal(supplier)}
+                        />
                         <Button
                           icon={<Edit size={20} />}
                           colorText="text-gray_b"
@@ -308,7 +442,7 @@ const ProveedoresPage = () => {
                 ))
               ) : (
                 <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                  <td colSpan={5} className="py-4 text-center">
+                  <td colSpan={6} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                       <Truck size={64} className="mb-4 text-gray_m" />
                       <p className="text-gray_m">
@@ -338,6 +472,147 @@ const ProveedoresPage = () => {
             />
           )}
         </div>
+
+        <Modal
+          isOpen={isProductAssignmentModalOpen}
+          onClose={() => {
+            setIsProductAssignmentModalOpen(false);
+            setProductSearchQuery("");
+            setSelectedProduct(null);
+          }}
+          title={`Productos de ${
+            selectedSupplierForProducts?.companyName || ""
+          }`}
+          minheight="min-h-[50vh]"
+          buttons={
+            <Button
+              text="Cerrar"
+              colorText="text-gray_b dark:text-white"
+              colorTextHover="hover:text-white hover:dark:text-white"
+              colorBg="bg-gray_xl dark:bg-gray_m"
+              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              onClick={() => {
+                setIsProductAssignmentModalOpen(false);
+                setProductSearchQuery("");
+                setSelectedProduct(null);
+              }}
+            />
+          }
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-2">
+                <h3 className="font-semibold">Buscar Productos</h3>
+                <Input
+                  placeholder="Buscar por nombre o código de barras"
+                  value={productSearchQuery}
+                  onChange={(e) => setProductSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="border rounded-lg p-2 h-[40vh] overflow-y-auto">
+                {isLoadingProducts ? (
+                  <div className="flex justify-center items-center h-40">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : filteredAvailableProducts.length > 0 ? (
+                  <div className="space-y-2">
+                    {filteredAvailableProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className={`p-2 border rounded cursor-pointer hover:bg-gray-100 ${
+                          selectedProduct?.id === product.id
+                            ? "bg-blue-100"
+                            : ""
+                        }`}
+                        onClick={() => setSelectedProduct(product)}
+                      >
+                        <div className="flex justify-between">
+                          <span className="font-medium">{product.name}</span>
+                          <span className="text-sm text-gray-500">
+                            {product.barcode || "Sin código"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>
+                            Stock: {product.stock} {product.unit}
+                          </span>
+                          <span className="font-semibold">
+                            {new Intl.NumberFormat("es-AR", {
+                              style: "currency",
+                              currency: "ARS",
+                            }).format(product.price)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No hay productos disponibles</p>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  icon={<Plus size={20} />}
+                  text="Agregar Producto"
+                  colorText="text-white"
+                  colorTextHover="text-white"
+                  onClick={() => {
+                    if (selectedProduct) {
+                      assignProduct(selectedProduct);
+                      setSelectedProduct(null);
+                    }
+                  }}
+                  disabled={!selectedProduct}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-semibold">Productos asignados</h3>
+              <div className="border rounded-lg p-2 h-[40vh] overflow-y-auto">
+                {assignedProducts.length > 0 ? (
+                  <div className="space-y-2">
+                    {assignedProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className="p-2 border rounded hover:bg-gray-100"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-medium">{product.name}</div>
+                            <div className="text-sm">
+                              {product.stock} {product.unit} •{" "}
+                              {new Intl.NumberFormat("es-AR", {
+                                style: "currency",
+                                currency: "ARS",
+                              }).format(product.price)}
+                            </div>
+                          </div>
+
+                          <Button
+                            minwidth="min-w-[5rem]"
+                            icon={<Trash size={20} />}
+                            colorText="text-white"
+                            colorTextHover="text-white"
+                            colorBg="bg-red-500"
+                            colorBgHover="hover:bg-red-700"
+                            onClick={() => unassignProduct(product)}
+                            px="px-2"
+                            py="py-2"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No hay productos asignados</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Modal>
 
         <Modal
           isOpen={isModalOpen}

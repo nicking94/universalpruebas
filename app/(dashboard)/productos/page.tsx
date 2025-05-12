@@ -57,6 +57,9 @@ const ProductsPage = () => {
   const [barcodeInput, setBarcodeInput] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage, setProductsPerPage] = useState(5);
+  const [productSuppliers, setProductSuppliers] = useState<
+    Record<number, string>
+  >({});
 
   const unitOptions: UnitOption[] = [
     { value: "Unid.", label: "Unidad" },
@@ -316,6 +319,29 @@ const ProductsPage = () => {
       isMounted = false;
     };
   }, []);
+  useEffect(() => {
+    const loadSuppliers = async () => {
+      const supplierMap: Record<number, string> = {};
+
+      for (const product of products) {
+        const supplierIds = await db.supplierProducts
+          .where("productId")
+          .equals(product.id)
+          .primaryKeys();
+
+        if (supplierIds.length > 0) {
+          const supplier = await db.suppliers.get(supplierIds[0][0]);
+          if (supplier) {
+            supplierMap[product.id] = supplier.companyName;
+          }
+        }
+      }
+
+      setProductSuppliers(supplierMap);
+    };
+
+    loadSuppliers();
+  }, [products]);
 
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -385,6 +411,7 @@ const ProductsPage = () => {
                   Precio de venta
                 </th>
                 <th className="text-sm 2xl:text-lg px-4 py-2 ">Vencimiento</th>
+                <th className="text-sm 2xl:text-lg px-4 py-2">Proveedor</th>
                 <th className="w-40 max-w-[10rem] text-sm 2xl:text-lg px-4 py-2">
                   Acciones
                 </th>
@@ -496,6 +523,9 @@ const ProductsPage = () => {
                           {expirationDate && isExpired && (
                             <span className="ml-2 text-red-800">(Vencido)</span>
                           )}
+                        </td>
+                        <td className="px-4 py-2 border border-gray_xl">
+                          {productSuppliers[product.id] || "Sin Asignar"}
                         </td>
                         <td className="px-4 py-2 flex justify-center gap-4">
                           <Button

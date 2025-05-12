@@ -263,6 +263,11 @@ export type Supplier = {
   nextVisit?: string;
   createdAt: string;
   updatedAt: string;
+  productIds?: number[];
+};
+export type SupplierProduct = {
+  supplierId: number;
+  productId: number;
 };
 export type DatepickerProps = {
   value: string | undefined;
