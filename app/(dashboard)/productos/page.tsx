@@ -555,7 +555,7 @@ const ProductsPage = () => {
                   })
               ) : (
                 <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                  <td colSpan={6} className="py-4 text-center">
+                  <td colSpan={7} className="py-4 text-center">
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                       <PackageX size={64} className="mb-4 text-gray_m" />
                       <p className="text-gray_m">Todavía no hay productos.</p>
