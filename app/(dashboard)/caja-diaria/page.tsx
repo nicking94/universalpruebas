@@ -17,7 +17,7 @@ import { format, parseISO, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
-import Select, { SingleValue } from "react-select";
+import Select from "react-select";
 import Input from "@/app/components/Input";
 
 const CajaDiariaPage = () => {
@@ -125,13 +125,23 @@ const CajaDiariaPage = () => {
 
   const calculateFilteredTotals = () => {
     const filtered = getFilteredMovements();
+    const processedMovementIds = new Set();
+
     return {
       totalIngresos: filtered
-        .filter((m) => m.type === "INGRESO")
-        .reduce((sum, m) => sum + m.amount, 0),
+        .filter((m) => {
+          if (processedMovementIds.has(m.id)) return false;
+          processedMovementIds.add(m.id);
+          return m.type === "INGRESO";
+        })
+        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0), // Asegura que amount sea número
       totalEgresos: filtered
-        .filter((m) => m.type === "EGRESO")
-        .reduce((sum, m) => sum + m.amount, 0),
+        .filter((m) => {
+          if (processedMovementIds.has(m.id)) return false;
+          processedMovementIds.add(m.id);
+          return m.type === "EGRESO";
+        })
+        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0), // Asegura que amount sea número
     };
   };
 
@@ -403,15 +413,24 @@ const CajaDiariaPage = () => {
         };
       }
 
+      // Usamos un Set para evitar duplicados
+      const processedMovementIds = new Set();
+
       movements.forEach((movement) => {
+        if (processedMovementIds.has(movement.id)) return;
+        processedMovementIds.add(movement.id);
+
         summary[date].movements.push(movement);
+
+        const amount = Number(movement.amount) || 0; // Asegura que es número
+
         if (movement.type === "INGRESO") {
-          summary[date].ingresos += movement.amount;
+          summary[date].ingresos += amount;
           if (movement.profit) {
-            summary[date].gananciaNeta += movement.profit;
+            summary[date].gananciaNeta += Number(movement.profit) || 0;
           }
         } else {
-          summary[date].egresos += movement.amount;
+          summary[date].egresos += amount;
         }
       });
 
@@ -447,16 +466,10 @@ const CajaDiariaPage = () => {
   const dailySummaries = getDailySummary();
 
   const addMovement = async () => {
-    const totalPayment = paymentMethods.reduce((sum, m) => sum + m.amount, 0);
-    const amountNumber = parseFloat(amount);
-
-    if (Math.abs(totalPayment - amountNumber) > 0.01) {
-      showNotification(
-        "La suma de los métodos no coincide con el monto total",
-        "error"
-      );
-      return;
-    }
+    const totalPayment = paymentMethods.reduce(
+      (sum, m) => sum + (m.amount || 0),
+      0
+    );
 
     const isCashOpen = await checkCashStatus();
     if (!isCashOpen) return;
@@ -469,28 +482,29 @@ const CajaDiariaPage = () => {
         showNotification("La caja no está abierta", "error");
         return;
       }
-      const movements: DailyCashMovement[] = paymentMethods.map((method) => ({
+
+      const movement: DailyCashMovement = {
         id: Date.now() + Math.random(),
-        amount: method.amount,
+        amount: totalPayment,
         description,
         type: movementType,
-        paymentMethod: method.method,
+        paymentMethod: paymentMethods[0].method,
         date: new Date().toISOString(),
         supplierId: selectedSupplier?.value,
         supplierName: selectedSupplier?.label,
         combinedPaymentMethods: paymentMethods,
-      }));
+      };
 
       const updatedCash = {
         ...dailyCash,
-        movements: [...dailyCash.movements, ...movements],
+        movements: [...dailyCash.movements, movement],
         totalIncome:
           movementType === "INGRESO"
-            ? (dailyCash.totalIncome || 0) + amountNumber
+            ? (dailyCash.totalIncome || 0) + totalPayment
             : dailyCash.totalIncome,
         totalExpense:
           movementType === "EGRESO"
-            ? (dailyCash.totalExpense || 0) + amountNumber
+            ? (dailyCash.totalExpense || 0) + totalPayment
             : dailyCash.totalExpense,
       };
 
@@ -522,27 +536,11 @@ const CajaDiariaPage = () => {
 
       if (field === "amount") {
         const numericValue =
-          typeof value === "string"
-            ? parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0
-            : (value as number);
-
+          typeof value === "string" ? parseFloat(value) || 0 : value;
         updated[index] = {
           ...updated[index],
-          amount: parseFloat(numericValue.toFixed(2)),
+          amount: numericValue,
         };
-
-        if (updated.length === 2) {
-          const totalPayment = updated.reduce((sum, m) => sum + m.amount, 0);
-          const difference = parseFloat(amount) - totalPayment;
-
-          if (difference !== 0) {
-            const otherIndex = index === 0 ? 1 : 0;
-            updated[otherIndex].amount = Math.max(
-              0,
-              updated[otherIndex].amount + difference
-            );
-          }
-        }
       } else {
         updated[index] = {
           ...updated[index],
@@ -554,37 +552,36 @@ const CajaDiariaPage = () => {
     });
   };
   const handlePaymentAmountChange = (index: number, value: string) => {
-    // Permite números y un punto decimal
-    const cleanValue = value.replace(/[^0-9.]/g, "");
-    // Asegura que solo haya un punto decimal
-    const parts = cleanValue.split(".");
-    const numericValue =
-      parts.length > 1
-        ? parseFloat(`${parts[0]}.${parts[1]}`)
-        : parseFloat(cleanValue) || 0;
+    const cleanValue = value.replace(/\./g, "");
+    const numericValue = cleanValue.replace(/[^0-9]/g, "");
+    const amount = parseFloat(numericValue) || 0;
 
-    handlePaymentMethodChange(index, "amount", numericValue);
+    setPaymentMethods((prev) => {
+      const updated = [...prev];
+      updated[index].amount = amount;
+
+      // Actualiza el monto total automáticamente
+      const newTotal = updated.reduce((sum, m) => sum + (m.amount || 0), 0);
+      setAmount(newTotal.toString());
+
+      return updated;
+    });
   };
   const addPaymentMethod = () => {
     setPaymentMethods((prev) => {
       if (prev.length >= paymentOptions.length) return prev;
-      const newMethods = [...prev];
-      if (newMethods.length === 2) {
-        newMethods.forEach((method) => {
-          method.amount = 0;
-        });
-      }
 
-      const usedMethods = newMethods.map((m) => m.method);
-      const availableMethod = paymentOptions.find(
-        (option) => !usedMethods.includes(option.value as PaymentMethod)
-      );
+      const usedMethods = prev.map((m) => m.method);
+      const availableMethod =
+        paymentOptions.find(
+          (option) => !usedMethods.includes(option.value as PaymentMethod)
+        ) || paymentOptions[0];
 
       return [
-        ...newMethods,
+        ...prev,
         {
-          method: (availableMethod?.value as PaymentMethod) || "EFECTIVO",
-          amount: 0,
+          method: availableMethod.value as PaymentMethod,
+          amount: 0, // Inicializa en 0 en lugar de distribuir
         },
       ];
     });
@@ -595,14 +592,19 @@ const CajaDiariaPage = () => {
 
       const updated = [...prev];
       updated.splice(index, 1);
-      if (updated.length === 2) {
+
+      // Si queda un solo método, le asignamos el total
+      if (updated.length === 1) {
         const totalAmount = parseFloat(amount) || 0;
-        updated[0].amount = totalAmount / 2;
-        updated[1].amount = totalAmount / 2;
+        updated[0].amount = totalAmount;
       }
 
       return updated;
     });
+  };
+  const formatInputValue = (value: number) => {
+    // Si el valor es 0, retorna cadena vacía para mejor experiencia de usuario
+    return value === 0 ? "" : value.toString();
   };
 
   //omitido
@@ -671,23 +673,18 @@ const CajaDiariaPage = () => {
     const fetchData = async () => {
       try {
         const storedDailyCashes = await db.dailyCashes.toArray();
-        setDailyCashes(storedDailyCashes);
 
-        const today = new Date().toISOString().split("T")[0];
-        const todayCash = storedDailyCashes.find((dc) => dc.date === today);
-        setCurrentDailyCash(todayCash || null);
+        // Limpia los datos si es necesario
+        const cleanedCashes = storedDailyCashes.map((cash) => ({
+          ...cash,
+          movements: cash.movements.map((m) => ({
+            ...m,
+            amount: Number(m.amount) || 0, // Asegura que amount sea número
+          })),
+        }));
 
-        if (!todayCash) {
-          // Verificar si hay cajas sin cerrar antes de permitir abrir una nueva
-          const openPreviousCashes = storedDailyCashes.filter(
-            (cash) => !cash.closed && cash.date < today
-          );
-
-          if (openPreviousCashes.length > 0) {
-            await checkAndCloseOldCashes();
-          }
-          setIsOpenCashModal(true);
-        }
+        setDailyCashes(cleanedCashes);
+        // Resto del código...
       } catch (error) {
         console.error("Error al cargar cajas diarias:", error);
         showNotification("Error al cargar cajas diarias", "error");
@@ -1207,12 +1204,7 @@ const CajaDiariaPage = () => {
                     value={paymentOptions.find(
                       (option) => option.value === method.method
                     )}
-                    onChange={(
-                      selectedOption: SingleValue<{
-                        value: string;
-                        label: string;
-                      }>
-                    ) =>
+                    onChange={(selectedOption) =>
                       handlePaymentMethodChange(
                         index,
                         "method",
@@ -1226,11 +1218,7 @@ const CajaDiariaPage = () => {
                   <Input
                     type="text"
                     placeholder="Monto"
-                    value={
-                      method.amount > 0
-                        ? new Intl.NumberFormat("es-AR").format(method.amount)
-                        : ""
-                    }
+                    value={formatInputValue(method.amount)}
                     onChange={(e) =>
                       handlePaymentAmountChange(index, e.target.value)
                     }
@@ -1271,16 +1259,12 @@ const CajaDiariaPage = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-
             <div className="p-2 bg-gray_b text-white text-center">
               <p className="font-semibold text-3xl">
                 TOTAL:{" "}
-                {paymentMethods
-                  .reduce((sum, m) => sum + m.amount, 0)
-                  .toLocaleString("es-AR", {
-                    style: "currency",
-                    currency: "ARS",
-                  })}
+                {formatCurrency(
+                  paymentMethods.reduce((sum, m) => sum + (m.amount || 0), 0)
+                )}
               </p>
             </div>
           </div>
