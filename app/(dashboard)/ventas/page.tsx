@@ -21,6 +21,7 @@ import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
 import Select, { SingleValue } from "react-select";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
+import { formatCurrency } from "@/app/lib/utils/utils";
 
 const VentasPage = () => {
   const currentYear = new Date().getFullYear();
@@ -270,73 +271,47 @@ const VentasPage = () => {
 
       const movements: DailyCashMovement[] = [];
       const totalSaleAmount = sale.total;
-
-      // Para pagos de fiados, buscar la venta original
-      let originalSale: Sale | undefined;
-      if (sale.credit && sale.paid) {
-        originalSale = await db.sales.get(sale.id);
-      }
-
       if (sale.products.length > 0) {
-        sale.products.forEach((product) => {
-          const productAmount = calculatePrice(product);
-          const productRatio = productAmount / totalSaleAmount;
+        const paymentMethodsDescription = sale.paymentMethods
+          .map((p) => `${p.method}: ${formatCurrency(p.amount)}`)
+          .join(" + ");
 
-          sale.paymentMethods.forEach((payment) => {
-            const paymentProductAmount = productRatio * payment.amount;
-            const currentProduct =
-              originalSale?.products.find((p) => p.id === product.id) ||
-              product;
-            const profit = calculateProfit(currentProduct);
+        const movement: DailyCashMovement = {
+          id: Date.now(),
+          amount: totalSaleAmount,
+          description: `Venta de ${sale.products
+            .map((p) => p.name)
+            .join(", ")} (${paymentMethodsDescription})`,
+          items: sale.products.map((p) => ({
+            productId: p.id,
+            productName: p.name,
+            quantity: p.quantity,
+            unit: p.unit,
+            price: p.price,
+          })),
 
-            let quantity = currentProduct.quantity;
-            if (currentProduct.unit === "Unid.") {
-              quantity = Math.round(
-                currentProduct.quantity * (payment.amount / productAmount)
-              );
-            }
+          type: "INGRESO",
+          date: new Date().toISOString(),
+          paymentMethod: "MIXTO",
+          productId: sale.products[0].id,
+          productName: sale.products.map((p) => p.name).join(", "),
+          costPrice: sale.products.reduce(
+            (sum, p) => sum + p.costPrice * p.quantity,
+            0
+          ),
+          sellPrice: sale.products.reduce(
+            (sum, p) => sum + p.price * p.quantity,
+            0
+          ),
+          quantity: sale.products.reduce((sum, p) => sum + p.quantity, 0),
+          unit: sale.products[0].unit,
+          profit: sale.products.reduce((sum, p) => sum + calculateProfit(p), 0),
+          isCreditPayment: sale.credit,
+          originalSaleId: sale.id,
+          combinedPaymentMethods: sale.paymentMethods,
+        };
 
-            movements.push({
-              id: Date.now(),
-              amount: paymentProductAmount,
-              description: `Venta de ${
-                currentProduct.name
-              } - ${quantity.toFixed(2)} ${currentProduct.unit}${
-                sale.credit ? " (PAGO FIADO)" : ""
-              }`,
-              type: "INGRESO",
-              date: new Date().toISOString(),
-              paymentMethod: payment.method,
-              productId: currentProduct.id,
-              productName: currentProduct.name,
-              costPrice: currentProduct.costPrice,
-              sellPrice: currentProduct.price,
-              quantity: quantity,
-              unit: currentProduct.unit,
-              profit: profit,
-              isCreditPayment: sale.credit,
-              originalSaleId: sale.id,
-            });
-          });
-        });
-      }
-      if (sale.manualAmount && sale.manualAmount > 0) {
-        const manualRatio = sale.manualAmount / totalSaleAmount;
-
-        sale.paymentMethods.forEach((payment) => {
-          const paymentManualAmount = manualRatio * payment.amount;
-
-          movements.push({
-            id: Date.now(),
-            amount: paymentManualAmount,
-            description: "Monto manual adicional",
-            type: "INGRESO",
-            date: new Date().toISOString(),
-            paymentMethod: payment.method,
-            isCreditPayment: sale.credit,
-            originalSaleId: sale.id,
-          });
-        });
+        movements.push(movement);
       }
 
       if (!dailyCash) {
@@ -1236,15 +1211,8 @@ const VentasPage = () => {
                         </div>
                         <div className="ml-4 flex-shrink-0">
                           <span className="text-sm font-medium text-gray_b">
-                            {product.quantity} {product.unit.toLowerCase()} ×{" "}
-                            {formatPrice(
-                              calculatePrice({
-                                ...product,
-                                quantity: 1,
-                                unit: product.unit,
-                              })
-                            )}{" "}
-                            = {formatPrice(calculatePrice(product))}
+                            {product.quantity} {product.unit.toLowerCase()} ={" "}
+                            {formatPrice(calculatePrice(product))}
                           </span>
                         </div>
                       </li>
@@ -1281,6 +1249,7 @@ const VentasPage = () => {
                 colorText="text-white"
                 colorTextHover="text-white"
                 onClick={handleConfirmAddSale}
+                hotkey="Enter"
               />
               <Button
                 text="Cancelar"
@@ -1289,6 +1258,7 @@ const VentasPage = () => {
                 colorBg="bg-gray_xl dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
                 onClick={handleCloseModal}
+                hotkey="Escape"
               />
             </div>
           }

@@ -592,7 +592,6 @@ const FiadosPage = () => {
                             py="py-1"
                             minwidth="min-w-0"
                             onClick={() => handleOpenInfoModal(oldestSale)}
-                            text="Detalles"
                           />
                         </div>
                       </td>

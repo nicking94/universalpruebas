@@ -100,9 +100,11 @@ const Metrics = () => {
       filteredCashes = [currentDailyCash];
     }
 
+    // Creamos un mapa para agrupar productos por ID (más preciso que por nombre)
     const productMap = new Map<
-      string,
+      number,
       {
+        name: string;
         quantity: number;
         amount: number;
         profit: number;
@@ -112,58 +114,104 @@ const Metrics = () => {
 
     filteredCashes.forEach((cash) => {
       cash.movements.forEach((movement) => {
-        if (
-          movement.type === "INGRESO" &&
-          movement.productName &&
-          movement.unit
-        ) {
-          // Filtrar por unidad seleccionada
-          if (unit === "unidad" && movement.unit !== "Unid.") return;
-          if (unit === "kg" && !["Kg", "gr"].includes(movement.unit)) return;
-          if (unit === "litro" && !["L", "ml"].includes(movement.unit)) return;
+        if (movement.type === "INGRESO" && movement.items) {
+          // Procesamos cada item de la venta individualmente
+          movement.items.forEach((item) => {
+            const existing = productMap.get(item.productId) || {
+              name: item.productName,
+              quantity: 0,
+              amount: 0,
+              profit: 0,
+              unit: item.unit || "Unid.",
+            };
 
-          const existing = productMap.get(movement.productName) || {
-            quantity: 0,
-            amount: 0,
-            profit: 0,
-            unit: movement.unit,
-          };
-
-          let quantityToAdd = movement.quantity || 0;
-          if (unit === "kg") {
-            if (movement.unit === "gr" && movement.quantity !== undefined) {
-              quantityToAdd = movement.quantity / 1000;
+            // Convertimos las cantidades a la unidad base para comparación
+            let quantityToAdd = item.quantity || 0;
+            if (item.unit === "gr") {
+              quantityToAdd = quantityToAdd / 1000; // Convertir a kg
+            } else if (item.unit === "ml") {
+              quantityToAdd = quantityToAdd / 1000; // Convertir a litros
             }
-          } else if (unit === "litro") {
-            if (movement.unit === "ml" && movement.quantity !== undefined) {
-              quantityToAdd = movement.quantity / 1000;
-            }
-          }
 
-          const costPrice = movement.costPrice || 0;
-          const sellPrice = movement.sellPrice || 0;
+            // Calculamos el profit basado en el precio y costo
+            const profitPerUnit =
+              (item.price || 0) -
+              (movement.costPrice || 0) / (movement.quantity || 1);
 
-          productMap.set(movement.productName, {
-            quantity: existing.quantity + quantityToAdd,
-            amount: existing.amount + movement.amount,
-            profit:
-              existing.profit +
-              (sellPrice - costPrice) * (movement.quantity || 0),
-            unit: unit === "kg" ? "Kg" : unit === "litro" ? "L" : "Unid.",
+            productMap.set(item.productId, {
+              name: existing.name,
+              quantity: existing.quantity + quantityToAdd,
+              amount: existing.amount + item.price * item.quantity,
+              profit: existing.profit + profitPerUnit * item.quantity,
+              unit: existing.unit,
+            });
           });
         }
       });
     });
 
-    return Array.from(productMap.entries())
-      .map(([name, { quantity, amount, profit, unit }]) => ({
-        name,
-        quantity,
-        amount,
-        profit,
-        unit,
-      }))
+    const allProducts = Array.from(productMap.values())
+      .map(({ name, quantity, amount, profit, unit }) => {
+        // Convertimos a la unidad más adecuada para mostrar
+        let displayQuantity = quantity;
+        let displayUnit = unit;
+
+        // Solo convertimos si el usuario seleccionó "kg" o "litro" en el filtro
+        if (unit === "kg" && displayUnit === "gr") {
+          // Convertimos gramos a kg solo si es 1000g o más
+          if (quantity >= 1000) {
+            displayQuantity = quantity / 1000;
+            displayUnit = "Kg";
+          }
+        } else if (unit === "litro" && displayUnit === "ml") {
+          // Convertimos ml a L solo si es 1000ml o más
+          if (quantity >= 1000) {
+            displayQuantity = quantity / 1000;
+            displayUnit = "L";
+          }
+        }
+
+        return {
+          name,
+          quantity,
+          displayQuantity, // Cantidad convertida para mostrar
+          displayUnit, // Unidad convertida para mostrar
+          amount,
+          profit,
+          originalUnit: unit, // Guardamos la unidad original
+        };
+      })
       .sort((a, b) => b.quantity - a.quantity);
+
+    // Filtramos según la unidad seleccionada
+    const filteredProducts = allProducts.filter((product) => {
+      if (unit === "unidad") return product.originalUnit === "Unid.";
+      if (unit === "kg") return ["Kg", "gr"].includes(product.originalUnit);
+      if (unit === "litro") return ["L", "ml"].includes(product.originalUnit);
+      return true;
+    });
+
+    // Función para formatear la cantidad mostrada
+    const formatDisplayQuantity = (qty: number, unit: string) => {
+      // Para unidades, sin decimales
+      if (unit === "Unid.") return qty.toString();
+
+      // Para gramos/ml, sin decimales
+      if (unit === "gr" || unit === "ml") return qty.toString();
+
+      // Para kg/L, máximo 1 decimal
+      const rounded = Math.round(qty * 10) / 10;
+      return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
+    };
+
+    // Retornamos los productos con la cantidad ya formateada
+    return filteredProducts.slice(0, 5).map((product) => ({
+      ...product,
+      displayText: `${formatDisplayQuantity(
+        product.displayQuantity,
+        product.displayUnit
+      )} ${product.displayUnit}`,
+    }));
   };
 
   const getMonthlySummary = () => {
@@ -316,14 +364,8 @@ const Metrics = () => {
   const annualSummary = getAnnualSummary();
   const dailyMonthData = getDailyDataForMonth();
   const monthlyYearData = getMonthlyDataForYear();
-  const topProductsMonthly = getProductMovements(
-    "month",
-    monthlyRankingUnit
-  ).slice(0, 5);
-  const topProductsYearly = getProductMovements(
-    "year",
-    yearlyRankingUnit
-  ).slice(0, 5);
+  const topProductsMonthly = getProductMovements("month", monthlyRankingUnit);
+  const topProductsYearly = getProductMovements("year", yearlyRankingUnit);
 
   const monthlyBarChartData = {
     labels: dailyMonthData.map((data) => data.date),
@@ -536,10 +578,13 @@ const Metrics = () => {
                       className="py-2 flex justify-between items-center text-sm"
                     >
                       <span className="truncate uppercase">
-                        - {product.name}
+                        <span className="font-bold text-blue_m dark:text-blue_l">
+                          {index + 1}- {""}
+                        </span>
+                        {product.name}
                       </span>
                       <span className="font-medium">
-                        {product.quantity.toFixed(2)} {product.unit}
+                        {product.displayText}{" "}
                       </span>
                     </div>
                   ))}
@@ -628,10 +673,13 @@ const Metrics = () => {
                       className="py-2 flex justify-between items-center text-sm"
                     >
                       <span className="truncate uppercase">
-                        - {product.name}
+                        <span className="font-bold text-blue_m dark:text-blue_l">
+                          {index + 1}- {""}
+                        </span>
+                        {product.name}
                       </span>
                       <span className="font-medium">
-                        {product.quantity.toFixed(2)} {product.unit}
+                        {product.displayText}{" "}
                       </span>
                     </div>
                   ))}

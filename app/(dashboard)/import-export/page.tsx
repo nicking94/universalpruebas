@@ -56,7 +56,6 @@ export default function ImportExportPage() {
 
     const text = await file.text();
     const data = JSON.parse(text);
-    console.log("JSON importado completo:", data);
 
     setLoading(true);
     try {
@@ -74,28 +73,24 @@ export default function ImportExportPage() {
 
           try {
             await db.theme.bulkAdd(data.theme || []);
-            console.log("Theme importado");
           } catch (e) {
             console.error("Error en theme:", e);
           }
 
           try {
             await db.products.bulkAdd(data.products || []);
-            console.log("Productos importados");
           } catch (e) {
             console.error("Error en products:", e);
           }
 
           try {
             await db.sales.bulkPut(data.sales || []);
-            console.log("Ventas importadas");
           } catch (e) {
             console.error("Error en sales:", e);
           }
 
           try {
             await db.auth.bulkAdd(data.auth || []);
-            console.log("Auth importado");
           } catch (e) {
             console.error("Error en auth:", e);
           }

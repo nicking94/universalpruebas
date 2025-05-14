@@ -153,8 +153,11 @@ export type Sale = {
 };
 
 export type SaleItem = {
-  product: Product;
+  productId: number;
+  productName: string;
   quantity: number;
+  unit: string;
+  price: number;
 };
 
 export type PaginationProps = {
@@ -177,7 +180,7 @@ export type ProductOption = {
   isDisabled?: boolean;
 };
 
-export type PaymentMethod = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA";
+export type PaymentMethod = "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "MIXTO";
 
 export type PaymentSplit = {
   method: PaymentMethod;
@@ -188,11 +191,13 @@ export type MovementType = "INGRESO" | "EGRESO";
 
 export type DailyCashMovement = {
   id: number;
+  subMovements?: PaymentSplit[];
+  method?: PaymentMethod;
   amount: number;
   description: string;
   type: "INGRESO" | "EGRESO";
   date: string;
-  paymentMethod?: "EFECTIVO" | "TRANSFERENCIA" | "TARJETA";
+  paymentMethod?: "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "MIXTO";
   productId?: number;
   productName?: string;
   costPrice?: number;
@@ -204,6 +209,8 @@ export type DailyCashMovement = {
   originalSaleId?: number;
   supplierId?: number;
   supplierName?: string;
+  combinedPaymentMethods?: PaymentSplit[];
+  items?: SaleItem[];
 };
 
 export type DailyCash = {

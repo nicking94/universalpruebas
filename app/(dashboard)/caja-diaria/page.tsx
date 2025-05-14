@@ -110,9 +110,15 @@ const CajaDiariaPage = () => {
   const getFilteredMovements = () => {
     return selectedDayMovements.filter((movement) => {
       const typeMatch = filterType === "TODOS" || movement.type === filterType;
+
       const paymentMatch =
         filterPaymentMethod === "TODOS" ||
-        movement.paymentMethod === filterPaymentMethod;
+        movement.paymentMethod === filterPaymentMethod ||
+        (movement.combinedPaymentMethods &&
+          movement.combinedPaymentMethods.some(
+            (m) => m.method === filterPaymentMethod
+          ));
+
       return typeMatch && paymentMatch;
     });
   };
@@ -161,6 +167,7 @@ const CajaDiariaPage = () => {
       style: "currency",
       currency: "ARS",
       minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
@@ -178,22 +185,97 @@ const CajaDiariaPage = () => {
       return false;
     }
   };
+  // Mover esta función al principio con las otras funciones del componente
+  const checkAndCloseOldCashes = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    try {
+      const allCashes = await db.dailyCashes.toArray();
+      const openPreviousCashes = allCashes.filter(
+        (cash) => !cash.closed && cash.date < today
+      );
+
+      if (openPreviousCashes.length === 0) return;
+
+      for (const cash of openPreviousCashes) {
+        const cashIncome = cash.movements
+          .filter((m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO")
+          .reduce((sum, m) => sum + m.amount, 0);
+
+        const cashExpense = cash.movements
+          .filter((m) => m.type === "EGRESO")
+          .reduce((sum, m) => sum + m.amount, 0);
+
+        const expectedAmount = cash.initialAmount + cashIncome - cashExpense;
+
+        const updatedCash = {
+          ...cash,
+          closed: true,
+          closingAmount: expectedAmount,
+          cashIncome,
+          cashExpense,
+          otherIncome: cash.movements
+            .filter(
+              (m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO"
+            )
+            .reduce((sum, m) => sum + m.amount, 0),
+          closingDifference: 0,
+          closingDate: new Date().toISOString(),
+        };
+
+        await db.dailyCashes.update(cash.id, updatedCash);
+
+        // Actualizar el estado local
+        setDailyCashes((prev) =>
+          prev.map((dc) => (dc.id === cash.id ? updatedCash : dc))
+        );
+
+        if (currentDailyCash && currentDailyCash.id === cash.id) {
+          setCurrentDailyCash(updatedCash);
+        }
+      }
+
+      showNotification(
+        `Se cerraron ${openPreviousCashes.length} caja(s) de días anteriores automáticamente.`,
+        "info"
+      );
+    } catch (error) {
+      console.error("Error al cerrar cajas antiguas:", error);
+      showNotification("Error al cerrar cajas de días anteriores", "error");
+    }
+  };
+
+  // Luego puedes usar esta función en tus otros efectos y funciones
+  useEffect(() => {
+    const checkMidnightAndClose = () => {
+      const now = new Date();
+      // Verificar solo los primeros 5 minutos de cada hora para reducir ejecuciones
+      if (now.getHours() === 0 && now.getMinutes() < 5) {
+        checkAndCloseOldCashes();
+      }
+    };
+
+    const interval = setInterval(checkMidnightAndClose, 5 * 60 * 1000); // Verificar cada 5 minutos
+    checkMidnightAndClose(); // Ejecutar inmediatamente al montar
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    checkAndCloseOldCashes();
+  }, []);
 
   const openCash = async () => {
+    const today = new Date().toISOString().split("T")[0];
     const allCashes = await db.dailyCashes.toArray();
     const openPreviousCashes = allCashes.filter(
-      (cash) =>
-        !cash.closed && cash.date < new Date().toISOString().split("T")[0]
+      (cash) => !cash.closed && cash.date < today
     );
 
     if (openPreviousCashes.length > 0) {
-      showNotification(
-        `Hay ${openPreviousCashes.length} caja(s) de días anteriores sin cerrar. 
-        Por favor ciérrelas antes de abrir una nueva.`,
-        "error"
-      );
+      await checkAndCloseOldCashes();
       return;
     }
+
     if (!initialAmount) {
       showNotification("Debe ingresar un monto inicial", "error");
       return;
@@ -206,7 +288,6 @@ const CajaDiariaPage = () => {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
       const dailyCash: DailyCash = {
         id: Date.now(),
         date: today,
@@ -397,6 +478,7 @@ const CajaDiariaPage = () => {
         date: new Date().toISOString(),
         supplierId: selectedSupplier?.value,
         supplierName: selectedSupplier?.label,
+        combinedPaymentMethods: paymentMethods,
       }));
 
       const updatedCash = {
@@ -472,8 +554,15 @@ const CajaDiariaPage = () => {
     });
   };
   const handlePaymentAmountChange = (index: number, value: string) => {
-    const cleanValue = value.replace(/[^0-9]/g, "");
-    const numericValue = parseFloat(cleanValue) || 0;
+    // Permite números y un punto decimal
+    const cleanValue = value.replace(/[^0-9.]/g, "");
+    // Asegura que solo haya un punto decimal
+    const parts = cleanValue.split(".");
+    const numericValue =
+      parts.length > 1
+        ? parseFloat(`${parts[0]}.${parts[1]}`)
+        : parseFloat(cleanValue) || 0;
+
     handlePaymentMethodChange(index, "amount", numericValue);
   };
   const addPaymentMethod = () => {
@@ -515,6 +604,7 @@ const CajaDiariaPage = () => {
       return updated;
     });
   };
+
   //omitido
   // const handleDeleteMovement = async () => {
 
@@ -588,6 +678,14 @@ const CajaDiariaPage = () => {
         setCurrentDailyCash(todayCash || null);
 
         if (!todayCash) {
+          // Verificar si hay cajas sin cerrar antes de permitir abrir una nueva
+          const openPreviousCashes = storedDailyCashes.filter(
+            (cash) => !cash.closed && cash.date < today
+          );
+
+          if (openPreviousCashes.length > 0) {
+            await checkAndCloseOldCashes();
+          }
           setIsOpenCashModal(true);
         }
       } catch (error) {
@@ -598,26 +696,6 @@ const CajaDiariaPage = () => {
 
     fetchData();
   }, []);
-  useEffect(() => {
-    const checkAndCloseOldCashes = async () => {
-      const today = new Date().toISOString().split("T")[0];
-      const allCashes = await db.dailyCashes.toArray();
-
-      for (const cash of allCashes) {
-        if (cash.date < today && !cash.closed) {
-          const updatedCash = {
-            ...cash,
-            closed: true,
-            closingAmount: 0,
-            closingDate: new Date().toISOString(),
-          };
-          await db.dailyCashes.update(cash.id, updatedCash);
-        }
-      }
-    };
-
-    checkAndCloseOldCashes();
-  }, []);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -625,11 +703,21 @@ const CajaDiariaPage = () => {
   const DetailModal = () => {
     const filteredMovements = getFilteredMovements();
     const { totalIngresos, totalEgresos } = calculateFilteredTotals();
-    //omitido
-    // const handleDeleteClick = (movement: DailyCashMovement) => {
-    //   setMovementToDelete(movement);
-    //   setIsConfirmModalOpen(true);
-    // };
+    const groupedMovements = filteredMovements.reduce((acc, movement) => {
+      if (movement.originalSaleId) {
+        if (!acc[movement.originalSaleId]) {
+          acc[movement.originalSaleId] = {
+            ...movement,
+            subMovements: movement.combinedPaymentMethods || [],
+          };
+        }
+        return acc;
+      }
+
+      // Para movimientos no agrupables (egresos, etc.)
+      acc[movement.id] = movement;
+      return acc;
+    }, {} as Record<number, DailyCashMovement>);
 
     return (
       <Modal
@@ -637,7 +725,7 @@ const CajaDiariaPage = () => {
         onClose={() => setIsDetailModalOpen(false)}
         title="Detalles del día"
         buttons={
-          <div className="flex justify-end mt-4 ">
+          <div className="flex justify-end mt-4">
             <Button
               text="Cerrar"
               colorText="text-gray_b dark:text-white"
@@ -722,32 +810,20 @@ const CajaDiariaPage = () => {
                   Tipo
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Método
+                  Métodos de Pago
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Producto
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cantidad
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Proveedor
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Descripción
-                </th>
-                {/* omitido */}
-                {/* <th className=" w-40 max-w-[10rem] px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider ">
-                  Acciones
-                </th> */}
               </tr>
             </thead>
             <tbody className={`bg-white divide-y divide-gray_xl`}>
-              {filteredMovements.length > 0 ? (
-                filteredMovements.map((movement, index) => (
+              {Object.values(groupedMovements).length > 0 ? (
+                Object.values(groupedMovements).map((movement, index) => (
                   <tr
                     key={index}
                     className={movement.type === "EGRESO" ? "bg-red-50" : ""}
@@ -764,56 +840,55 @@ const CajaDiariaPage = () => {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-sm text-gray-500">
-                      {movement.paymentMethod}:{" "}
+                      {movement.combinedPaymentMethods ? (
+                        <div className="flex flex-col">
+                          {movement.combinedPaymentMethods.map((method, i) => (
+                            <div key={i}>
+                              {method.method}: {formatCurrency(method.amount)}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        `${movement.paymentMethod}: ${formatCurrency(
+                          movement.amount
+                        )}`
+                      )}
+                    </td>
+                    <td className=" px-4 py-2 text-sm text-gray-500">
+                      {Array.isArray(movement.items) &&
+                      movement.items.length > 0 ? (
+                        <div className="flex flex-col">
+                          {movement.items.map((item, i) => (
+                            <div key={i} className="flex justify-between">
+                              <span className="font-semibold">
+                                {item.productName}
+                              </span>{" "}
+                              ×{item.quantity} {""}
+                              {item.unit}
+                            </div>
+                          ))}
+                        </div>
+                      ) : movement.productName ? (
+                        <span>
+                          <span className="font-semibold">
+                            {movement.productName}
+                          </span>{" "}
+                          ×{movement.quantity} {""}
+                          {movement.unit}
+                        </span>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+
+                    <td className="px-4 py-2 text-sm text-center font-medium text-green-600">
                       {formatCurrency(movement.amount)}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
-                      {movement.productName ||
-                        (movement.type === "EGRESO" ? "Egreso" : "Varios")}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
-                      {movement.quantity
-                        ? `${movement.quantity} ${movement.unit || ""}`
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
-                      {movement.type === "EGRESO" && movement.supplierName
-                        ? movement.supplierName
-                        : "-"}
-                    </td>
-                    <td
-                      className={`px-4 py-2 text-sm font-medium ${
-                        movement.type === "INGRESO"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {formatCurrency(movement.amount)}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
-                      {movement.description || "-"}
-                    </td>
-                    {/* omitido */}
-                    {/* <td className="px-4 py-2 whitespace-nowrap text-sm h-full">
-                      <div className="flex justify-center items-center h-full">
-                        <Button
-                          icon={<Trash size={20} />}
-                          colorText="text-gray_b"
-                          colorTextHover="hover:text-white"
-                          colorBg="bg-transparent"
-                          colorBgHover="hover:bg-red-500"
-                          px="px-1"
-                          py="py-1"
-                          minwidth="min-w-0"
-                          onClick={() => handleDeleteClick(movement)}
-                        />
-                      </div>
-                    </td> */}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-4 text-center text-gray_l">
+                  <td colSpan={6} className="py-4 text-center text-gray_l">
                     No hay movimientos que coincidan con los filtros
                   </td>
                 </tr>
