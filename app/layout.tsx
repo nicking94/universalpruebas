@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <SidebarProvider>
       <html lang="es">
-        <body className={` ${roboto.variable} antialiased `}>
+        <body className={` ${roboto.variable} antialiased hidden md:block`}>
           <main>{children}</main>
         </body>
       </html>
