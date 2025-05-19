@@ -8,8 +8,8 @@ import { USERS } from "@/app/lib/constants/constants";
 import { db } from "../../database/db";
 
 const TRIAL_CREDENTIALS = {
-  username: "admin",
-  password: "admin",
+  username: "demo",
+  password: "demo",
 };
 
 const LoginPage = () => {
