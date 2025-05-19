@@ -6,27 +6,61 @@ const TrialNotification = () => {
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [isDemoUser, setIsDemoUser] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
-  useEffect(() => {
-    const checkAuth = async () => {
+  const checkAuthState = async () => {
+    try {
       const auth = await db.auth.get(1);
-      if (auth?.isAuthenticated && auth.userId) {
-        setUserId(auth.userId);
+      const authenticated = auth?.isAuthenticated ?? false;
+      setIsAuthenticated(authenticated);
+
+      if (authenticated && auth?.userId) {
         const user = await db.users.get(auth.userId);
-        setIsDemoUser(user?.username === "demo");
+
+        if (!user) {
+          console.error("Usuario no encontrado");
+          setUserId(null);
+          setIsDemoUser(false);
+          return;
+        }
+
+        setUserId(auth.userId);
+        setIsDemoUser(user.username === "demo");
+      } else {
+        setUserId(null);
+        setIsDemoUser(false);
       }
-    };
-    checkAuth();
-  }, []);
+    } catch (error) {
+      console.error("Error verificando autenticación:", error);
+      setUserId(null);
+      setIsDemoUser(false);
+      setIsAuthenticated(false);
+    }
+  };
 
   useEffect(() => {
-    if (!userId || !isDemoUser) return;
+    checkAuthState();
+
+    const interval = setInterval(checkAuthState, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    if (!isAuthenticated || !userId || !isDemoUser) {
+      setDaysLeft(null);
+      return;
+    }
 
     const calculateRemainingDays = async () => {
       try {
         let trialRecord = await db.trialPeriods.get(userId);
+        const user = await db.users.get(userId);
 
-        // Si no existe registro, lo creamos
+        if (!user || user.username !== "demo") {
+          setDaysLeft(null);
+          return;
+        }
+
         if (!trialRecord) {
           const newRecord = {
             userId: userId,
@@ -34,37 +68,28 @@ const TrialNotification = () => {
           };
           await db.trialPeriods.put(newRecord);
           trialRecord = newRecord;
-          console.log("Nuevo registro de prueba creado:", newRecord);
         }
 
         const startDate = new Date(trialRecord.firstAccessDate);
         const currentDate = new Date();
-
-        // Ajuste para considerar el día actual como día 1
         const diffTime = currentDate.getTime() - startDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        // Días restantes (7 días totales - días transcurridos)
         const remainingDays = Math.max(0, 7 - diffDays);
-
-        console.log("Fecha inicio:", startDate);
-        console.log("Días transcurridos:", diffDays);
-        console.log("Días restantes:", remainingDays);
 
         setDaysLeft(remainingDays);
       } catch (error) {
-        console.error("Error calculating trial days:", error);
+        console.error("Error calculando días:", error);
         setDaysLeft(null);
       }
     };
 
     calculateRemainingDays();
-    const interval = setInterval(calculateRemainingDays, 3600000); // Chequear cada hora
+    const interval = setInterval(calculateRemainingDays, 3600000);
 
     return () => clearInterval(interval);
-  }, [userId, isDemoUser]);
+  }, [userId, isDemoUser, isAuthenticated]);
 
-  if (daysLeft === null || !isDemoUser) return null;
+  if (daysLeft === null || !isDemoUser || !isAuthenticated) return null;
 
   return (
     <div
