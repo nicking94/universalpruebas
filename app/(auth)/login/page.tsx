@@ -1,3 +1,4 @@
+// app/login/page.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -7,6 +8,11 @@ import { AuthData, User } from "@/app/lib/types/types";
 import { USERS } from "@/app/lib/constants/constants";
 import { db } from "../../database/db";
 
+const TRIAL_CREDENTIALS = {
+  username: "admin",
+  password: "admin",
+};
+
 const LoginPage = () => {
   const router = useRouter();
   const [isOpenNotification, setIsOpenNotification] = useState(false);
@@ -15,8 +21,15 @@ const LoginPage = () => {
     "success" | "error" | "info"
   >("error");
 
-  // Opcional: cargar usuarios en la base de datos al montar el componente
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("expired") === "true") {
+      setNotificationMessage("Su periodo de prueba ha expirado");
+      setNotificationType("error");
+      setIsOpenNotification(true);
+      setTimeout(() => setIsOpenNotification(false), 3000);
+    }
+
     const initializeUsers = async () => {
       const count = await db.users.count();
       if (count === 0) {
@@ -31,8 +44,35 @@ const LoginPage = () => {
     initializeUsers();
   }, []);
 
+  const checkTrialPeriod = async (userId: number) => {
+    try {
+      const trialRecord = await db.trialPeriods
+        .where("userId")
+        .equals(userId)
+        .first();
+
+      if (!trialRecord) {
+        await db.trialPeriods.add({
+          id: 1,
+          firstAccessDate: new Date(),
+          userId: userId,
+        });
+        return true;
+      }
+
+      const firstAccess = new Date(trialRecord.firstAccessDate);
+      const now = new Date();
+      const diffInMs = now.getTime() - firstAccess.getTime();
+      const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+      return diffInDays <= 7;
+    } catch (err) {
+      console.error("Error al verificar periodo de prueba:", err);
+      return false;
+    }
+  };
+
   const handleLogin = async (data: AuthData) => {
-    // Buscar el usuario en la base de datos
     const user = await db.users
       .where("username")
       .equals(data.username)
@@ -43,14 +83,24 @@ const LoginPage = () => {
       setNotificationMessage("Usuario o contraseña incorrectos");
       setNotificationType("error");
       setIsOpenNotification(true);
-      setTimeout(() => {
-        setIsOpenNotification(false);
-      }, 2000);
+      setTimeout(() => setIsOpenNotification(false), 2000);
       return;
     }
 
-    // Guardar el estado de autenticación con el ID del usuario
+    if (data.username === TRIAL_CREDENTIALS.username) {
+      const isTrialValid = await checkTrialPeriod(user.id);
+
+      if (!isTrialValid) {
+        setNotificationMessage("El periodo de prueba de 1 semana ha expirado");
+        setNotificationType("error");
+        setIsOpenNotification(true);
+        setTimeout(() => setIsOpenNotification(false), 2000);
+        return;
+      }
+    }
+
     await db.auth.put({ id: 1, isAuthenticated: true, userId: user.id });
+    await db.appState.put({ id: 1, lastActiveDate: new Date() });
 
     setNotificationMessage("Inicio de sesión exitoso");
     setNotificationType("success");

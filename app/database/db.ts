@@ -26,10 +26,15 @@ class MyDatabase extends Dexie {
   customers!: Table<Customer, string>;
   suppliers!: Table<Supplier, number>;
   supplierProducts!: Table<SupplierProduct, [number, number]>;
+  trialPeriods!: Table<
+    { id: number; firstAccessDate: Date; userId: number },
+    number
+  >;
+  appState!: Table<{ id: number; lastActiveDate: Date }, number>;
 
   constructor() {
     super("MyDatabase");
-    this.version(4).stores({
+    this.version(5).stores({
       theme: "id",
       products: "++id, name, barcode, stock",
       users: "id, username",
@@ -42,6 +47,7 @@ class MyDatabase extends Dexie {
       customers: "&id, name",
       suppliers: "++id, companyName, lastVisit, nextVisit, createdAt",
       supplierProducts: "[supplierId+productId], supplierId, productId",
+      appState: "id",
     });
   }
 }

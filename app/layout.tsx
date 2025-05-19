@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 import { SidebarProvider } from "./context/SidebarContext";
+import TrialNotification from "./components/TrialNotification";
+import SessionChecker from "./components/SessionChecker";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -28,7 +30,9 @@ export default function RootLayout({
     <SidebarProvider>
       <html lang="es">
         <body className={` ${roboto.variable} antialiased hidden md:block`}>
-          <main>{children}</main>
+          <main>
+            {children} <SessionChecker /> <TrialNotification />
+          </main>
         </body>
       </html>
     </SidebarProvider>
