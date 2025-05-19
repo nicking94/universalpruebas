@@ -5,8 +5,8 @@ export const USERS = [
     id: 1,
   },
   {
-    username: process.env.NEXT_PUBLIC_LOGIN_USERNAME_1 || "admin",
-    password: process.env.NEXT_PUBLIC_LOGIN_PASSWORD_1 || "admin",
+    username: process.env.NEXT_PUBLIC_LOGIN_USERNAME_1 || "administrador",
+    password: process.env.NEXT_PUBLIC_LOGIN_PASSWORD_1 || "administrador",
     id: 2,
   },
 ];
