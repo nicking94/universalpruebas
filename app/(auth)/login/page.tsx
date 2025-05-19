@@ -4,13 +4,8 @@ import { useRouter } from "next/navigation";
 import AuthForm from "@/app/components/AuthForm";
 import Notification from "@/app/components/Notification";
 import { AuthData, User } from "@/app/lib/types/types";
-import { USERS } from "@/app/lib/constants/constants";
+import { TRIAL_CREDENTIALS, USERS } from "@/app/lib/constants/constants";
 import { db } from "../../database/db";
-
-const TRIAL_CREDENTIALS = {
-  username: "demo",
-  password: "demo",
-};
 
 const LoginPage = () => {
   const router = useRouter();
@@ -66,6 +61,37 @@ const LoginPage = () => {
   };
 
   const handleLogin = async (data: AuthData) => {
+    if (
+      data.username === TRIAL_CREDENTIALS.username &&
+      data.password === TRIAL_CREDENTIALS.password
+    ) {
+      const demoUser = await db.users
+        .where("username")
+        .equals(TRIAL_CREDENTIALS.username)
+        .first();
+
+      if (demoUser) {
+        const trialRecord = await db.trialPeriods.get(demoUser.id);
+
+        if (trialRecord) {
+          const firstAccess = new Date(trialRecord.firstAccessDate);
+          const now = new Date();
+          const diffInMs = now.getTime() - firstAccess.getTime();
+          const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+          if (diffInDays > 7) {
+            setNotificationMessage(
+              "El periodo de prueba de 1 semana ha expirado"
+            );
+            setNotificationType("error");
+            setIsOpenNotification(true);
+            setTimeout(() => setIsOpenNotification(false), 2000);
+            return;
+          }
+        }
+      }
+    }
+
     const user = await db.users
       .where("username")
       .equals(data.username)

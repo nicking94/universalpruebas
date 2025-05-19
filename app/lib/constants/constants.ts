@@ -10,3 +10,8 @@ export const USERS = [
     id: 2,
   },
 ];
+
+export const TRIAL_CREDENTIALS = {
+  username: "demo",
+  password: "demo",
+};
