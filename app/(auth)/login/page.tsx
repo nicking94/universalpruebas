@@ -81,12 +81,14 @@ const LoginPage = () => {
     }
 
     if (data.username === TRIAL_CREDENTIALS.username) {
-      const trialRecord = await db.trialPeriods.get(user.id);
-      if (!trialRecord) {
+      const existingTrial = await db.trialPeriods.get(user.id);
+
+      if (!existingTrial) {
         await db.trialPeriods.put({
           userId: user.id,
           firstAccessDate: new Date(),
         });
+        console.log("registro de prueba inicial creado");
       }
 
       const isTrialValid = await checkTrialPeriod(user.id);
