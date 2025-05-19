@@ -45,16 +45,11 @@ const LoginPage = () => {
 
   const checkTrialPeriod = async (userId: number) => {
     try {
-      const trialRecord = await db.trialPeriods
-        .where("userId")
-        .equals(userId)
-        .first();
-
+      const trialRecord = await db.trialPeriods.get(userId);
       if (!trialRecord) {
         await db.trialPeriods.put({
-          id: 1,
-          firstAccessDate: new Date(),
           userId: userId,
+          firstAccessDate: new Date(),
         });
         return true;
       }
@@ -86,10 +81,10 @@ const LoginPage = () => {
     }
 
     if (data.username === TRIAL_CREDENTIALS.username) {
+      await db.trialPeriods.where("userId").equals(user.id).delete();
       await db.trialPeriods.put({
-        id: 1,
-        firstAccessDate: new Date(),
         userId: user.id,
+        firstAccessDate: new Date(),
       });
 
       const isTrialValid = await checkTrialPeriod(user.id);
