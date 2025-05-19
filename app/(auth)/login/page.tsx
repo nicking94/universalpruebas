@@ -81,11 +81,13 @@ const LoginPage = () => {
     }
 
     if (data.username === TRIAL_CREDENTIALS.username) {
-      await db.trialPeriods.where("userId").equals(user.id).delete();
-      await db.trialPeriods.put({
-        userId: user.id,
-        firstAccessDate: new Date(),
-      });
+      const trialRecord = await db.trialPeriods.get(user.id);
+      if (!trialRecord) {
+        await db.trialPeriods.put({
+          userId: user.id,
+          firstAccessDate: new Date(),
+        });
+      }
 
       const isTrialValid = await checkTrialPeriod(user.id);
 

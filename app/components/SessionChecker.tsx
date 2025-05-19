@@ -13,7 +13,7 @@ const SessionChecker = () => {
       if (!auth?.isAuthenticated || !auth.userId) return;
 
       const user = await db.users.get(auth.userId);
-      if (!user || user.username !== "admin") return;
+      if (!user || user.username !== "demo") return;
 
       const trialRecord = await db.trialPeriods
         .where("userId")
