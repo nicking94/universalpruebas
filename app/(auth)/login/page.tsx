@@ -1,4 +1,3 @@
-// app/login/page.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -51,7 +50,7 @@ const LoginPage = () => {
         .equals(userId)
         .first();
 
-      if (!trialRecord || process.env.NODE_ENV === "development") {
+      if (!trialRecord) {
         await db.trialPeriods.put({
           id: 1,
           firstAccessDate: new Date(),

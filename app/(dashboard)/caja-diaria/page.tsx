@@ -29,10 +29,6 @@ const CajaDiariaPage = () => {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [type, setType] = useState<"success" | "error" | "info">("success");
   const [isOpenModal, setIsOpenModal] = useState(false);
-  //omitido
-  // const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  // const [movementToDelete, setMovementToDelete] =
-  //   useState<DailyCashMovement | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDayMovements, setSelectedDayMovements] = useState<
     DailyCashMovement[]
@@ -49,11 +45,6 @@ const CajaDiariaPage = () => {
     PaymentMethod | "TODOS"
   >("TODOS");
 
-  //omitido
-  // const [dailyCashToDelete, setDailyCashToDelete] = useState<DailyCash | null>(
-  //   null
-  // );
-  // const [isDeleteCashModalOpen, setIsDeleteCashModalOpen] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<{
     value: number;
@@ -65,27 +56,6 @@ const CajaDiariaPage = () => {
     { value: "TRANSFERENCIA", label: "Transferencia" },
     { value: "TARJETA", label: "Tarjeta" },
   ];
-  //omitido
-  // const deleteDailyCash = async () => {
-  //   if (!dailyCashToDelete) return;
-
-  //   try {
-  //     await db.dailyCashes.delete(dailyCashToDelete.id);
-
-  //     setDailyCashes((prev) =>
-  //       prev.filter((dc) => dc.id !== dailyCashToDelete.id)
-  //     );
-  //     if (currentDailyCash && currentDailyCash.id === dailyCashToDelete.id) {
-  //       setCurrentDailyCash(null);
-  //     }
-
-  //     setIsDeleteCashModalOpen(false);
-  //     showNotification("Caja eliminada correctamente", "success");
-  //   } catch (error) {
-  //     console.error("Error al eliminar caja:", error);
-  //     showNotification("Error al eliminar caja", "error");
-  //   }
-  // };
 
   const [description, setDescription] = useState("");
   const [movementType, setMovementType] = useState<"INGRESO" | "EGRESO">(
@@ -134,14 +104,14 @@ const CajaDiariaPage = () => {
           processedMovementIds.add(m.id);
           return m.type === "INGRESO";
         })
-        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0), // Asegura que amount sea número
+        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0),
       totalEgresos: filtered
         .filter((m) => {
           if (processedMovementIds.has(m.id)) return false;
           processedMovementIds.add(m.id);
           return m.type === "EGRESO";
         })
-        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0), // Asegura que amount sea número
+        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0),
     };
   };
 
@@ -195,7 +165,6 @@ const CajaDiariaPage = () => {
       return false;
     }
   };
-  // Mover esta función al principio con las otras funciones del componente
   const checkAndCloseOldCashes = async () => {
     const today = new Date().toISOString().split("T")[0];
     try {
@@ -234,7 +203,6 @@ const CajaDiariaPage = () => {
 
         await db.dailyCashes.update(cash.id, updatedCash);
 
-        // Actualizar el estado local
         setDailyCashes((prev) =>
           prev.map((dc) => (dc.id === cash.id ? updatedCash : dc))
         );
@@ -254,18 +222,16 @@ const CajaDiariaPage = () => {
     }
   };
 
-  // Luego puedes usar esta función en tus otros efectos y funciones
   useEffect(() => {
     const checkMidnightAndClose = () => {
       const now = new Date();
-      // Verificar solo los primeros 5 minutos de cada hora para reducir ejecuciones
       if (now.getHours() === 0 && now.getMinutes() < 5) {
         checkAndCloseOldCashes();
       }
     };
 
-    const interval = setInterval(checkMidnightAndClose, 5 * 60 * 1000); // Verificar cada 5 minutos
-    checkMidnightAndClose(); // Ejecutar inmediatamente al montar
+    const interval = setInterval(checkMidnightAndClose, 5 * 60 * 1000);
+    checkMidnightAndClose();
 
     return () => clearInterval(interval);
   }, []);
@@ -413,7 +379,6 @@ const CajaDiariaPage = () => {
         };
       }
 
-      // Usamos un Set para evitar duplicados
       const processedMovementIds = new Set();
 
       movements.forEach((movement) => {
@@ -422,7 +387,7 @@ const CajaDiariaPage = () => {
 
         summary[date].movements.push(movement);
 
-        const amount = Number(movement.amount) || 0; // Asegura que es número
+        const amount = Number(movement.amount) || 0;
 
         if (movement.type === "INGRESO") {
           summary[date].ingresos += amount;
@@ -559,8 +524,6 @@ const CajaDiariaPage = () => {
     setPaymentMethods((prev) => {
       const updated = [...prev];
       updated[index].amount = amount;
-
-      // Actualiza el monto total automáticamente
       const newTotal = updated.reduce((sum, m) => sum + (m.amount || 0), 0);
       setAmount(newTotal.toString());
 
@@ -581,7 +544,7 @@ const CajaDiariaPage = () => {
         ...prev,
         {
           method: availableMethod.value as PaymentMethod,
-          amount: 0, // Inicializa en 0 en lugar de distribuir
+          amount: 0,
         },
       ];
     });
@@ -593,7 +556,6 @@ const CajaDiariaPage = () => {
       const updated = [...prev];
       updated.splice(index, 1);
 
-      // Si queda un solo método, le asignamos el total
       if (updated.length === 1) {
         const totalAmount = parseFloat(amount) || 0;
         updated[0].amount = totalAmount;
@@ -603,64 +565,9 @@ const CajaDiariaPage = () => {
     });
   };
   const formatInputValue = (value: number) => {
-    // Si el valor es 0, retorna cadena vacía para mejor experiencia de usuario
     return value === 0 ? "" : value.toString();
   };
 
-  //omitido
-  // const handleDeleteMovement = async () => {
-
-  //   if (!movementToDelete) return;
-
-  //   try {
-
-  //     const allCashes = await db.dailyCashes.toArray();
-  //     const cashWithMovement = allCashes.find((cash) =>
-  //       cash.movements.some((m) => m.id === movementToDelete.id)
-  //     );
-
-  //     if (!cashWithMovement) {
-  //       showNotification("No se encontró la caja del movimiento", "error");
-  //       return;
-  //     }
-
-  //     const updatedMovements = cashWithMovement.movements.filter(
-  //       (m) => m.id !== movementToDelete.id
-  //     );
-
-  //     const updatedCash = {
-  //       ...cashWithMovement,
-  //       movements: updatedMovements,
-  //       totalIncome:
-  //         movementToDelete.type === "INGRESO"
-  //           ? (cashWithMovement.totalIncome || 0) - movementToDelete.amount
-  //           : cashWithMovement.totalIncome,
-  //       totalExpense:
-  //         movementToDelete.type === "EGRESO"
-  //           ? (cashWithMovement.totalExpense || 0) - movementToDelete.amount
-  //           : cashWithMovement.totalExpense,
-  //     };
-
-  //     await db.dailyCashes.update(cashWithMovement.id, updatedCash);
-  //     setDailyCashes((prev) =>
-  //       prev.map((dc) => (dc.id === cashWithMovement.id ? updatedCash : dc))
-  //     );
-
-  //     if (currentDailyCash && currentDailyCash.id === cashWithMovement.id) {
-  //       setCurrentDailyCash(updatedCash);
-  //     }
-
-  //     setSelectedDayMovements(updatedMovements);
-  //     setFilterType("TODOS");
-  //     setFilterPaymentMethod("TODOS");
-
-  //     setIsConfirmModalOpen(false);
-  //     showNotification("Movimiento eliminado correctamente", "success");
-  //   } catch (error) {
-  //     console.error("Error al eliminar movimiento:", error);
-  //     showNotification("Error al eliminar movimiento", "error");
-  //   }
-  // };
   useEffect(() => {
     const fetchSuppliers = async () => {
       const allSuppliers = await db.suppliers.toArray();
@@ -673,18 +580,15 @@ const CajaDiariaPage = () => {
     const fetchData = async () => {
       try {
         const storedDailyCashes = await db.dailyCashes.toArray();
-
-        // Limpia los datos si es necesario
         const cleanedCashes = storedDailyCashes.map((cash) => ({
           ...cash,
           movements: cash.movements.map((m) => ({
             ...m,
-            amount: Number(m.amount) || 0, // Asegura que amount sea número
+            amount: Number(m.amount) || 0,
           })),
         }));
 
         setDailyCashes(cleanedCashes);
-        // Resto del código...
       } catch (error) {
         console.error("Error al cargar cajas diarias:", error);
         showNotification("Error al cargar cajas diarias", "error");
@@ -711,7 +615,6 @@ const CajaDiariaPage = () => {
         return acc;
       }
 
-      // Para movimientos no agrupables (egresos, etc.)
       acc[movement.id] = movement;
       return acc;
     }, {} as Record<number, DailyCashMovement>);
@@ -866,13 +769,13 @@ const CajaDiariaPage = () => {
                           ))}
                         </div>
                       ) : movement.productName ? (
-                        <span>
+                        <div className="flex justify-between">
                           <span className="font-semibold">
                             {movement.productName}
                           </span>{" "}
                           ×{movement.quantity} {""}
                           {movement.unit}
-                        </span>
+                        </div>
                       ) : (
                         "-"
                       )}
@@ -1108,26 +1011,6 @@ const CajaDiariaPage = () => {
                               openDetailModal(day.movements);
                             }}
                           />
-                          {/* omitido */}
-                          {/* <Button
-                            icon={<Trash size={20} />}
-                            colorText="text-gray_b"
-                            colorTextHover="hover:text-white"
-                            colorBg="bg-transparent"
-                            colorBgHover="hover:bg-red-500"
-                            px="px-1"
-                            py="py-1"
-                            minwidth="min-w-0"
-                            onClick={() => {
-                              const cashToDelete = dailyCashes.find(
-                                (dc) => dc.date === day.date
-                              );
-                              if (cashToDelete) {
-                                setDailyCashToDelete(cashToDelete);
-                                setIsDeleteCashModalOpen(true);
-                              }
-                            }}
-                          /> */}
                         </td>
                       </tr>
                     ))
@@ -1342,47 +1225,6 @@ const CajaDiariaPage = () => {
             />
           </div>
         </Modal>
-        {/* omitido */}
-        {/* <Modal
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          title="Eliminar Movimiento"
-          buttons={
-            <>
-              <Button
-                text="Eliminar"
-                colorText="text-white"
-                colorTextHover="text-white"
-                colorBg="bg-red-500"
-                colorBgHover="hover:bg-red-700"
-                onClick={handleDeleteMovement}
-              />
-              <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
-                onClick={() => setIsConfirmModalOpen(false)}
-              />
-            </>
-          }
-        >
-          <p className="text-gray_m dark:text-white">
-            ¿Está seguro de que desea eliminar este movimiento?
-          </p>
-        </Modal> */}
-        {/* <Modal
-          isOpen={isDeleteCashModalOpen}
-          onClose={() => setIsDeleteCashModalOpen(false)}
-          title="Eliminar Caja"
-          onConfirm={deleteDailyCash}
-        >
-          <p className="text-gray_m dark:text-white">
-            ¿Está seguro de que desea eliminar esta caja? Esta acción no se
-            puede deshacer.
-          </p>
-        </Modal> */}
 
         <Notification
           isOpen={isNotificationOpen}
