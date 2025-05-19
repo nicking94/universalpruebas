@@ -34,7 +34,7 @@ class MyDatabase extends Dexie {
 
   constructor() {
     super("MyDatabase");
-    this.version(5).stores({
+    this.version(6).stores({
       theme: "id",
       products: "++id, name, barcode, stock",
       users: "id, username",
@@ -48,6 +48,7 @@ class MyDatabase extends Dexie {
       suppliers: "++id, companyName, lastVisit, nextVisit, createdAt",
       supplierProducts: "[supplierId+productId], supplierId, productId",
       appState: "id",
+      trialPeriods: "++id, firstAccessDate, userId",
     });
   }
 }

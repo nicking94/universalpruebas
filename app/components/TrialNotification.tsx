@@ -40,14 +40,22 @@ const TrialNotification = () => {
   if (daysLeft === null) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-md shadow-md z-50">
+    <div
+      className={`animate-pulse fixed top-7 left-1/2 text-md px-10 shadow-sm z-50 ${
+        daysLeft > 4
+          ? "bg-green-100 text-gray_b shadow-green-200"
+          : daysLeft >= 1 && daysLeft <= 4
+          ? "bg-yellow-100 text-gray_b shadow-yellow-200"
+          : "bg-red-500 text-white shadow-red-300"
+      }`}
+    >
       {daysLeft > 0 ? (
-        <p>
+        <p className="italic">
           Días restantes de prueba:{" "}
           <span className="font-bold">{daysLeft}</span>
         </p>
       ) : (
-        <p className="text-red-600 font-bold">Periodo de prueba expirado</p>
+        <p className="font-bold">Periodo de prueba terminado</p>
       )}
     </div>
   );

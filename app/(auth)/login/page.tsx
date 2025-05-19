@@ -51,15 +51,14 @@ const LoginPage = () => {
         .equals(userId)
         .first();
 
-      if (!trialRecord) {
-        await db.trialPeriods.add({
+      if (!trialRecord || process.env.NODE_ENV === "development") {
+        await db.trialPeriods.put({
           id: 1,
           firstAccessDate: new Date(),
           userId: userId,
         });
         return true;
       }
-
       const firstAccess = new Date(trialRecord.firstAccessDate);
       const now = new Date();
       const diffInMs = now.getTime() - firstAccess.getTime();
@@ -88,6 +87,12 @@ const LoginPage = () => {
     }
 
     if (data.username === TRIAL_CREDENTIALS.username) {
+      await db.trialPeriods.put({
+        id: 1,
+        firstAccessDate: new Date(),
+        userId: user.id,
+      });
+
       const isTrialValid = await checkTrialPeriod(user.id);
 
       if (!isTrialValid) {

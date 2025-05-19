@@ -896,6 +896,22 @@ const CajaDiariaPage = () => {
       </Modal>
     );
   };
+
+  useEffect(() => {
+    const checkInitialCashStatus = async () => {
+      await checkAndCloseOldCashes();
+      const today = new Date().toISOString().split("T")[0];
+      const dailyCash = await db.dailyCashes.get({ date: today });
+
+      if (!dailyCash) {
+        setIsOpenCashModal(true);
+      } else {
+        setCurrentDailyCash(dailyCash);
+      }
+    };
+
+    checkInitialCashStatus();
+  }, []);
   return (
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)] flex flex-col justify-between ">

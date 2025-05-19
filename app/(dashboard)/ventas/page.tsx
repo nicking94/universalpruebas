@@ -22,6 +22,8 @@ import Pagination from "@/app/components/Pagination";
 import Select, { SingleValue } from "react-select";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
 import { formatCurrency } from "@/app/lib/utils/utils";
+import { ensureCashIsOpen } from "@/app/lib/utils/cash";
+import { useRouter } from "next/navigation";
 
 const VentasPage = () => {
   const currentYear = new Date().getFullYear();
@@ -36,7 +38,7 @@ const VentasPage = () => {
     barcode: "",
     manualAmount: 0,
   });
-
+  const router = useRouter();
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -61,6 +63,7 @@ const VentasPage = () => {
   } | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [shouldRedirectToCash, setShouldRedirectToCash] = useState(false);
 
   const unitOptions: UnitOption[] = [
     { value: "Unid.", label: "Unidad" },
@@ -136,6 +139,10 @@ const VentasPage = () => {
     },
     [calculatePrice]
   );
+  const checkCashStatus = async () => {
+    const { needsRedirect } = await ensureCashIsOpen();
+    return needsRedirect;
+  };
   const updateStockAfterSale = (
     productId: number,
     soldQuantity: number,
@@ -544,11 +551,29 @@ const VentasPage = () => {
       };
     });
   };
-  const handleAddSale = () => {
+  const handleAddSale = async () => {
+    const needsRedirect = await checkCashStatus();
+
+    if (needsRedirect) {
+      setShouldRedirectToCash(true);
+
+      return;
+    }
+
     setIsOpenModal(true);
   };
 
   const handleConfirmAddSale = async () => {
+    const needsRedirect = await checkCashStatus();
+
+    if (needsRedirect) {
+      setShouldRedirectToCash(true);
+      showNotification(
+        "Debes abrir la caja primero para realizar ventas",
+        "error"
+      );
+      return;
+    }
     const totalPaymentMethods = newSale.paymentMethods.reduce(
       (sum, method) => sum + method.amount,
       0
@@ -955,6 +980,11 @@ const VentasPage = () => {
   for (let i = 1; i <= Math.ceil(filteredSales.length / salesPerPage); i++) {
     pageNumbers.push(i);
   }
+  useEffect(() => {
+    if (shouldRedirectToCash) {
+      router.push("/caja-diaria");
+    }
+  }, [shouldRedirectToCash]);
 
   return (
     <ProtectedRoute>
