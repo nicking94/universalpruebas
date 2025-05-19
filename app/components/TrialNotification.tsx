@@ -93,7 +93,7 @@ const TrialNotification = () => {
 
   return (
     <div
-      className={`fixed top-7 left-1/2 transform -translate-x-1/2 px-6 py-2 rounded-md shadow-md z-50 text-sm font-medium ${
+      className={`fixed sm:top-7 lg:top-7 sm:left-[70vw] lg:left-1/2 transform -translate-x-1/2 px-6 py-2 rounded-md shadow-md z-50 text-sm font-medium ${
         daysLeft > 4
           ? "bg-green-100 text-green-800"
           : daysLeft > 1
