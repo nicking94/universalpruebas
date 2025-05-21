@@ -15,6 +15,8 @@ const SessionChecker = () => {
       const user = await db.users.get(auth.userId);
       if (!user) return;
 
+      const now = new Date();
+
       if (user.username === TRIAL_CREDENTIALS.username) {
         const trialRecord = await db.trialPeriods
           .where("userId")
@@ -23,7 +25,14 @@ const SessionChecker = () => {
 
         if (trialRecord) {
           const firstAccess = new Date(trialRecord.firstAccessDate);
-          const now = new Date();
+          if (isNaN(firstAccess.getTime())) {
+            await db.trialPeriods.put({
+              userId: auth.userId,
+              firstAccessDate: now,
+            });
+            return;
+          }
+
           const diffInMs = now.getTime() - firstAccess.getTime();
           const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 
@@ -32,10 +41,15 @@ const SessionChecker = () => {
             router.push("/login?expired=true");
             return;
           }
+        } else {
+          await db.trialPeriods.put({
+            userId: auth.userId,
+            firstAccessDate: now,
+          });
         }
       }
 
-      await db.appState.put({ id: 1, lastActiveDate: new Date() });
+      await db.appState.put({ id: 1, lastActiveDate: now });
     };
 
     checkSession();

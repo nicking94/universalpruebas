@@ -1,19 +1,36 @@
 "use client";
-import { redirect } from "next/navigation";
 import { useEffect } from "react";
-import { clearBrowserCache } from "./lib/utils/cacheUtils";
+import { useRouter } from "next/navigation";
+import { checkVersionAndClean } from "./lib/utils/cacheUtils";
 
 export default function Home() {
+  const router = useRouter();
+  const APP_VERSION = "1.4";
+
   useEffect(() => {
-    const version = "1.3";
+    const initializeApp = async () => {
+      try {
+        const versionChanged = await checkVersionAndClean(APP_VERSION);
 
-    if (localStorage.getItem("appVersion") !== version) {
-      localStorage.setItem("appVersion", version);
-      clearBrowserCache().then(() => {});
-    } else {
-      redirect("/login");
-    }
-  }, []);
+        if (versionChanged) {
+          setTimeout(() => {
+            router.replace("/login");
+          }, 500);
+        } else {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+        router.replace("/login");
+      }
+    };
 
-  return null;
+    initializeApp();
+  }, [router]);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <p>Cargando aplicación...</p>
+    </div>
+  );
 }

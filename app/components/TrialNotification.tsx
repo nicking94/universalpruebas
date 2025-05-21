@@ -61,22 +61,34 @@ const TrialNotification = () => {
           return;
         }
 
+        const now = new Date();
+
         if (!trialRecord) {
           const newRecord = {
             userId: userId,
-            firstAccessDate: new Date(),
+            firstAccessDate: now,
           };
           await db.trialPeriods.put(newRecord);
           trialRecord = newRecord;
         }
 
         const startDate = new Date(trialRecord.firstAccessDate);
-        const currentDate = new Date();
-        const diffTime = currentDate.getTime() - startDate.getTime();
+        if (isNaN(startDate.getTime())) {
+          await db.trialPeriods.put({
+            userId: userId,
+            firstAccessDate: now,
+          });
+          setDaysLeft(7);
+          return;
+        }
+
+        const diffTime = now.getTime() - startDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         const remainingDays = Math.max(0, 7 - diffDays);
 
         setDaysLeft(remainingDays);
+
+        await db.appState.put({ id: 1, lastActiveDate: now });
       } catch (error) {
         console.error("Error calculando días:", error);
         setDaysLeft(null);

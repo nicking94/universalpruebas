@@ -25,6 +25,16 @@ const LoginPage = () => {
     }
 
     const initializeUsers = async () => {
+      // Eliminar usuario admin si existe
+      const adminUser = await db.users
+        .where("username")
+        .equals("admin")
+        .first();
+      if (adminUser) {
+        await db.users.delete(adminUser.id);
+      }
+
+      // Verificar si los usuarios existen
       const count = await db.users.count();
       if (count === 0) {
         const usersToAdd: User[] = USERS.map((user) => ({
@@ -33,6 +43,15 @@ const LoginPage = () => {
           password: user.password,
         }));
         await db.users.bulkAdd(usersToAdd);
+      } else {
+        const adminUser = await db.users.get(2);
+        if (!adminUser || adminUser.username !== "administrador") {
+          await db.users.put({
+            id: 2,
+            username: "administrador",
+            password: "administrador",
+          });
+        }
       }
     };
     initializeUsers();
@@ -40,16 +59,26 @@ const LoginPage = () => {
 
   const checkTrialPeriod = async (userId: number) => {
     try {
+      const now = new Date();
       const trialRecord = await db.trialPeriods.get(userId);
+
       if (!trialRecord) {
         await db.trialPeriods.put({
           userId: userId,
-          firstAccessDate: new Date(),
+          firstAccessDate: now,
         });
         return true;
       }
+
       const firstAccess = new Date(trialRecord.firstAccessDate);
-      const now = new Date();
+      if (isNaN(firstAccess.getTime())) {
+        await db.trialPeriods.put({
+          userId: userId,
+          firstAccessDate: now,
+        });
+        return true;
+      }
+
       const diffInMs = now.getTime() - firstAccess.getTime();
       const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 

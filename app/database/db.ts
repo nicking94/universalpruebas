@@ -31,22 +31,33 @@ class MyDatabase extends Dexie {
 
   constructor() {
     super("MyDatabase");
-    this.version(8).stores({
-      theme: "id",
-      products: "++id, name, barcode, stock",
-      users: "id, username",
-      auth: "id",
-      sales:
-        "++id, date, *paymentMethod, customerName, customerId, paid, credit",
-      dailyCashes: "++id, &date, closed",
-      dailyCashMovements: "++id, dailyCashId, date, type",
-      payments: "++id, saleId, date, method",
-      customers: "&id, name",
-      suppliers: "++id, companyName, lastVisit, nextVisit, createdAt",
-      supplierProducts: "[supplierId+productId], supplierId, productId",
-      appState: "id",
-      trialPeriods: "&userId, firstAccessDate",
-    });
+    this.version(9)
+      .stores({
+        theme: "id",
+        products: "++id, name, barcode, stock",
+        users: "id, username",
+        auth: "id",
+        sales:
+          "++id, date, *paymentMethod, customerName, customerId, paid, credit",
+        dailyCashes: "++id, &date, closed",
+        dailyCashMovements: "++id, dailyCashId, date, type",
+        payments: "++id, saleId, date, method",
+        customers: "&id, name",
+        suppliers: "++id, companyName, lastVisit, nextVisit, createdAt",
+        supplierProducts: "[supplierId+productId], supplierId, productId",
+        appState: "id",
+        trialPeriods: "&userId, firstAccessDate",
+      })
+      .upgrade(async (trans) => {
+        const adminUser = await trans
+          .table("users")
+          .where("username")
+          .equals("admin")
+          .first();
+        if (adminUser) {
+          await trans.table("users").delete(adminUser.id);
+        }
+      });
   }
 }
 
