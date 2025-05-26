@@ -90,6 +90,7 @@ const LoginPage = () => {
   };
 
   const handleLogin = async (data: AuthData) => {
+    // Verificar si es el usuario demo
     if (
       data.username === TRIAL_CREDENTIALS.username &&
       data.password === TRIAL_CREDENTIALS.password
@@ -98,6 +99,15 @@ const LoginPage = () => {
         .where("username")
         .equals(TRIAL_CREDENTIALS.username)
         .first();
+
+      // Si no existe el usuario demo, rechazar el login
+      if (!demoUser) {
+        setNotificationMessage("El periodo de prueba ha finalizado");
+        setNotificationType("error");
+        setIsOpenNotification(true);
+        setTimeout(() => setIsOpenNotification(false), 2000);
+        return;
+      }
 
       if (demoUser) {
         const trialRecord = await db.trialPeriods.get(demoUser.id);
@@ -143,7 +153,6 @@ const LoginPage = () => {
           userId: user.id,
           firstAccessDate: new Date(),
         });
-        console.log("registro de prueba inicial creado");
       }
 
       const isTrialValid = await checkTrialPeriod(user.id);
@@ -170,8 +179,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-blue-100 ">
+    <div className="min-h-screen flex bg-blue-100">
       <AuthForm type="login" onSubmit={handleLogin} />
+
       <Notification
         isOpen={isOpenNotification}
         message={notificationMessage}
