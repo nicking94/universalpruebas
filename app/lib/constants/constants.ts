@@ -1,4 +1,3 @@
-// lib/constants/constants.ts
 export const USERS = [
   {
     username: process.env.NEXT_PUBLIC_LOGIN_USERNAME_2 || "demo",

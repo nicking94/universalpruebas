@@ -78,18 +78,17 @@ const VentasPage = () => {
     const quantity = product.quantity;
     const unit = product.unit;
 
-    // Convertir todo a la unidad base para cálculos precisos
     let quantityInBaseUnit: number;
 
     switch (unit) {
       case "gr":
-        quantityInBaseUnit = quantity / 1000; // Convertir a Kg
+        quantityInBaseUnit = quantity / 1000;
         break;
       case "Kg":
         quantityInBaseUnit = quantity;
         break;
       case "ml":
-        quantityInBaseUnit = quantity / 1000; // Convertir a L
+        quantityInBaseUnit = quantity / 1000;
         break;
       case "L":
         quantityInBaseUnit = quantity;
@@ -288,9 +287,7 @@ const VentasPage = () => {
         const movement: DailyCashMovement = {
           id: Date.now(),
           amount: totalSaleAmount,
-          description: `Venta de ${sale.products
-            .map((p) => p.name)
-            .join(", ")} `,
+          description: "Venta",
           items: sale.products.map((p) => ({
             productId: p.id,
             productName: p.name,
@@ -727,11 +724,6 @@ const VentasPage = () => {
       setSaleToDelete(null);
     }
   };
-  // omitido
-  // const handleOpenDeleteConfirmation = (sale: Sale) => {
-  //   setSaleToDelete(sale);
-  //   setIsConfirmModalOpen(true);
-  // };
   useEffect(() => {
     if (newSale.paymentMethods.length === 1) {
       setNewSale((prev) => ({

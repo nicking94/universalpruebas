@@ -100,8 +100,6 @@ const Metrics = () => {
     } else if (period === "day" && currentDailyCash) {
       filteredCashes = [currentDailyCash];
     }
-
-    // Creamos un mapa para agrupar productos por ID (más preciso que por nombre)
     const productMap = new Map<
       number,
       {
@@ -116,7 +114,6 @@ const Metrics = () => {
     filteredCashes.forEach((cash) => {
       cash.movements.forEach((movement) => {
         if (movement.type === "INGRESO" && movement.items) {
-          // Procesamos cada item de la venta individualmente
           movement.items.forEach((item) => {
             const existing = productMap.get(item.productId) || {
               name: item.productName,
@@ -126,15 +123,13 @@ const Metrics = () => {
               unit: item.unit || "Unid.",
             };
 
-            // Convertimos las cantidades a la unidad base para comparación
             let quantityToAdd = item.quantity || 0;
             if (item.unit === "gr") {
-              quantityToAdd = quantityToAdd / 1000; // Convertir a kg
+              quantityToAdd = quantityToAdd / 1000;
             } else if (item.unit === "ml") {
-              quantityToAdd = quantityToAdd / 1000; // Convertir a litros
+              quantityToAdd = quantityToAdd / 1000;
             }
 
-            // Calculamos el profit basado en el precio y costo
             const profitPerUnit =
               (item.price || 0) -
               (movement.costPrice || 0) / (movement.quantity || 1);
@@ -153,19 +148,15 @@ const Metrics = () => {
 
     const allProducts = Array.from(productMap.values())
       .map(({ name, quantity, amount, profit, unit }) => {
-        // Convertimos a la unidad más adecuada para mostrar
         let displayQuantity = quantity;
         let displayUnit = unit;
 
-        // Solo convertimos si el usuario seleccionó "kg" o "litro" en el filtro
         if (unit === "kg" && displayUnit === "gr") {
-          // Convertimos gramos a kg solo si es 1000g o más
           if (quantity >= 1000) {
             displayQuantity = quantity / 1000;
             displayUnit = "Kg";
           }
         } else if (unit === "litro" && displayUnit === "ml") {
-          // Convertimos ml a L solo si es 1000ml o más
           if (quantity >= 1000) {
             displayQuantity = quantity / 1000;
             displayUnit = "L";
@@ -175,16 +166,15 @@ const Metrics = () => {
         return {
           name,
           quantity,
-          displayQuantity, // Cantidad convertida para mostrar
-          displayUnit, // Unidad convertida para mostrar
+          displayQuantity,
+          displayUnit,
           amount,
           profit,
-          originalUnit: unit, // Guardamos la unidad original
+          originalUnit: unit,
         };
       })
       .sort((a, b) => b.quantity - a.quantity);
 
-    // Filtramos según la unidad seleccionada
     const filteredProducts = allProducts.filter((product) => {
       if (unit === "unidad") return product.originalUnit === "Unid.";
       if (unit === "kg") return ["Kg", "gr"].includes(product.originalUnit);
@@ -192,20 +182,15 @@ const Metrics = () => {
       return true;
     });
 
-    // Función para formatear la cantidad mostrada
     const formatDisplayQuantity = (qty: number, unit: string) => {
-      // Para unidades, sin decimales
       if (unit === "Unid.") return qty.toString();
 
-      // Para gramos/ml, sin decimales
       if (unit === "gr" || unit === "ml") return qty.toString();
 
-      // Para kg/L, máximo 1 decimal
       const rounded = Math.round(qty * 10) / 10;
       return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
     };
 
-    // Retornamos los productos con la cantidad ya formateada
     return filteredProducts.slice(0, 5).map((product) => ({
       ...product,
       displayText: `${formatDisplayQuantity(
@@ -215,6 +200,7 @@ const Metrics = () => {
     }));
   };
 
+  // Modificar las funciones de reducción para manejar mejor los egresos
   const getMonthlySummary = () => {
     return dailyCashes
       .filter((cash) => {
@@ -225,26 +211,16 @@ const Metrics = () => {
         (acc, cash) => {
           const ingresos = cash.movements
             .filter((m) => m.type === "INGRESO")
-            .reduce((sum, m) => sum + m.amount, 0);
+            .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
 
           const egresos = cash.movements
             .filter((m) => m.type === "EGRESO")
-            .reduce((sum, m) => sum + m.amount, 0);
-
-          const ganancia = cash.movements
-            .filter((m) => m.type === "INGRESO")
-            .reduce((sum, m) => {
-              if (m.profit !== undefined) return sum + m.profit;
-              if (m.costPrice && m.sellPrice && m.quantity) {
-                return sum + (m.sellPrice - m.costPrice) * m.quantity;
-              }
-              return sum;
-            }, 0);
+            .reduce((sum, m) => sum + Math.abs(Number(m.amount)) || 0, 0);
 
           return {
             ingresos: acc.ingresos + ingresos,
             egresos: acc.egresos + egresos,
-            ganancia: acc.ganancia + ganancia,
+            ganancia: acc.ingresos + ingresos - (acc.egresos + egresos),
           };
         },
         { ingresos: 0, egresos: 0, ganancia: 0 }
@@ -298,9 +274,10 @@ const Metrics = () => {
         const ingresos = dailyCash.movements
           .filter((m) => m.type === "INGRESO")
           .reduce((sum, m) => sum + m.amount, 0);
+
         const egresos = dailyCash.movements
           .filter((m) => m.type === "EGRESO")
-          .reduce((sum, m) => sum + m.amount, 0);
+          .reduce((sum, m) => sum + Math.abs(Number(m.amount)) || 0, 0);
         const ganancia = dailyCash.movements
           .filter((m) => m.type === "INGRESO")
           .reduce((sum, m) => {
@@ -373,14 +350,14 @@ const Metrics = () => {
     datasets: [
       {
         label: "Ingresos",
-        data: dailyMonthData.map((data) => data.ingresos),
+        data: dailyMonthData.map((data) => data.ingresos || 0),
         backgroundColor: "rgba(75, 192, 192, 0.6)",
         borderColor: "rgba(75, 192, 192, 1)",
         borderWidth: 1,
       },
       {
         label: "Egresos",
-        data: dailyMonthData.map((data) => data.egresos),
+        data: dailyMonthData.map((data) => data.egresos || 0),
         backgroundColor: "rgba(255, 99, 132, 0.6)",
         borderColor: "rgba(255, 99, 132, 1)",
         borderWidth: 1,
@@ -450,8 +427,8 @@ const Metrics = () => {
   return (
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Métricas</h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
+          <h1 className="text-xl 2xl:text-2xl font-semibold ">Métricas</h1>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2">
