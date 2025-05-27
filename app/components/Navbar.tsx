@@ -13,7 +13,7 @@ const Navbar: React.FC<NavbarProps> = ({
   const { isSidebarOpen } = useSidebar();
 
   return (
-    <header className="bg-white dark:bg-black text-gray_b dark:text-white w-full px-10 py-5 relative shadow-sm shadow-gray_xl dark:shadow-gray_m transition-all duration-200">
+    <header className=" bg-white dark:bg-black text-gray_b dark:text-white w-full px-10 py-5 relative shadow-sm shadow-gray_xl dark:shadow-gray_m transition-all duration-200">
       <nav
         className={`${
           isSidebarOpen ? "ml-64" : "ml-30"
