@@ -24,15 +24,17 @@ const Button: React.FC<ButtonProps> = ({
     if (!hotkey) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === hotkey && !disabled) {
+      if (["F1", "F2", "F3", "F4", "F5"].includes(e.key)) {
         e.preventDefault();
+      }
+      if (e.key === hotkey && !disabled) {
         onClick?.();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [hotkey, onClick, disabled]);
 
