@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect } from "react";
+import React from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { ButtonProps } from "../lib/types/types";
 
 const Button: React.FC<ButtonProps> = ({
@@ -20,30 +21,34 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   hotkey,
 }) => {
-  useEffect(() => {
-    if (!hotkey) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (["F1", "F2", "F3", "F4", "F5"].includes(e.key)) {
-        e.preventDefault();
+  // Configuración del hotkey
+  useHotkeys(
+    hotkey || "",
+    (event) => {
+      event.preventDefault();
+      if (!disabled && onClick) {
+        onClick();
       }
-      if (e.key === hotkey && !disabled) {
-        onClick?.();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [hotkey, onClick, disabled]);
+    },
+    {
+      enabled: !disabled && !!hotkey,
+      enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"],
+      preventDefault: true,
+      keydown: true,
+      keyup: false,
+    },
+    [disabled, onClick] // Dependencias
+  );
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={` ${colorText} ${colorTextHover} ${width} ${minwidth} ${height} ${px} ${py} ${colorBg} ${colorBgHover} cursor-pointer flex items-center justify-center gap-4 rounded transition-all duration-200`}
+      tabIndex={0}
+      className={`${colorText} ${colorTextHover} ${width} ${minwidth} ${height} ${px} ${py} ${colorBg} ${colorBgHover} ${
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      } flex items-center justify-center gap-4 rounded transition-all duration-200`}
     >
       {icon && iconPosition === "left" && <span>{icon}</span>}
       {text && <span>{text}</span>}
