@@ -21,11 +21,12 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   hotkey,
 }) => {
-  // Configuración del hotkey
   useHotkeys(
     hotkey || "",
     (event) => {
       event.preventDefault();
+      event.stopPropagation();
+
       if (!disabled && onClick) {
         onClick();
       }
@@ -33,11 +34,14 @@ const Button: React.FC<ButtonProps> = ({
     {
       enabled: !disabled && !!hotkey,
       enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"],
+      enableOnContentEditable: true,
       preventDefault: true,
       keydown: true,
       keyup: false,
+      splitKey: "+", // Para combinar teclas (ej: "shift+f2")
+      description: text ? `Botón: ${text}` : undefined, // Para accesibilidad
     },
-    [disabled, onClick] // Dependencias
+    [disabled, onClick, hotkey] // Dependencias actualizadas
   );
 
   return (
@@ -46,6 +50,7 @@ const Button: React.FC<ButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       tabIndex={0}
+      aria-label={text}
       className={`${colorText} ${colorTextHover} ${width} ${minwidth} ${height} ${px} ${py} ${colorBg} ${colorBgHover} ${
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       } flex items-center justify-center gap-4 rounded transition-all duration-200`}
