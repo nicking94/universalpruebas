@@ -22,8 +22,12 @@ export default function AppLayout({
   };
 
   const handleCloseSession = async () => {
-    await db.auth.put({ id: 1, isAuthenticated: false });
-    router.push("/login");
+    try {
+      await db.auth.put({ id: 1, isAuthenticated: false, userId: undefined });
+      router.replace("/login");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
   };
 
   useEffect(() => {

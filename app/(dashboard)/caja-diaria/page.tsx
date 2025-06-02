@@ -21,8 +21,11 @@ import Select from "react-select";
 import Input from "@/app/components/Input";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import InputCash from "@/app/components/InputCash";
+import { useRubro } from "@/app/context/RubroContext";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 
 const CajaDiariaPage = () => {
+  const { rubro } = useRubro();
   const [dailyCashes, setDailyCashes] = useState<DailyCash[]>([]);
   const [currentDailyCash, setCurrentDailyCash] = useState<DailyCash | null>(
     null
@@ -610,7 +613,7 @@ const CajaDiariaPage = () => {
         }
         minheight="min-h-[23rem]"
       >
-        <div className="mb-4 grid grid-cols-2 gap-4">
+        <div className="mb-4 grid grid-cols-2 gap-2">
           <div className="bg-green-100 p-3 rounded-lg">
             <h3 className="font-semibold text-green-800">Total Ingresos</h3>
             <p className="text-xl font-bold text-green-800">
@@ -624,7 +627,7 @@ const CajaDiariaPage = () => {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray_b dark:text-white">
               Tipo
@@ -674,19 +677,20 @@ const CajaDiariaPage = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
                   Tipo
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Métodos de Pago
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
                   Producto
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
                   Descripción
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
+                  Métodos de Pago
+                </th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 capitalize tracking-wider">
                   Total
                 </th>
               </tr>
@@ -709,6 +713,54 @@ const CajaDiariaPage = () => {
                         {movement.type}
                       </span>
                     </td>
+
+                    <td className="px-4 py-2 text-sm text-gray-500">
+                      {Array.isArray(movement.items) &&
+                      movement.items.length > 0 ? (
+                        <div className="flex flex-col">
+                          {movement.items.map((item, i) => (
+                            <div key={i} className="flex justify-between">
+                              <span className="font-semibold">
+                                {getDisplayProductName(
+                                  {
+                                    name: item.productName,
+                                    size: item.size,
+                                    color: item.color,
+                                    rubro: rubro,
+                                  },
+                                  rubro,
+                                  true
+                                )}
+                              </span>{" "}
+                              ×{item.quantity} {""}
+                              {item.unit}
+                            </div>
+                          ))}
+                        </div>
+                      ) : movement.productName ? (
+                        <div className="flex justify-between">
+                          <span className="font-semibold">
+                            {getDisplayProductName(
+                              {
+                                name: movement.productName,
+                                size: movement.size,
+                                color: movement.color,
+                                rubro: rubro,
+                              },
+                              rubro,
+                              true
+                            )}
+                          </span>{" "}
+                          ×{movement.quantity} {""}
+                          {movement.unit}
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-500">
+                      {movement.description}
+                    </td>
                     <td className="px-4 py-2 text-sm text-gray-500">
                       {movement.combinedPaymentMethods ? (
                         <div className="flex flex-col">
@@ -723,35 +775,6 @@ const CajaDiariaPage = () => {
                           movement.amount
                         )}`
                       )}
-                    </td>
-                    <td className=" px-4 py-2 text-sm text-gray-500">
-                      {Array.isArray(movement.items) &&
-                      movement.items.length > 0 ? (
-                        <div className="flex flex-col">
-                          {movement.items.map((item, i) => (
-                            <div key={i} className="flex justify-between">
-                              <span className="font-semibold">
-                                {item.productName}
-                              </span>{" "}
-                              ×{item.quantity} {""}
-                              {item.unit}
-                            </div>
-                          ))}
-                        </div>
-                      ) : movement.productName ? (
-                        <div className="flex justify-between">
-                          <span className="font-semibold">
-                            {movement.productName}
-                          </span>{" "}
-                          ×{movement.quantity} {""}
-                          {movement.unit}
-                        </div>
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
-                      {movement.description}
                     </td>
 
                     <td className="px-4 py-2 text-sm text-center font-medium text-green-600">
@@ -890,7 +913,7 @@ const CajaDiariaPage = () => {
             )}
 
             <div className="flex justify-between mb-2">
-              <div className="flex gap-4">
+              <div className="flex gap-2">
                 <Select
                   options={monthOptions}
                   value={monthOptions.find((m) => m.value === selectedMonth)}
@@ -971,7 +994,7 @@ const CajaDiariaPage = () => {
                             {day.closed ? "Cerrada" : "Abierta"}
                           </span>
                         </td>
-                        <td className="px-4 py-2 flex justify-center items-center gap-4 border-x border-gray_xl">
+                        <td className="px-4 py-2 flex justify-center items-center gap-2 border-x border-gray_xl">
                           <Button
                             icon={<Info size={20} />}
                             colorText="text-gray_b"
@@ -1026,7 +1049,7 @@ const CajaDiariaPage = () => {
           title="Nuevo Movimiento"
           onConfirm={addMovement}
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <div className="w-full flex justify-between space-x-4">
               <div className="flex flex-col w-full">
                 <label className="block text-gray_m dark:text-white text-sm font-semibold">
@@ -1068,7 +1091,7 @@ const CajaDiariaPage = () => {
               {paymentMethods.map((method, index) => (
                 <div
                   key={index}
-                  className={`flex items-center gap-4 ${
+                  className={`flex items-center gap-2 ${
                     paymentMethods.length > 1 ? "space-y-6" : ""
                   }`}
                 >
@@ -1170,7 +1193,7 @@ const CajaDiariaPage = () => {
             </div>
           }
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <p className="text-gray_m dark:text-white">
               Para comenzar, ingrese el monto inicial en caja.
             </p>
@@ -1189,7 +1212,7 @@ const CajaDiariaPage = () => {
           title="Cierre de Caja"
           onConfirm={closeCash}
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <InputCash
               label="Monto Contado en Efectivo"
               value={Number(actualCashCount) || 0}

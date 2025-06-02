@@ -2,7 +2,7 @@
 
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import { db } from "@/app/database/db";
-import { DailyCash } from "@/app/lib/types/types";
+import { DailyCash, Product, Rubro } from "@/app/lib/types/types";
 
 import {
   parseISO,
@@ -29,6 +29,8 @@ import {
 } from "chart.js";
 import { Bar, Pie, Line } from "react-chartjs-2";
 import { formatCurrency } from "@/app/lib/utils/currency";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import { useRubro } from "@/app/context/RubroContext";
 
 ChartJS.register(
   BarElement,
@@ -42,6 +44,8 @@ ChartJS.register(
 );
 
 const Metrics = () => {
+  const { rubro } = useRubro();
+  const [products, setProducts] = useState<Product[]>([]);
   const [monthlyRankingUnit, setMonthlyRankingUnit] = useState<
     "unidad" | "kg" | "litro"
   >("unidad");
@@ -74,17 +78,31 @@ const Metrics = () => {
 
     fetchData();
   }, []);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const response = await db.products.toArray();
+      setProducts(response);
+    };
+
+    fetchProducts();
+  }, []);
+  useEffect(() => {
+    if (rubro === "indumentaria") {
+      setMonthlyRankingUnit("unidad");
+      setYearlyRankingUnit("unidad");
+    }
+  }, [rubro]);
 
   const unitOptions = [
     { value: "unidad", label: "Unidad" },
     { value: "kg", label: "Kilogramo" },
     { value: "litro", label: "Litro" },
   ];
-
   const getProductMovements = (
-    period: "day" | "month" | "year",
+    period: "month" | "year",
     unit: "unidad" | "kg" | "litro"
   ) => {
+    const effectiveUnit = rubro === "indumentaria" ? "unidad" : unit;
     let filteredCashes = dailyCashes;
 
     if (period === "month") {
@@ -100,6 +118,7 @@ const Metrics = () => {
     } else if (period === "day" && currentDailyCash) {
       filteredCashes = [currentDailyCash];
     }
+
     const productMap = new Map<
       number,
       {
@@ -108,46 +127,57 @@ const Metrics = () => {
         amount: number;
         profit: number;
         unit: string;
+        rubro: Rubro;
       }
     >();
-
     filteredCashes.forEach((cash) => {
       cash.movements.forEach((movement) => {
         if (movement.type === "INGRESO" && movement.items) {
           movement.items.forEach((item) => {
-            const existing = productMap.get(item.productId) || {
-              name: item.productName,
-              quantity: 0,
-              amount: 0,
-              profit: 0,
-              unit: item.unit || "Unid.",
-            };
+            const product = products.find((p) => p.id === item.productId);
+            if (product && (rubro === "todos" || product.rubro === rubro)) {
+              const existing = productMap.get(item.productId) || {
+                name: item.productName,
+                quantity: 0,
+                amount: 0,
+                profit: 0,
+                unit: item.unit || "Unid.",
+                rubro: product.rubro,
+              };
 
-            let quantityToAdd = item.quantity || 0;
-            if (item.unit === "gr") {
-              quantityToAdd = quantityToAdd / 1000;
-            } else if (item.unit === "ml") {
-              quantityToAdd = quantityToAdd / 1000;
+              let quantityToAdd = item.quantity || 0;
+              if (item.unit === "gr" || item.unit === "ml") {
+                quantityToAdd = quantityToAdd / 1000;
+              }
+
+              const profitPerUnit =
+                (item.price || 0) -
+                (movement.costPrice || 0) / (movement.quantity || 1);
+
+              productMap.set(item.productId, {
+                name: existing.name,
+                quantity: existing.quantity + quantityToAdd,
+                amount: existing.amount + item.price * item.quantity,
+                profit: existing.profit + profitPerUnit * item.quantity,
+                unit: existing.unit,
+                rubro: existing.rubro,
+              });
             }
-
-            const profitPerUnit =
-              (item.price || 0) -
-              (movement.costPrice || 0) / (movement.quantity || 1);
-
-            productMap.set(item.productId, {
-              name: existing.name,
-              quantity: existing.quantity + quantityToAdd,
-              amount: existing.amount + item.price * item.quantity,
-              profit: existing.profit + profitPerUnit * item.quantity,
-              unit: existing.unit,
-            });
           });
         }
       });
     });
 
     const allProducts = Array.from(productMap.values())
-      .map(({ name, quantity, amount, profit, unit }) => {
+      .map(({ name, quantity, amount, profit, unit, rubro }) => {
+        // Crear objeto con la estructura que espera getDisplayProductName
+        const productInfo = {
+          name,
+          size: products.find((p) => p.name === name)?.size,
+          color: products.find((p) => p.name === name)?.color,
+          rubro,
+        };
+
         let displayQuantity = quantity;
         let displayUnit = unit;
 
@@ -164,7 +194,7 @@ const Metrics = () => {
         }
 
         return {
-          name,
+          name: getDisplayProductName(productInfo, rubro),
           quantity,
           displayQuantity,
           displayUnit,
@@ -176,9 +206,11 @@ const Metrics = () => {
       .sort((a, b) => b.quantity - a.quantity);
 
     const filteredProducts = allProducts.filter((product) => {
-      if (unit === "unidad") return product.originalUnit === "Unid.";
-      if (unit === "kg") return ["Kg", "gr"].includes(product.originalUnit);
-      if (unit === "litro") return ["L", "ml"].includes(product.originalUnit);
+      if (effectiveUnit === "unidad") return product.originalUnit === "Unid.";
+      if (effectiveUnit === "kg")
+        return ["Kg", "gr"].includes(product.originalUnit);
+      if (effectiveUnit === "litro")
+        return ["L", "ml"].includes(product.originalUnit);
       return true;
     });
 
@@ -210,7 +242,21 @@ const Metrics = () => {
         (acc, cash) => {
           const ingresos = cash.movements
             .filter((m) => m.type === "INGRESO")
-            .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+            .reduce((sum, m) => {
+              if (rubro === "todos") return sum + (Number(m.amount) || 0);
+
+              // Filtrar por rubro si no es "todos"
+              const itemsTotal =
+                m.items?.reduce((itemSum, item) => {
+                  const product = products.find((p) => p.id === item.productId);
+                  if (product && product.rubro === rubro) {
+                    return itemSum + item.price * item.quantity;
+                  }
+                  return itemSum;
+                }, 0) || 0;
+
+              return sum + itemsTotal;
+            }, 0);
 
           const egresos = cash.movements
             .filter((m) => m.type === "EGRESO")
@@ -219,13 +265,29 @@ const Metrics = () => {
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (m.profit !== undefined) {
-                return sum + m.profit;
+              if (rubro === "todos") {
+                if (m.profit !== undefined) return sum + m.profit;
+                const costPrice = m.costPrice || 0;
+                const sellPrice = m.sellPrice || 0;
+                const quantity = m.quantity || 0;
+                return sum + (sellPrice - costPrice) * quantity;
               }
-              const costPrice = m.costPrice || 0;
-              const sellPrice = m.sellPrice || 0;
-              const quantity = m.quantity || 0;
-              return sum + (sellPrice - costPrice) * quantity;
+              const itemsProfit =
+                m.items?.reduce((itemSum, item) => {
+                  const product = products.find((p) => p.id === item.productId);
+                  if (product && product.rubro === rubro) {
+                    const costPrice = m.costPrice || 0;
+                    const sellPrice = item.price || 0;
+                    const quantity = item.quantity || 0;
+                    return (
+                      itemSum +
+                      (sellPrice - costPrice / (m.quantity || 1)) * quantity
+                    );
+                  }
+                  return itemSum;
+                }, 0) || 0;
+
+              return sum + itemsProfit;
             }, 0);
 
           return {
@@ -247,20 +309,52 @@ const Metrics = () => {
         (acc, cash) => {
           const ingresos = cash.movements
             .filter((m) => m.type === "INGRESO")
-            .reduce((sum, m) => sum + m.amount, 0);
+            .reduce((sum, m) => {
+              if (rubro === "todos") return sum + m.amount;
+
+              const itemsTotal =
+                m.items?.reduce((itemSum, item) => {
+                  const product = products.find((p) => p.id === item.productId);
+                  if (product && product.rubro === rubro) {
+                    return itemSum + item.price * item.quantity;
+                  }
+                  return itemSum;
+                }, 0) || 0;
+
+              return sum + itemsTotal;
+            }, 0);
+
           const egresos = cash.movements
             .filter((m) => m.type === "EGRESO")
             .reduce((sum, m) => sum + m.amount, 0);
+
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (m.profit !== undefined) {
-                return sum + m.profit;
+              if (rubro === "todos") {
+                if (m.profit !== undefined) return sum + m.profit;
+                const costPrice = m.costPrice || 0;
+                const sellPrice = m.sellPrice || 0;
+                const quantity = m.quantity || 0;
+                return sum + (sellPrice - costPrice) * quantity;
               }
-              const costPrice = m.costPrice || 0;
-              const sellPrice = m.sellPrice || 0;
-              const quantity = m.quantity || 0;
-              return sum + (sellPrice - costPrice) * quantity;
+
+              const itemsProfit =
+                m.items?.reduce((itemSum, item) => {
+                  const product = products.find((p) => p.id === item.productId);
+                  if (product && product.rubro === rubro) {
+                    const costPrice = m.costPrice || 0;
+                    const sellPrice = item.price || 0;
+                    const quantity = item.quantity || 0;
+                    return (
+                      itemSum +
+                      (sellPrice - costPrice / (m.quantity || 1)) * quantity
+                    );
+                  }
+                  return itemSum;
+                }, 0) || 0;
+
+              return sum + itemsProfit;
             }, 0);
 
           return {
@@ -284,19 +378,53 @@ const Metrics = () => {
       if (dailyCash) {
         const ingresos = dailyCash.movements
           .filter((m) => m.type === "INGRESO")
-          .reduce((sum, m) => sum + m.amount, 0);
+          .reduce((sum, m) => {
+            if (rubro === "todos") return sum + m.amount;
+
+            // Filtrar por rubro si no es "todos"
+            const itemsTotal =
+              m.items?.reduce((itemSum, item) => {
+                const product = products.find((p) => p.id === item.productId);
+                if (product && product.rubro === rubro) {
+                  return itemSum + item.price * item.quantity;
+                }
+                return itemSum;
+              }, 0) || 0;
+
+            return sum + itemsTotal;
+          }, 0);
 
         const egresos = dailyCash.movements
           .filter((m) => m.type === "EGRESO")
           .reduce((sum, m) => sum + Math.abs(Number(m.amount)) || 0, 0);
+
         const ganancia = dailyCash.movements
           .filter((m) => m.type === "INGRESO")
           .reduce((sum, m) => {
-            if (m.profit !== undefined) return sum + m.profit;
-            const costPrice = m.costPrice || 0;
-            const sellPrice = m.sellPrice || 0;
-            const quantity = m.quantity || 0;
-            return sum + (sellPrice - costPrice) * quantity;
+            if (rubro === "todos") {
+              if (m.profit !== undefined) return sum + m.profit;
+              const costPrice = m.costPrice || 0;
+              const sellPrice = m.sellPrice || 0;
+              const quantity = m.quantity || 0;
+              return sum + (sellPrice - costPrice) * quantity;
+            }
+
+            const itemsProfit =
+              m.items?.reduce((itemSum, item) => {
+                const product = products.find((p) => p.id === item.productId);
+                if (product && product.rubro === rubro) {
+                  const costPrice = m.costPrice || 0;
+                  const sellPrice = item.price || 0;
+                  const quantity = item.quantity || 0;
+                  return (
+                    itemSum +
+                    (sellPrice - costPrice / (m.quantity || 1)) * quantity
+                  );
+                }
+                return itemSum;
+              }, 0) || 0;
+
+            return sum + itemsProfit;
           }, 0);
 
         return { date: format(day, "dd"), ingresos, egresos, ganancia };
@@ -317,21 +445,61 @@ const Metrics = () => {
           (acc, cash) => {
             const ingresos = cash.movements
               .filter((m) => m.type === "INGRESO")
-              .reduce((sum, m) => sum + m.amount, 0);
+              .reduce((sum, m) => {
+                if (rubro === "todos") return sum + m.amount;
+
+                // Filtrar ingresos por rubro
+                const itemsTotal =
+                  m.items?.reduce((itemSum, item) => {
+                    const product = products.find(
+                      (p) => p.id === item.productId
+                    );
+                    if (product && product.rubro === rubro) {
+                      return itemSum + item.price * item.quantity;
+                    }
+                    return itemSum;
+                  }, 0) || 0;
+
+                return sum + itemsTotal;
+              }, 0);
+
             const egresos = cash.movements
               .filter((m) => m.type === "EGRESO")
-              .reduce((sum, m) => sum + m.amount, 0);
+              .reduce((sum, m) => sum + Math.abs(Number(m.amount)) || 0, 0);
+
             const ganancia = cash.movements
               .filter((m) => m.type === "INGRESO")
               .reduce((sum, m) => {
-                if (m.sellPrice && m.costPrice && m.quantity) {
-                  return (
-                    sum +
-                    (Number(m.sellPrice) - Number(m.costPrice)) *
-                      Number(m.quantity)
-                  );
+                if (rubro === "todos") {
+                  if (m.sellPrice && m.costPrice && m.quantity) {
+                    return (
+                      sum +
+                      (Number(m.sellPrice) - Number(m.costPrice)) *
+                        Number(m.quantity)
+                    );
+                  }
+                  return sum;
                 }
-                return sum;
+
+                // Filtrar ganancias por rubro
+                const itemsProfit =
+                  m.items?.reduce((itemSum, item) => {
+                    const product = products.find(
+                      (p) => p.id === item.productId
+                    );
+                    if (product && product.rubro === rubro) {
+                      const costPrice = m.costPrice || 0;
+                      const sellPrice = item.price || 0;
+                      const quantity = item.quantity || 0;
+                      return (
+                        itemSum +
+                        (sellPrice - costPrice / (m.quantity || 1)) * quantity
+                      );
+                    }
+                    return itemSum;
+                  }, 0) || 0;
+
+                return sum + itemsProfit;
               }, 0);
 
             return {
@@ -438,7 +606,7 @@ const Metrics = () => {
   return (
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
           <h1 className="text-xl 2xl:text-2xl font-semibold ">Métricas</h1>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -543,13 +711,21 @@ const Metrics = () => {
                   más vendidos este mes
                 </h3>
                 <select
-                  value={monthlyRankingUnit}
+                  value={
+                    rubro === "indumentaria" ? "unidad" : monthlyRankingUnit
+                  }
                   onChange={(e) =>
+                    rubro !== "indumentaria" &&
                     setMonthlyRankingUnit(
                       e.target.value as "unidad" | "kg" | "litro"
                     )
                   }
-                  className="text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
+                  disabled={rubro === "indumentaria"}
+                  className={`text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm ${
+                    rubro === "indumentaria"
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
                 >
                   {unitOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -566,15 +742,13 @@ const Metrics = () => {
                       key={index}
                       className="py-2 flex justify-between items-center text-sm"
                     >
-                      <span className="truncate uppercase">
+                      <span className="truncate">
                         <span className="font-bold text-blue_m dark:text-blue_l">
                           {index + 1}- {""}
                         </span>
                         {product.name}
                       </span>
-                      <span className="font-medium">
-                        {product.displayText}{" "}
-                      </span>
+                      <span className="font-medium">{product.displayText}</span>
                     </div>
                   ))}
                 </div>
@@ -639,13 +813,21 @@ const Metrics = () => {
                   más vendidos este año
                 </h3>
                 <select
-                  value={yearlyRankingUnit}
+                  value={
+                    rubro === "indumentaria" ? "unidad" : yearlyRankingUnit
+                  }
                   onChange={(e) =>
+                    rubro !== "indumentaria" &&
                     setYearlyRankingUnit(
                       e.target.value as "unidad" | "kg" | "litro"
                     )
                   }
-                  className="text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm"
+                  disabled={rubro === "indumentaria"}
+                  className={`text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm ${
+                    rubro === "indumentaria"
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
                 >
                   {unitOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -661,7 +843,7 @@ const Metrics = () => {
                       key={index}
                       className="py-2 flex justify-between items-center text-sm"
                     >
-                      <span className="truncate uppercase">
+                      <span className="truncate capitalize">
                         <span className="font-bold text-blue_m dark:text-blue_l">
                           {index + 1}- {""}
                         </span>

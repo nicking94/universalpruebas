@@ -13,7 +13,7 @@ import {
   UnitOption,
 } from "@/app/lib/types/types";
 import { Info, Plus, ShoppingCart, Trash } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/app/database/db";
 import { parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -25,8 +25,17 @@ import { ensureCashIsOpen } from "@/app/lib/utils/cash";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import InputCash from "@/app/components/InputCash";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import { useRubro } from "@/app/context/RubroContext";
 
+type SelectOption = {
+  value: number;
+  label: string;
+  product: Product;
+  isDisabled: boolean;
+};
 const VentasPage = () => {
+  const { rubro } = useRubro();
   const currentYear = new Date().getFullYear();
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -216,21 +225,26 @@ const VentasPage = () => {
     }
   };
 
-  const productOptions: {
-    value: number;
-    label: string;
-    isDisabled?: boolean;
-  }[] = products.map((product) => {
-    const stock = Number(product.stock);
-    const isValidStock = !isNaN(stock);
+  const productOptions = useMemo(() => {
+    return products
+      .filter((product) => rubro === "todos" || product.rubro === rubro)
+      .map((product) => {
+        const stock = Number(product.stock);
+        const isValidStock = !isNaN(stock);
+        const displayName = getDisplayProductName(product, rubro);
 
-    return {
-      value: product.id,
-      label:
-        isValidStock && stock > 0 ? product.name : `${product.name} (agotado)`,
-      isDisabled: !isValidStock || stock <= 0,
-    };
-  });
+        return {
+          value: product.id,
+          label:
+            isValidStock && stock > 0
+              ? displayName
+              : `${displayName} (agotado)`,
+          product: product,
+          isDisabled: !isValidStock || stock <= 0,
+        } as SelectOption;
+      });
+  }, [products, rubro]);
+
   const monthOptions = [...Array(12)].map((_, i) => {
     const month = (i + 1).toString().padStart(2, "0");
     return {
@@ -259,7 +273,11 @@ const VentasPage = () => {
         ? saleYear === selectedYear.toString()
         : true;
 
-      return matchesMonth && matchesYear;
+      const matchesRubro =
+        rubro === "todos" ||
+        sale.products.some((product) => product.rubro === rubro);
+
+      return matchesMonth && matchesYear && matchesRubro;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const showNotification = (
@@ -294,6 +312,8 @@ const VentasPage = () => {
             quantity: p.quantity,
             unit: p.unit,
             price: p.price,
+            size: p.size,
+            color: p.color,
           })),
 
           type: "INGRESO",
@@ -315,6 +335,8 @@ const VentasPage = () => {
           isCreditPayment: sale.credit,
           originalSaleId: sale.id,
           combinedPaymentMethods: sale.paymentMethods,
+          size: sale.products[0].size,
+          color: sale.products[0].color,
         };
 
         movements.push(movement);
@@ -809,17 +831,33 @@ const VentasPage = () => {
     selectedOptions: readonly {
       value: number;
       label: string;
-      isDisabled?: boolean | undefined;
+      isDisabled?: boolean;
+      product?: Product;
     }[]
   ) => {
     setNewSale((prevState) => {
-      const updatedProducts = selectedOptions
+      // Filtrar solo productos habilitados
+      const enabledOptions = selectedOptions.filter((opt) => !opt.isDisabled);
+
+      const updatedProducts = enabledOptions
         .map((option) => {
-          const product = products.find((p) => p.id === option.value);
+          const product =
+            option.product || products.find((p) => p.id === option.value);
           if (!product) return null;
-          if (Number(product.stock) <= 0) {
+
+          // Verificar stock
+          const stockInBaseUnit = convertToGrams(
+            Number(product.stock),
+            product.unit
+          );
+          const requestedInBaseUnit = convertToGrams(1, product.unit);
+
+          if (stockInBaseUnit < requestedInBaseUnit) {
             showNotification(
-              `El producto ${product.name} no tiene stock disponible`,
+              `Stock insuficiente para ${getDisplayProductName(
+                product,
+                rubro
+              )}`,
               "error"
             );
             return null;
@@ -829,16 +867,16 @@ const VentasPage = () => {
             (p) => p.id === product.id
           );
 
-          return existingProduct
-            ? existingProduct
-            : {
-                ...product,
-                quantity: 1,
-                unit: product.unit,
-                stock: Number(product.stock),
-                price: Number(product.price),
-                costPrice: Number(product.costPrice),
-              };
+          return (
+            existingProduct || {
+              ...product,
+              quantity: 1,
+              unit: product.unit,
+              stock: Number(product.stock),
+              price: Number(product.price),
+              costPrice: Number(product.costPrice),
+            }
+          );
         })
         .filter(Boolean) as Product[];
 
@@ -846,19 +884,10 @@ const VentasPage = () => {
         updatedProducts,
         prevState.manualAmount || 0
       );
-      const updatedPaymentMethods = [...prevState.paymentMethods];
-      if (updatedPaymentMethods.length > 0) {
-        const assignedAmount = updatedPaymentMethods
-          .slice(0, -1)
-          .reduce((sum, m) => sum + m.amount, 0);
-        updatedPaymentMethods[updatedPaymentMethods.length - 1].amount =
-          parseFloat((newTotal - assignedAmount).toFixed(2));
-      }
 
       return {
         ...prevState,
         products: updatedProducts,
-        paymentMethods: updatedPaymentMethods,
         total: newTotal,
       };
     });
@@ -979,7 +1008,7 @@ const VentasPage = () => {
     if (shouldRedirectToCash) {
       router.push("/caja-diaria");
     }
-  }, [shouldRedirectToCash]);
+  }, [shouldRedirectToCash, router]);
 
   return (
     <ProtectedRoute>
@@ -987,7 +1016,7 @@ const VentasPage = () => {
         <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Ventas</h1>
 
         <div className="flex justify-between mb-2">
-          <div className="flex w-full max-w-[20rem] gap-4">
+          <div className="flex w-full max-w-[20rem] gap-2">
             <Select
               value={monthOptions.find(
                 (option) => option.value === selectedMonth
@@ -1031,12 +1060,19 @@ const VentasPage = () => {
                 <th className="text-sm 2xl:text-lg px-4 py-2 text-start ">
                   Producto
                 </th>
+                {rubro === "indumentaria" && (
+                  <th className="text-sm 2xl:text-lg px-4 py-2">Talle</th>
+                )}
 
-                <th className="text-sm 2xl:text-lg px-4 py-2 ">Total</th>
+                {rubro === "indumentaria" && (
+                  <th className="text-sm 2xl:text-lg px-4 py-2">Color</th>
+                )}
+
                 <th className=" text-sm 2xl:text-lg px-4 py-2 ">Fecha</th>
                 <th className="text-sm 2xl:text-lg px-4 py-2 ">
                   Forma De Pago
                 </th>
+                <th className="text-sm 2xl:text-lg px-4 py-2 ">Total</th>
                 <th className="w-40 max-w-[10rem] text-sm 2xl:text-lg px-4 py-2">
                   Acciones
                 </th>
@@ -1056,40 +1092,33 @@ const VentasPage = () => {
                       className=" text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_xl"
                     >
                       <td
-                        className="font-semibold px-2 text-start uppercase border border-gray_xl truncate max-w-[200px]"
-                        title={products.map((p) => p?.name || "").join(", ")}
+                        className="font-semibold px-2 text-start capitalize border border-gray_xl truncate max-w-[200px]"
+                        title={products
+                          .map((p) => getDisplayProductName(p, rubro))
+                          .join(", ")}
                       >
-                        {products.map((p) => p?.name || "").join(", ").length >
-                        60
+                        {products
+                          .map((p) => getDisplayProductName(p, rubro))
+                          .join(", ").length > 60
                           ? products
-                              .map((p) => p?.name || "")
+                              .map((p) => getDisplayProductName(p, rubro))
                               .join(", ")
                               .slice(0, 30) + "..."
                           : products
-                              .map(
-                                (p) =>
-                                  `${p?.name || ""} x ${p?.quantity || 0}${
-                                    p?.unit || ""
-                                  }`
-                              )
+                              .map((p) => getDisplayProductName(p, rubro))
                               .join(" | ")}
                       </td>
+                      {rubro === "indumentaria" && (
+                        <td className="px-4 py-2 border border-gray_xl">
+                          {products.map((p) => p.size || "-").join(", ")}
+                        </td>
+                      )}
 
-                      <td className=" px-4 py-2 border border-gray_xl">
-                        {sale.credit ? (
-                          <span className="text-orange-500">
-                            FIADO - $
-                            {total.toLocaleString("es-AR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </span>
-                        ) : (
-                          `$${total.toLocaleString("es-AR", {
-                            minimumFractionDigits: 2,
-                          })}`
-                        )}
-                      </td>
-
+                      {rubro === "indumentaria" && (
+                        <td className="px-4 py-2 border border-gray_xl">
+                          {products.map((p) => p.color || "-").join(", ")}
+                        </td>
+                      )}
                       <td className=" px-4 py-2 border border-gray_xl">
                         {format(saleDate, "dd/MM/yyyy", { locale: es })}
                       </td>
@@ -1106,9 +1135,23 @@ const VentasPage = () => {
                           ))
                         )}
                       </td>
+                      <td className=" px-4 py-2 border border-gray_xl">
+                        {sale.credit ? (
+                          <span className="text-orange-500">
+                            FIADO - $
+                            {total.toLocaleString("es-AR", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        ) : (
+                          `$${total.toLocaleString("es-AR", {
+                            minimumFractionDigits: 2,
+                          })}`
+                        )}
+                      </td>
 
                       <td className="px-4 py-2 border border-gray_xl">
-                        <div className="flex justify-center items-center gap-4 h-full">
+                        <div className="flex justify-center items-center gap-2 h-full">
                           <Button
                             icon={<Info size={20} />}
                             colorText="text-gray_b"
@@ -1127,7 +1170,10 @@ const VentasPage = () => {
                 })
               ) : (
                 <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                  <td colSpan={6} className="py-4 text-center">
+                  <td
+                    colSpan={rubro === "indumentaria" ? 7 : 6}
+                    className="py-4 text-center"
+                  >
                     <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                       <ShoppingCart size={64} className="mb-4 text-gray_m" />
                       <p className="text-gray_m">Todavía no hay ventas.</p>
@@ -1205,7 +1251,6 @@ const VentasPage = () => {
                   <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
                     Detalles de Productos
                   </h3>
-
                   <ul className="divide-y divide-gray-200">
                     {selectedSale.products.map((product, index) => (
                       <li
@@ -1213,8 +1258,8 @@ const VentasPage = () => {
                         className="py-3 flex justify-between items-center"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray_b truncate uppercase">
-                            {product.name}
+                          <p className="text-sm font-medium text-gray_b truncate capitalize">
+                            {getDisplayProductName(product, rubro)}
                           </p>
                           <p className="text-xs text-gray_l">
                             {product.barcode
@@ -1277,9 +1322,9 @@ const VentasPage = () => {
           }
           minheight="min-h-[26rem]"
         >
-          <form onSubmit={handleConfirmAddSale} className="flex flex-col gap-4">
+          <form onSubmit={handleConfirmAddSale} className="flex flex-col gap-2">
             <div className="w-full flex items-center space-x-4">
-              <div className="w-full">
+              <div className="w-full ">
                 <label className="block text-sm font-medium text-gray_m dark:text-white">
                   Escanear código de barras
                 </label>
@@ -1307,21 +1352,28 @@ const VentasPage = () => {
                 >
                   Productos
                 </label>
-                <Select<
-                  { value: number; label: string; isDisabled?: boolean },
-                  true
-                >
-                  id="productSelect"
-                  isOptionDisabled={(option) => option.isDisabled ?? false}
-                  options={productOptions}
+                <Select
                   isMulti
-                  onChange={handleProductSelect}
+                  options={productOptions}
                   value={newSale.products.map((p) => ({
                     value: p.id,
-                    label: p.name,
+                    label: getDisplayProductName(p, rubro, true),
+                    product: p,
+                    isDisabled: false,
                   }))}
-                  placeholder="Seleccione productos"
+                  onChange={handleProductSelect}
+                  formatOptionLabel={(option: SelectOption) =>
+                    `${option.label}${option.isDisabled ? " (Sin stock)" : ""}`
+                  }
+                  getOptionValue={(option: SelectOption) =>
+                    option.value.toString()
+                  }
+                  isOptionDisabled={(option: SelectOption) => option.isDisabled}
+                  closeMenuOnSelect={false}
+                  placeholder="Buscar productos..."
+                  noOptionsMessage={() => "No hay productos disponibles"}
                   className="text-black"
+                  classNamePrefix="react-select"
                 />
               </div>
             </div>
@@ -1346,22 +1398,27 @@ const VentasPage = () => {
                           {product.name.toUpperCase()}
                         </td>
                         <td className="w-40 max-w-40 px-4 py-2">
-                          {" "}
-                          <Select
-                            placeholder="Unidad"
-                            options={unitOptions}
-                            value={unitOptions.find(
-                              (option) => option.value === product.unit
-                            )}
-                            onChange={(selectedOption) => {
-                              handleUnitChange(
-                                product.id,
-                                selectedOption,
-                                product.quantity
-                              );
-                            }}
-                            className="text-black "
-                          />
+                          {["Kg", "gr", "L", "ml"].includes(product.unit) ? (
+                            <Select
+                              placeholder="Unidad"
+                              options={unitOptions}
+                              value={unitOptions.find(
+                                (option) => option.value === product.unit
+                              )}
+                              onChange={(selectedOption) => {
+                                handleUnitChange(
+                                  product.id,
+                                  selectedOption,
+                                  product.quantity
+                                );
+                              }}
+                              className="text-black"
+                            />
+                          ) : (
+                            <div className="text-center py-2 text-gray-500">
+                              {product.unit}
+                            </div>
+                          )}
                         </td>
                         <td className="w-20 max-w-20 px-4 py-2  ">
                           <Input
@@ -1449,7 +1506,7 @@ const VentasPage = () => {
                 ) : (
                   <>
                     {newSale.paymentMethods.map((payment, index) => (
-                      <div key={index} className="flex items-center gap-4 mb-2">
+                      <div key={index} className="flex items-center gap-2 mb-2">
                         <Select
                           value={paymentOptions.find(
                             (option) => option.value === payment.method
@@ -1519,7 +1576,7 @@ const VentasPage = () => {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="creditCheckbox"

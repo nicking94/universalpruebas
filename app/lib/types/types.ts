@@ -105,6 +105,7 @@ export type ProductTableProps = {
   onDelete: (id: number) => void;
   onEdit: (product: Product) => void;
 };
+export type Rubro = "comercio" | "indumentaria" | "todos";
 
 export type Product = {
   id: number;
@@ -117,6 +118,17 @@ export type Product = {
   unit: "Unid." | "gr" | "Kg" | "ml" | "L";
   barcode?: string;
   description?: string;
+  category?: string;
+  brand?: string;
+  color?: string;
+  size?: string;
+  rubro: Rubro;
+};
+export type ProductDisplayInfo = {
+  name: string;
+  size?: string;
+  color?: string;
+  rubro?: Rubro;
 };
 
 export type UnitOption = {
@@ -158,6 +170,8 @@ export type SaleItem = {
   quantity: number;
   unit: string;
   price: number;
+  size?: string;
+  color?: string;
 };
 
 export type PaginationProps = {
@@ -211,6 +225,8 @@ export type DailyCashMovement = {
   supplierName?: string;
   combinedPaymentMethods?: PaymentSplit[];
   items?: SaleItem[];
+  size?: string;
+  color?: string;
 };
 
 export type DailyCash = {
@@ -271,6 +287,7 @@ export type Supplier = {
   createdAt: string;
   updatedAt: string;
   productIds?: number[];
+  rubro?: Rubro;
 };
 export type SupplierProduct = {
   supplierId: number;

@@ -10,9 +10,12 @@ import Notification from "@/app/components/Notification";
 import Pagination from "@/app/components/Pagination";
 import { Edit, Plus, Trash, Users } from "lucide-react";
 import SearchBar from "@/app/components/SearchBar";
+import { useRubro } from "@/app/context/RubroContext";
 
 const ClientesPage = () => {
+  const { rubro } = useRubro();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState<
     Omit<Customer, "id" | "createdAt" | "updatedAt">
@@ -20,6 +23,7 @@ const ClientesPage = () => {
     name: "",
     phone: "",
   });
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
     null
@@ -38,15 +42,39 @@ const ClientesPage = () => {
     const fetchCustomers = async () => {
       const allCustomers = await db.customers.toArray();
       setCustomers(allCustomers);
-    };
-    fetchCustomers();
-  }, []);
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      const filtered = await Promise.all(
+        allCustomers.map(async (customer) => {
+          if (rubro === "todos") return customer;
+
+          const customerSales = await db.sales
+            .where("customerId")
+            .equals(customer.id)
+            .toArray();
+
+          const hasRubro = customerSales.some((sale) =>
+            sale.products.some((product) => product.rubro === rubro)
+          );
+
+          return hasRubro ? customer : null;
+        })
+      );
+
+      setFilteredCustomers(
+        filtered
+          .filter(Boolean)
+          .filter(
+            (customer) =>
+              customer?.name
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+              customer?.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+          ) as Customer[]
+      );
+    };
+
+    fetchCustomers();
+  }, [rubro, searchQuery]);
 
   const indexOfLastCustomer = currentPage * customersPerPage;
   const indexOfFirstCustomer = indexOfLastCustomer - customersPerPage;
@@ -91,6 +119,7 @@ const ClientesPage = () => {
 
       await db.customers.add(customerToAdd);
       setCustomers([...customers, customerToAdd]);
+      setFilteredCustomers([...filteredCustomers, customerToAdd]);
       setNewCustomer({ name: "", phone: "" });
       setIsModalOpen(false);
       showNotification("Cliente agregado correctamente", "success");
@@ -132,6 +161,9 @@ const ClientesPage = () => {
       }
 
       await db.customers.delete(customerToDelete.id);
+      setFilteredCustomers(
+        filteredCustomers.filter((c) => c.id !== customerToDelete.id)
+      );
       setCustomers(customers.filter((c) => c.id !== customerToDelete.id));
       showNotification("Cliente eliminado correctamente", "success");
     } catch (error) {
@@ -174,6 +206,7 @@ const ClientesPage = () => {
         phone: newCustomer.phone,
         updatedAt: new Date().toISOString(),
       };
+
       await db.transaction("rw", db.customers, db.sales, async () => {
         await db.customers.update(editingCustomer.id, updatedCustomer);
 
@@ -191,11 +224,19 @@ const ClientesPage = () => {
         );
       });
 
+      // Actualiza ambos estados
       setCustomers(
         customers.map((c) =>
           c.id === editingCustomer.id ? updatedCustomer : c
         )
       );
+
+      setFilteredCustomers(
+        filteredCustomers.map((c) =>
+          c.id === editingCustomer.id ? updatedCustomer : c
+        )
+      );
+
       setNewCustomer({ name: "", phone: "" });
       setEditingCustomer(null);
       setIsModalOpen(false);
@@ -253,7 +294,7 @@ const ClientesPage = () => {
                       {new Date(customer.createdAt).toLocaleDateString("es-AR")}
                     </td>
                     <td className="px-4 py-2 border border-gray_xl">
-                      <div className="flex justify-center items-center gap-4 h-full">
+                      <div className="flex justify-center items-center gap-2 h-full">
                         <Button
                           icon={<Edit size={20} />}
                           colorText="text-gray_b"

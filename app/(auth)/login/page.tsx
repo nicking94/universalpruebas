@@ -169,9 +169,10 @@ const LoginPage = () => {
     setIsOpenNotification(true);
     setTimeout(() => {
       setIsOpenNotification(false);
-      router.push("/caja-diaria");
+      router.replace("/caja-diaria");
     }, 2000);
   };
+
   return (
     <div className="min-h-screen flex">
       <AuthForm type="login" onSubmit={handleLogin} />

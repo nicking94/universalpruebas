@@ -21,8 +21,10 @@ import SearchBar from "@/app/components/SearchBar";
 import { Info, Plus, Trash, Wallet } from "lucide-react";
 import Pagination from "@/app/components/Pagination";
 import InputCash from "@/app/components/InputCash";
+import { useRubro } from "@/app/context/RubroContext";
 
 const FiadosPage = () => {
+  const { rubro } = useRubro();
   const [currentPage, setCurrentPage] = useState(1);
   const [creditsPerPage, setCreditsPerPage] = useState(5);
   const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
@@ -51,9 +53,16 @@ const FiadosPage = () => {
   } | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const filteredSales = creditSales.filter((sale) =>
-    sale.customerName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSales = creditSales.filter((sale) => {
+    const matchesSearch = sale.customerName
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesRubro =
+      rubro === "todos" ||
+      sale.products.some((product) => product.rubro === rubro);
+
+    return matchesSearch && matchesRubro;
+  });
 
   const salesByCustomer = filteredSales.reduce((acc, sale) => {
     if (!acc[sale.customerName]) {
@@ -117,12 +126,13 @@ const FiadosPage = () => {
 
   const calculateCustomerBalance = (customerName: string) => {
     const customerSales = creditSales.filter(
-      (sale) => sale.customerName === customerName
+      (sale) =>
+        sale.customerName === customerName &&
+        (rubro === "todos" || sale.products.some((p) => p.rubro === rubro))
     );
+
     const customerPayments = payments.filter((p) =>
-      creditSales.some(
-        (s) => s.id === p.saleId && s.customerName === customerName
-      )
+      customerSales.some((s) => s.id === p.saleId)
     );
 
     const totalSales = customerSales.reduce((sum, sale) => sum + sale.total, 0);
@@ -322,40 +332,6 @@ const FiadosPage = () => {
     }
   };
 
-  const handleDeleteSingleCredit = async (saleId: number) => {
-    try {
-      await db.sales.delete(saleId);
-      await db.payments.where("saleId").equals(saleId).delete();
-
-      setCreditSales(creditSales.filter((sale) => sale.id !== saleId));
-      setPayments(payments.filter((p) => p.saleId !== saleId));
-
-      showNotification("Fiado eliminado correctamente", "success");
-      if (currentCustomerInfo) {
-        const updatedSales = currentCustomerInfo.sales.filter(
-          (s) => s.id !== saleId
-        );
-        if (updatedSales.length === 0) {
-          setIsInfoModalOpen(false);
-          return;
-        }
-
-        setCurrentCustomerInfo({
-          ...currentCustomerInfo,
-          sales: updatedSales,
-          balance: updatedSales.reduce((total, sale) => {
-            const paymentsForSale = payments
-              .filter((p) => p.saleId === sale.id)
-              .reduce((sum, p) => sum + p.amount, 0);
-            return total + (sale.total - paymentsForSale);
-          }, 0),
-        });
-      }
-    } catch (error) {
-      console.error("Error al eliminar fiado:", error);
-      showNotification("Error al eliminar fiado", "error");
-    }
-  };
   const validateCurrency = (value: string): boolean => {
     return /^\d+(\.\d{1,2})?$/.test(value);
   };
@@ -575,7 +551,7 @@ const FiadosPage = () => {
                         })}
                       </td>
                       <td className="px-4 py-2 border border-gray_xl">
-                        <div className="flex justify-center items-center h-full">
+                        <div className="flex justify-center items-center h-full gap-2">
                           <Button
                             icon={<Info size={20} />}
                             iconPosition="left"
@@ -586,6 +562,39 @@ const FiadosPage = () => {
                             py="py-1"
                             minwidth="min-w-0"
                             onClick={() => handleOpenInfoModal(oldestSale)}
+                          />
+                          {customerBalance > 0 && (
+                            <>
+                              <Button
+                                icon={<Wallet size={20} />}
+                                iconPosition="left"
+                                colorText="text-gray_b"
+                                colorTextHover="hover:text-white"
+                                colorBg="bg-transparent"
+                                px="px-2"
+                                py="py-1"
+                                minwidth="min-w-0"
+                                onClick={() => {
+                                  setCurrentCreditSale(oldestSale);
+                                  setIsPaymentModalOpen(true);
+                                }}
+                              />
+                            </>
+                          )}
+                          <Button
+                            icon={<Trash size={20} />}
+                            iconPosition="left"
+                            colorText="text-gray_b"
+                            colorTextHover="hover:text-white"
+                            colorBg="bg-transparent"
+                            colorBgHover="hover:bg-red-500"
+                            px="px-2"
+                            py="py-1"
+                            minwidth="min-w-0"
+                            onClick={() => {
+                              setCustomerToDelete(customerName);
+                              setIsDeleteModalOpen(true);
+                            }}
                           />
                         </div>
                       </td>
@@ -623,7 +632,7 @@ const FiadosPage = () => {
         <Modal
           isOpen={isInfoModalOpen}
           onClose={() => setIsInfoModalOpen(false)}
-          title={`Información de ${currentCustomerInfo?.name}`}
+          title={`Detalles de fiados - ${currentCustomerInfo?.name}`}
           buttons={
             <div className="flex justify-between w-full">
               <Button
@@ -637,7 +646,7 @@ const FiadosPage = () => {
                   setIsDeleteModalOpen(true);
                 }}
                 disabled={
-                  !currentCustomerInfo || currentCustomerInfo.balance < 0
+                  !currentCustomerInfo || currentCustomerInfo.balance <= 0
                 }
               />
               <Button
@@ -651,118 +660,204 @@ const FiadosPage = () => {
             </div>
           }
         >
-          <div className="space-y-10">
-            <p
-              className={`text-lg font-semibold px-3 py-2 rounded-lg inline-block ${
-                (currentCustomerInfo?.balance ?? 0) <= 0
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
-              }`}
-            >
-              Deuda total pendiente:{" "}
-              {(currentCustomerInfo?.balance ?? 0).toLocaleString("es-AR", {
-                style: "currency",
-                currency: "ARS",
-              })}
-            </p>
+          <div className="space-y-6">
+            {/* Resumen destacado */}
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 p-4 rounded-lg shadow-sm">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    Cliente
+                  </h3>
+                  <p className="text-lg font-bold text-gray-800 dark:text-white">
+                    {currentCustomerInfo?.name}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    Estado
+                  </h3>
+                  <p
+                    className={`text-lg font-bold ${
+                      (currentCustomerInfo?.balance ?? 0) <= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {(currentCustomerInfo?.balance ?? 0) <= 0
+                      ? "Al día"
+                      : "En deuda"}
+                  </p>
+                </div>
+              </div>
 
-            <div className="max-h-64 overflow-y-auto">
-              <h3 className="font-semibold mb-2">Detalle de fiados:</h3>
-              <table className="bg-white text-gray_b w-full text-center border-collapse">
-                <thead className="bg-blue_b text-white text-sm 2xl:text-lg">
-                  <tr>
-                    <th className="px-2 py-1">Fecha</th>
-                    <th className="px-2 py-1">Total</th>
-                    <th className="px-2 py-1">Pagado</th>
+              <div className="mt-4 grid grid-cols-3 gap-4">
+                <div className="bg-white dark:bg-gray-600 p-3 rounded-lg shadow">
+                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                    Total fiado
+                  </p>
+                  <p className="font-semibold">
+                    {currentCustomerInfo?.sales
+                      .reduce((sum, sale) => sum + sale.total, 0)
+                      .toLocaleString("es-AR", {
+                        style: "currency",
+                        currency: "ARS",
+                      })}
+                  </p>
+                </div>
+                <div className="bg-white dark:bg-gray-600 p-3 rounded-lg shadow">
+                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                    Total pagado
+                  </p>
+                  <p className="font-semibold">
+                    {currentCustomerInfo?.sales
+                      .reduce((sum, sale) => {
+                        const paymentsForSale = payments
+                          .filter((p) => p.saleId === sale.id)
+                          .reduce((sum, p) => sum + p.amount, 0);
+                        return sum + paymentsForSale;
+                      }, 0)
+                      .toLocaleString("es-AR", {
+                        style: "currency",
+                        currency: "ARS",
+                      })}
+                  </p>
+                </div>
+                <div className="bg-white dark:bg-gray-600 p-3 rounded-lg shadow">
+                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                    Saldo pendiente
+                  </p>
+                  <p
+                    className={`font-semibold ${
+                      (currentCustomerInfo?.balance ?? 0) <= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {(currentCustomerInfo?.balance ?? 0).toLocaleString(
+                      "es-AR",
+                      {
+                        style: "currency",
+                        currency: "ARS",
+                      }
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                    <th className="px-2 py-1">Debe</th>
-                    <th className="w-40 max-w-[10rem] px-2 py-1">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray_xl border">
-                  {currentCustomerInfo?.sales.map((sale) => {
-                    const totalPayments = payments
-                      .filter((p) => p.saleId === sale.id)
-                      .reduce((sum, p) => sum + p.amount, 0);
-                    const remainingBalance = sale.total - totalPayments;
+            {/* Listado de fiados */}
+            <div className="max-h-96 overflow-y-auto">
+              <h3 className="font-semibold mb-3 text-lg border-b pb-2">
+                Historial de fiados
+              </h3>
 
-                    return (
-                      <tr key={sale.id} className="font-semibold">
-                        <td className="px-2 py-3">
+              {currentCustomerInfo?.sales.map((sale) => {
+                const totalPayments = payments
+                  .filter((p) => p.saleId === sale.id)
+                  .reduce((sum, p) => sum + p.amount, 0);
+                const remainingBalance = sale.total - totalPayments;
+                const isPaid = remainingBalance <= 0;
+
+                return (
+                  <div
+                    key={sale.id}
+                    className={`mb-4 p-4 rounded-lg shadow-sm ${
+                      isPaid
+                        ? "bg-green-50 dark:bg-gray-700"
+                        : "bg-red-50 dark:bg-gray-800"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            isPaid ? "bg-green-500" : "bg-red-500"
+                          }`}
+                        ></div>
+                        <span className="font-semibold">
                           {format(new Date(sale.date), "dd/MM/yyyy", {
                             locale: es,
                           })}
-                        </td>
-                        <td className="px-2 py-3">
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Detalle de productos */}
+                    <div className="mb-3">
+                      <h4 className="text-sm font-medium mb-1">Productos:</h4>
+                      <div className="bg-white dark:bg-gray-600 rounded-md p-2">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-1">Producto</th>
+                              <th className="text-right py-1">Cantidad</th>
+                              <th className="text-right py-1">Precio</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sale.products.map((product, idx) => (
+                              <tr
+                                key={idx}
+                                className="border-b last:border-b-0"
+                              >
+                                <td className="py-1">{product.name}</td>
+                                <td className="text-right py-1">
+                                  {product.quantity} {product.unit}
+                                </td>
+                                <td className="text-right py-1">
+                                  {product.price.toLocaleString("es-AR", {
+                                    style: "currency",
+                                    currency: "ARS",
+                                  })}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Resumen financiero */}
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div className="bg-white dark:bg-gray-600 p-2 rounded">
+                        <p className="font-medium">Total:</p>
+                        <p>
                           {sale.total.toLocaleString("es-AR", {
                             style: "currency",
                             currency: "ARS",
                           })}
-                        </td>
-                        <td className="px-2 py-3">
+                        </p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-600 p-2 rounded">
+                        <p className="font-medium">Pagado:</p>
+                        <p>
                           {totalPayments.toLocaleString("es-AR", {
                             style: "currency",
                             currency: "ARS",
                           })}
-                        </td>
-
-                        <td
-                          className={`px-2 py-3 ${
-                            remainingBalance <= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
+                        </p>
+                      </div>
+                      <div
+                        className={`p-2 rounded ${
+                          isPaid
+                            ? "bg-green-100 dark:bg-green-900"
+                            : "bg-red-100 dark:bg-red-900"
+                        }`}
+                      >
+                        <p className="font-medium">Saldo:</p>
+                        <p
+                          className={isPaid ? "text-green-600" : "text-red-600"}
                         >
                           {remainingBalance.toLocaleString("es-AR", {
                             style: "currency",
                             currency: "ARS",
                           })}
-                        </td>
-                        <td
-                          className={`flex ${
-                            remainingBalance > 0
-                              ? "justify-center"
-                              : "justify-end"
-                          } items-center px-2 py-3 space-x-4`}
-                        >
-                          {remainingBalance > 0 ? (
-                            <>
-                              <Button
-                                text="Pagar"
-                                colorText="text-white"
-                                colorTextHover="text-white"
-                                onClick={() => {
-                                  setCurrentCreditSale(sale);
-                                  setIsPaymentModalOpen(true);
-                                }}
-                              />
-                              <Button
-                                text="Eliminar"
-                                colorText="text-white"
-                                colorTextHover="text-white"
-                                colorBg="bg-red-500"
-                                colorBgHover="hover:bg-red-700"
-                                onClick={() =>
-                                  handleDeleteSingleCredit(sale.id)
-                                }
-                              />
-                            </>
-                          ) : (
-                            <Button
-                              text="Eliminar"
-                              colorText="text-white"
-                              colorTextHover="text-white"
-                              colorBg="bg-red-500"
-                              colorBgHover="hover:bg-red-700"
-                              onClick={() => handleDeleteSingleCredit(sale.id)}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Modal>
@@ -805,7 +900,7 @@ const FiadosPage = () => {
           <div className="space-y-6">
             <div>
               <p>Cliente: {currentCreditSale?.customerName || "Sin nombre"}</p>
-              <p className="flex items-center gap-4">
+              <p className="flex items-center gap-2">
                 <span>Deuda pendiente:</span>
                 <span
                   className={`px-2 py-1 rounded ${
@@ -830,7 +925,7 @@ const FiadosPage = () => {
                 Métodos de Pago
               </label>
               {paymentMethods.map((method, index) => (
-                <div key={index} className="flex items-center gap-4">
+                <div key={index} className="flex items-center gap-2">
                   <Select
                     value={paymentOptions.find(
                       (option) => option.value === method.method
