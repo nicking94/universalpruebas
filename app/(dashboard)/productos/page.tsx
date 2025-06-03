@@ -448,7 +448,7 @@ const ProductsPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)] ">
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
-            <thead className="text-white bg-blue_b">
+            <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b">
               <tr>
                 <th className="px-4 py-2 text-start text-sm 2xl:text-lg ">
                   Producto
@@ -520,11 +520,11 @@ const ProductsPage = () => {
                         key={index}
                         className={` text-xs 2xl:text-[.9rem] border-b border-gray_xl ${
                           isExpired
-                            ? "border-l-2 border-l-red-500 text-gray_b bg-white"
+                            ? "border-l-2 border-l-red_m text-gray_b bg-white"
                             : expiredToday
-                            ? "border-l-2 border-l-red-500 text-white bg-red-500"
+                            ? "border-l-2 border-l-red_m text-white bg-red_b"
                             : isExpiringSoon
-                            ? "border-l-2 border-l-red-500 text-gray_b bg-red-100 "
+                            ? "border-l-2 border-l-red_m text-gray_b bg-red_l "
                             : "text-gray_b bg-white"
                         }`}
                       >
@@ -544,7 +544,7 @@ const ProductsPage = () => {
                             )}
                             {isExpired && (
                               <AlertTriangle
-                                className="text-red-400 dark:text-yellow-500"
+                                className="text-red_m dark:text-yellow-500"
                                 size={18}
                               />
                             )}
@@ -568,7 +568,7 @@ const ProductsPage = () => {
                             !isNaN(Number(product.stock)) &&
                             Number(product.stock) > 0
                               ? ""
-                              : "text-red-900"
+                              : "text-red_b"
                           } font-normal px-4 py-2 border border-gray_xl`}
                         >
                           {!isNaN(Number(product.stock)) &&
@@ -593,7 +593,7 @@ const ProductsPage = () => {
                                 )
                               : "Sin fecha"}
                             {isExpiringSoon && (
-                              <span className=" ml-2 text-red-500">
+                              <span className=" ml-2 text-red_m">
                                 (Por vencer)
                               </span>
                             )}
@@ -603,9 +603,7 @@ const ProductsPage = () => {
                               </span>
                             )}
                             {expirationDate && isExpired && (
-                              <span className="ml-2 text-red-800">
-                                (Vencido)
-                              </span>
+                              <span className="ml-2 text-red_b">(Vencido)</span>
                             )}
                           </td>
                         )}
@@ -628,7 +626,7 @@ const ProductsPage = () => {
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
                             colorBg="bg-transparent"
-                            colorBgHover="hover:bg-red-500"
+                            colorBgHover="hover:bg-red_b"
                             px="px-1"
                             py="py-1"
                             minwidth="min-w-0"
@@ -724,7 +722,6 @@ const ProductsPage = () => {
                       });
                     }
                   }}
-                  placeholder="Escanear o ingresar código manualmente"
                 />
               </div>
 
@@ -931,15 +928,14 @@ const ProductsPage = () => {
                 onScanComplete={(code) => {
                   handleBarcodeScan(code);
                 }}
-                placeholder="Escanee el código de barras"
               />
             </div>
 
             {scannedProduct && (
-              <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <div className="mt-4 p-4 bg-gray_xl dark:bg-gray_b rounded-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-gray_m dark:text-gray_m">
                       Producto
                     </p>
                     <p className="text-lg font-semibold">
@@ -947,7 +943,7 @@ const ProductsPage = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-gray_m dark:text-gray_m">
                       Precio
                     </p>
                     <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
@@ -955,14 +951,12 @@ const ProductsPage = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-gray_m dark:text-gray_m">
                       Stock
                     </p>
                     <p
                       className={`text-lg font-semibold ${
-                        scannedProduct.stock > 0
-                          ? "text-green-600"
-                          : "text-red-600"
+                        scannedProduct.stock > 0 ? "text-green_b" : "text-red_b"
                       }`}
                     >
                       {scannedProduct.stock} {scannedProduct.unit}
@@ -970,7 +964,7 @@ const ProductsPage = () => {
                   </div>
                   {scannedProduct.expiration ? (
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <p className="text-sm font-medium text-gray_m dark:text-gray_m">
                         Vencimiento
                       </p>
                       <p className="text-lg font-semibold">

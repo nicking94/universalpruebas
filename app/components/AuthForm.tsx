@@ -71,9 +71,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
             onClick={() => setShowPassword(!showPassword)}
           >
             {showPassword ? (
-              <EyeOff className="h-5 w-5 text-gray-500" />
+              <EyeOff className="h-5 w-5 text-gray_m" />
             ) : (
-              <Eye className="h-5 w-5 text-gray-500" />
+              <Eye className="h-5 w-5 text-gray_m" />
             )}
           </button>
         </div>

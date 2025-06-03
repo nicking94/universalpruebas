@@ -48,7 +48,8 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
   const [activeItem, setActiveItem] = useState<string>("");
 
   const handleItemClick = (label: string, href?: string, target?: string) => {
-    setActiveItem((prev) => (prev === label ? "" : label));
+    // Siempre establecer el ítem como activo, no alternar
+    setActiveItem(label);
 
     if (href) {
       if (target === "_blank") {
@@ -76,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
       } overflow-y-auto`}
     >
       <div>
-        <div className="bg-blue_b dark:bg-gray_b text-white  flex items-center justify-between p-2 shadow-sm shadow-gray_xl dark:shadow-gray_b">
+        <div className="bg-gradient-to-bl from-blue_m to-blue_b dark:bg-gray_b text-white  flex items-center justify-between p-2 shadow-sm shadow-gray_xl dark:shadow-gray_b">
           <span>Menú</span>
           <Button
             colorText="text-white"
@@ -91,20 +92,20 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
             onClick={toggleSidebar}
           />
         </div>
-        <nav className="space-y-1 2xl:space-y-6 py-2 2xl:py-6 ">
+        <nav className="space-y-1 2xl:space-y-4 py-2">
           {items.map((item) => (
-            <div key={item.label} className="w-full text-md">
+            <div key={item.label} className="w-full text-md font-semibold">
               <button
                 onClick={() =>
                   handleItemClick(item.label, item.href, item.target)
                 }
                 className={` ${
                   activeItem === item.label
-                    ? " shadow-md shadow-gray_xl dark:shadow-gray_m bg-gray_xl dark:bg-gray_b"
+                    ? " shadow-md shadow-gray_xl dark:shadow-gray_m bg-gradient-to-bl from-blue_m to-blue_b text-white dark:bg-gray_b"
                     : ""
                 } ${
                   isSidebarOpen ? "justify-start" : "justify-center"
-                } cursor-pointer flex items-center px-2 py-4 w-full  hover:bg-gray_xl dark:hover:bg-gray_b transition-all duration-200`}
+                } cursor-pointer flex items-center px-2 py-4 w-full  hover:bg-blue_xl dark:hover:bg-gray_b transition-all duration-200`}
               >
                 {item.icon}
                 {isSidebarOpen && <span className="ml-3">{item.label}</span>}

@@ -398,7 +398,7 @@ const ProveedoresPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
           <table className="w-full text-center border-collapse shadow-sm shadow-gray_l">
-            <thead className="text-white bg-blue_b text-sm 2xl:text-lg">
+            <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b text-sm 2xl:text-lg">
               <tr>
                 <th className="px-4 py-2 text-left">Empresa</th>
                 <th className="px-4 py-2">Proveedores</th>
@@ -427,7 +427,7 @@ const ProveedoresPage = () => {
                             <span className="text-xs text-gray_l cursor-pointer">
                               +{supplier.contacts.length - 1} más
                             </span>
-                            <div className="absolute hidden group-hover:block z-10 w-64 p-2 bg-white border border-gray-200 rounded shadow-lg text-sm">
+                            <div className="absolute hidden group-hover:block z-10 w-64 p-2 bg-white border border-gray_l rounded shadow-lg text-sm">
                               {supplier.contacts
                                 .slice(1)
                                 .map((contact, index) => (
@@ -491,7 +491,7 @@ const ProveedoresPage = () => {
                           colorText="text-gray_b"
                           colorTextHover="hover:text-white"
                           colorBg="bg-transparent"
-                          colorBgHover="hover:bg-red-500"
+                          colorBgHover="hover:bg-red_b"
                           px="px-1"
                           py="py-1"
                           minwidth="min-w-0"
@@ -579,12 +579,12 @@ const ProveedoresPage = () => {
                     {filteredAvailableProducts.map((product) => (
                       <div
                         key={product.id}
-                        className={`p-2 border rounded hover:bg-gray-100 dark:hover:bg-gray_m flex justify-between items-center `}
+                        className={`p-2 border rounded hover:bg-gray_xl dark:hover:bg-gray_m flex justify-between items-center `}
                       >
                         <div className="flex-grow ">
                           <div className="flex justify-between">
                             <span className="font-medium">{product.name}</span>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-gray_m">
                               {product.barcode || "Sin código"}
                             </span>
                           </div>
@@ -615,7 +615,7 @@ const ProveedoresPage = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No hay productos disponibles</p>
+                  <p className="text-gray_m">No hay productos disponibles</p>
                 )}
               </div>
             </div>
@@ -628,7 +628,7 @@ const ProveedoresPage = () => {
                     {assignedProducts.map((product) => (
                       <div
                         key={product.id}
-                        className="p-2 border hover:bg-gray-100 dark:hover:bg-gray_m rounded"
+                        className="p-2 border hover:bg-gray_xl dark:hover:bg-gray_m rounded"
                       >
                         <div className="flex justify-between items-center">
                           <div>
@@ -647,8 +647,8 @@ const ProveedoresPage = () => {
                             icon={<Trash size={20} />}
                             colorText="text-white"
                             colorTextHover="text-white"
-                            colorBg="bg-red-500"
-                            colorBgHover="hover:bg-red-700"
+                            colorBg="bg-red_b"
+                            colorBgHover="hover:bg-red_m"
                             onClick={() => unassignProduct(product)}
                             px="px-1"
                             py="py-1"
@@ -658,7 +658,7 @@ const ProveedoresPage = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No hay productos asignados</p>
+                  <p className="text-gray_m">No hay productos asignados</p>
                 )}
               </div>
             </div>
@@ -706,10 +706,10 @@ const ProveedoresPage = () => {
               {contacts.map((contact, index) => (
                 <div
                   key={index}
-                  className="bg-blue_xl space-y-6 border border-blue_xl shadow-md shadow-gray_l p-4 mb-8"
+                  className="bg-gradient-to-bl from-blue_l to-blue_xl rounded-sm space-y-6 border border-blue_xl shadow-md shadow-gray_l p-4 mb-8"
                 >
                   <div className="flex justify-between items-center">
-                    <span className="bg-blue_m rounded-md px-2 py-1 text-white text-sm font-medium">
+                    <span className="bg-gradient-to-bl from-blue_m to-blue_b rounded-md px-2 py-1 text-white text-sm font-medium">
                       Proveedor #{index + 1}
                     </span>
                     {contacts.length > 1 && (
@@ -719,8 +719,8 @@ const ProveedoresPage = () => {
                         px="px-3"
                         py="py-1"
                         minwidth="min-w-0"
-                        colorBg="bg-red-500"
-                        colorBgHover="hover:bg-red-700"
+                        colorBg="bg-red_b"
+                        colorBgHover="hover:bg-red_m"
                         colorText="text-white"
                         colorTextHover="hover:text-white"
                         onClick={() => handleRemoveContact(index)}
@@ -797,8 +797,8 @@ const ProveedoresPage = () => {
                 text="Eliminar"
                 colorText="text-white"
                 colorTextHover="text-white"
-                colorBg="bg-red-500"
-                colorBgHover="hover:bg-red-700"
+                colorBg="bg-red_b"
+                colorBgHover="hover:bg-red_m"
                 onClick={handleDelete}
               />
               <Button

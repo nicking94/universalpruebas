@@ -37,8 +37,10 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="flex items-center gap-6">
-          <div className=" flex  items-center gap-2">
-            <p className="text-gray_b dark:text-white italic">Rubro:</p>
+          <div className=" flex items-center gap-2 bg-gradient-to-bl from-blue_m to-blue_b p-2 rounded-sm">
+            <p className="dark:text-white italic text-md font-normal text-white">
+              Rubro:
+            </p>
             <Select
               options={rubroOptions}
               value={selectedRubro}

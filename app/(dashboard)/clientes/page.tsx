@@ -258,7 +258,7 @@ const ClientesPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
           <table className="table-auto w-full text-center border-collapse shadow-sm shadow-gray_l">
-            <thead className="text-white bg-blue_b text-sm 2xl:text-lg">
+            <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b text-sm 2xl:text-lg">
               <tr>
                 <th className="px-4 py-2 text-start">Nombre</th>
                 <th className="px-4 py-2">Teléfono</th>
@@ -298,7 +298,7 @@ const ClientesPage = () => {
                           colorText="text-gray_b"
                           colorTextHover="hover:text-white"
                           colorBg="bg-transparent"
-                          colorBgHover="hover:bg-red-500"
+                          colorBgHover="hover:bg-red_b"
                           px="px-1"
                           py="py-1"
                           minwidth="min-w-0"
@@ -407,8 +407,8 @@ const ClientesPage = () => {
                 text="Eliminar"
                 colorText="text-white"
                 colorTextHover="text-white"
-                colorBg="bg-red-500"
-                colorBgHover="hover:bg-red-700"
+                colorBg="bg-red_b"
+                colorBgHover="hover:bg-red_m"
                 onClick={handleConfirmDelete}
                 hotkey="enter"
               />

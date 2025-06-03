@@ -22,6 +22,7 @@ import { Info, Plus, Trash, Wallet } from "lucide-react";
 import Pagination from "@/app/components/Pagination";
 import InputCash from "@/app/components/InputCash";
 import { useRubro } from "@/app/context/RubroContext";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 
 const FiadosPage = () => {
   const { rubro } = useRubro();
@@ -53,16 +54,23 @@ const FiadosPage = () => {
   } | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const filteredSales = creditSales.filter((sale) => {
-    const matchesSearch = sale.customerName
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesRubro =
-      rubro === "todos" ||
-      sale.products.some((product) => product.rubro === rubro);
+  const filteredSales = creditSales
+    .filter((sale) => {
+      const matchesSearch = sale.customerName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesRubro =
+        rubro === "todos" ||
+        sale.products.some((product) => product.rubro === rubro);
 
-    return matchesSearch && matchesRubro;
-  });
+      return matchesSearch && matchesRubro;
+    })
+    .sort((a, b) => {
+      if (a.paid !== b.paid) {
+        return a.paid ? 1 : -1;
+      }
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
 
   const salesByCustomer = filteredSales.reduce((acc, sale) => {
     if (!acc[sale.customerName]) {
@@ -508,7 +516,7 @@ const FiadosPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)] ">
           <table className="table-auto w-full text-center border-collapse shadow-sm shadow-gray_l">
-            <thead className="text-white bg-blue_b text-sm 2xl:text-lg">
+            <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b text-sm 2xl:text-lg">
               <tr>
                 <th className="px-4 py-2 text-start">Cliente</th>
                 <th className="px-4 py-2">Fecha</th>
@@ -540,9 +548,7 @@ const FiadosPage = () => {
                       </td>
                       <td
                         className={`font-semibold px-4 py-2 border border-gray_xl ${
-                          customerBalance <= 0
-                            ? "text-green-600"
-                            : "text-red-600"
+                          customerBalance <= 0 ? "text-green_b" : "text-red_b"
                         }`}
                       >
                         {customerBalance.toLocaleString("es-AR", {
@@ -563,31 +569,14 @@ const FiadosPage = () => {
                             minwidth="min-w-0"
                             onClick={() => handleOpenInfoModal(oldestSale)}
                           />
-                          {customerBalance > 0 && (
-                            <>
-                              <Button
-                                icon={<Wallet size={20} />}
-                                iconPosition="left"
-                                colorText="text-gray_b"
-                                colorTextHover="hover:text-white"
-                                colorBg="bg-transparent"
-                                px="px-2"
-                                py="py-1"
-                                minwidth="min-w-0"
-                                onClick={() => {
-                                  setCurrentCreditSale(oldestSale);
-                                  setIsPaymentModalOpen(true);
-                                }}
-                              />
-                            </>
-                          )}
+
                           <Button
                             icon={<Trash size={20} />}
                             iconPosition="left"
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
                             colorBg="bg-transparent"
-                            colorBgHover="hover:bg-red-500"
+                            colorBgHover="hover:bg-red_b"
                             px="px-2"
                             py="py-1"
                             minwidth="min-w-0"
@@ -634,21 +623,7 @@ const FiadosPage = () => {
           onClose={() => setIsInfoModalOpen(false)}
           title={`Detalles de fiados - ${currentCustomerInfo?.name}`}
           buttons={
-            <div className="flex justify-between w-full">
-              <Button
-                text="Eliminar todos"
-                colorText="text-white"
-                colorTextHover="text-white"
-                colorBg="bg-red-500"
-                colorBgHover="hover:bg-red-700"
-                onClick={() => {
-                  setCustomerToDelete(currentCustomerInfo?.name || null);
-                  setIsDeleteModalOpen(true);
-                }}
-                disabled={
-                  !currentCustomerInfo || currentCustomerInfo.balance <= 0
-                }
-              />
+            <div className="w-full flex justify-end">
               <Button
                 text="Cerrar"
                 colorText="text-gray_b dark:text-white"
@@ -662,25 +637,25 @@ const FiadosPage = () => {
         >
           <div className="space-y-6">
             {/* Resumen destacado */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-700 dark:to-gray-800 p-4 rounded-lg shadow-sm">
+            <div className="bg-gradient-to-bl from-blue_l to-blue_xl dark:from-gray_m dark:to-gray_b p-4 rounded-lg shadow-sm shadow-blue_ll dark:shadow-gray_m">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <h3 className="text-sm font-medium text-gray_b dark:text-gray_xl">
                     Cliente
                   </h3>
-                  <p className="text-lg font-bold text-gray-800 dark:text-white">
+                  <p className="text-md text-gray_b dark:text-white">
                     {currentCustomerInfo?.name}
                   </p>
                 </div>
                 <div className="text-right">
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <h3 className="text-sm font-medium text-gray_b dark:text-gray_xl">
                     Estado
                   </h3>
                   <p
                     className={`text-lg font-bold ${
                       (currentCustomerInfo?.balance ?? 0) <= 0
-                        ? "text-green-600"
-                        : "text-red-600"
+                        ? "text-green_b"
+                        : "text-red_b"
                     }`}
                   >
                     {(currentCustomerInfo?.balance ?? 0) <= 0
@@ -691,8 +666,8 @@ const FiadosPage = () => {
               </div>
 
               <div className="mt-4 grid grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-gray-600 p-3 rounded-lg shadow">
-                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                <div className="bg-white dark:bg-gray_m p-3 rounded-lg shadow">
+                  <p className="text-xs text-gray_m dark:text-gray_l">
                     Total fiado
                   </p>
                   <p className="font-semibold">
@@ -704,8 +679,8 @@ const FiadosPage = () => {
                       })}
                   </p>
                 </div>
-                <div className="bg-white dark:bg-gray-600 p-3 rounded-lg shadow">
-                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                <div className="bg-white dark:bg-gray_m p-3 rounded-lg shadow">
+                  <p className="text-xs text-gray_m dark:text-gray_l">
                     Total pagado
                   </p>
                   <p className="font-semibold">
@@ -722,15 +697,15 @@ const FiadosPage = () => {
                       })}
                   </p>
                 </div>
-                <div className="bg-white dark:bg-gray-600 p-3 rounded-lg shadow">
-                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                <div className="bg-white dark:bg-gray_m p-3 rounded-lg shadow">
+                  <p className="text-xs text-gray_m dark:text-gray_l">
                     Saldo pendiente
                   </p>
                   <p
                     className={`font-semibold ${
                       (currentCustomerInfo?.balance ?? 0) <= 0
-                        ? "text-green-600"
-                        : "text-red-600"
+                        ? "text-green_b"
+                        : "text-red_b"
                     }`}
                   >
                     {(currentCustomerInfo?.balance ?? 0).toLocaleString(
@@ -763,15 +738,15 @@ const FiadosPage = () => {
                     key={sale.id}
                     className={`mb-4 p-4 rounded-lg shadow-sm ${
                       isPaid
-                        ? "bg-green-50 dark:bg-gray-700"
-                        : "bg-red-50 dark:bg-gray-800"
+                        ? "bg-green_xl dark:bg-gray_b"
+                        : "bg-red_xl dark:bg-gray_b"
                     }`}
                   >
                     <div className="flex justify-between items-center mb-3">
                       <div className="flex items-center space-x-3">
                         <div
                           className={`w-3 h-3 rounded-full ${
-                            isPaid ? "bg-green-500" : "bg-red-500"
+                            isPaid ? "bg-green_500" : "bg-red_b"
                           }`}
                         ></div>
                         <span className="font-semibold">
@@ -780,12 +755,27 @@ const FiadosPage = () => {
                           })}
                         </span>
                       </div>
+
+                      {!isPaid && (
+                        <Button
+                          py="py-1"
+                          px="px-1"
+                          minwidth="min-w-20"
+                          colorText="text-white"
+                          colorTextHover="hover:text-white"
+                          text="Pagar"
+                          onClick={() => {
+                            setCurrentCreditSale(sale);
+                            setIsPaymentModalOpen(true);
+                            setIsInfoModalOpen(false);
+                          }}
+                        />
+                      )}
                     </div>
 
-                    {/* Detalle de productos */}
                     <div className="mb-3">
                       <h4 className="text-sm font-medium mb-1">Productos:</h4>
-                      <div className="bg-white dark:bg-gray-600 rounded-md p-2">
+                      <div className="bg-white dark:bg-gray_m rounded-md p-2">
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b">
@@ -800,7 +790,18 @@ const FiadosPage = () => {
                                 key={idx}
                                 className="border-b last:border-b-0"
                               >
-                                <td className="py-1">{product.name}</td>
+                                <td className="py-1">
+                                  {getDisplayProductName(
+                                    {
+                                      name: product.name,
+                                      size: product.size,
+                                      color: product.color,
+                                      rubro: product.rubro,
+                                    },
+                                    rubro,
+                                    true
+                                  )}
+                                </td>
                                 <td className="text-right py-1">
                                   {product.quantity} {product.unit}
                                 </td>
@@ -819,7 +820,7 @@ const FiadosPage = () => {
 
                     {/* Resumen financiero */}
                     <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div className="bg-white dark:bg-gray-600 p-2 rounded">
+                      <div className="bg-white dark:bg-gray_m p-2 rounded">
                         <p className="font-medium">Total:</p>
                         <p>
                           {sale.total.toLocaleString("es-AR", {
@@ -828,7 +829,7 @@ const FiadosPage = () => {
                           })}
                         </p>
                       </div>
-                      <div className="bg-white dark:bg-gray-600 p-2 rounded">
+                      <div className="bg-white dark:bg-gray_m p-2 rounded">
                         <p className="font-medium">Pagado:</p>
                         <p>
                           {totalPayments.toLocaleString("es-AR", {
@@ -840,14 +841,12 @@ const FiadosPage = () => {
                       <div
                         className={`p-2 rounded ${
                           isPaid
-                            ? "bg-green-100 dark:bg-green-900"
-                            : "bg-red-100 dark:bg-red-900"
+                            ? "bg-white dark:bg-green_b"
+                            : "bg-white dark:bg-red_b"
                         }`}
                       >
                         <p className="font-medium">Saldo:</p>
-                        <p
-                          className={isPaid ? "text-green-600" : "text-red-600"}
-                        >
+                        <p className={isPaid ? "text-green_b" : "text-red_b"}>
                           {remainingBalance.toLocaleString("es-AR", {
                             style: "currency",
                             currency: "ARS",
@@ -865,7 +864,9 @@ const FiadosPage = () => {
         <Modal
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
-          title="Registrar Pago"
+          title={`Registrar Pago - ${
+            currentCreditSale?.customerName || "Cliente"
+          }`}
           buttons={
             <>
               <Button
@@ -899,24 +900,43 @@ const FiadosPage = () => {
         >
           <div className="space-y-6">
             <div>
-              <p>Cliente: {currentCreditSale?.customerName || "Sin nombre"}</p>
               <p className="flex items-center gap-2">
-                <span>Deuda pendiente:</span>
-                <span
-                  className={`px-2 py-1 rounded ${
-                    calculateRemainingBalance(currentCreditSale!) <= 0
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  } font-semibold`}
-                >
-                  {calculateRemainingBalance(currentCreditSale!).toLocaleString(
-                    "es-AR",
-                    {
-                      style: "currency",
-                      currency: "ARS",
-                    }
-                  )}
-                </span>
+                <div className="flex justify-between w-full ">
+                  <div className="flex items-center gap-2">
+                    <span>Deuda pendiente:</span>
+                    <span
+                      className={`px-2 py-1 rounded ${
+                        calculateRemainingBalance(currentCreditSale!) <= 0
+                          ? "bg-white text-green_b"
+                          : "bg-white text-red_b"
+                      } font-semibold`}
+                    >
+                      {calculateRemainingBalance(
+                        currentCreditSale!
+                      ).toLocaleString("es-AR", {
+                        style: "currency",
+                        currency: "ARS",
+                      })}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    text="Pagar todo"
+                    colorText="text-white"
+                    colorTextHover="text-white"
+                    minwidth="min-w-20"
+                    py="py-1"
+                    px="px-2"
+                    onClick={() => {
+                      const remaining = calculateRemainingBalance(
+                        currentCreditSale!
+                      );
+                      setPaymentMethods([
+                        { method: "EFECTIVO", amount: remaining },
+                      ]);
+                    }}
+                  />
+                </div>
               </p>
             </div>
 
@@ -957,7 +977,7 @@ const FiadosPage = () => {
                     <button
                       type="button"
                       onClick={() => removePaymentMethod(index)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red_m hover:text-red_m"
                     >
                       <Trash size={16} />
                     </button>
@@ -987,7 +1007,7 @@ const FiadosPage = () => {
               </p>
               {paymentMethods.reduce((sum, m) => sum + m.amount, 0) >
                 calculateRemainingBalance(currentCreditSale!) && (
-                <p className="text-red-500 text-sm">
+                <p className="text-red_m text-sm">
                   El monto total excede la deuda pendiente
                 </p>
               )}
@@ -1005,8 +1025,8 @@ const FiadosPage = () => {
                 text="Si"
                 colorText="text-white"
                 colorTextHover="text-white"
-                colorBg="bg-red-500"
-                colorBgHover="hover:bg-red-700"
+                colorBg="bg-red_b"
+                colorBgHover="hover:bg-red_m"
                 onClick={handleDeleteCustomerCredits}
               />
               <Button
@@ -1025,7 +1045,7 @@ const FiadosPage = () => {
               ¿Está seguro que desea eliminar TODOS los fiados de{" "}
               {customerToDelete}?
             </p>
-            <p className="font-semibold text-red-500">
+            <p className="font-semibold text-red_b">
               Deuda pendiente:{" "}
               {calculateCustomerBalance(customerToDelete || "").toLocaleString(
                 "es-AR",

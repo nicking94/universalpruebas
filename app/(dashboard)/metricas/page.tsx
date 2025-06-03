@@ -613,7 +613,7 @@ const Metrics = () => {
             <div className="flex items-center gap-2">
               <label
                 htmlFor="month"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="text-sm font-medium text-gray_b dark:text-gray_l"
               >
                 Mes:
               </label>
@@ -621,7 +621,7 @@ const Metrics = () => {
                 id="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm"
+                className="bg-white dark:bg-gray_b border border-gray_l dark:border-gray_m rounded-md px-3 py-1 text-sm"
               >
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
@@ -636,7 +636,7 @@ const Metrics = () => {
             <div className="flex items-center gap-2">
               <label
                 htmlFor="year"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="text-sm font-medium text-gray_b dark:text-gray_l"
               >
                 Año:
               </label>
@@ -644,7 +644,7 @@ const Metrics = () => {
                 id="year"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm"
+                className="bg-white dark:bg-gray_b border border-gray_l dark:border-gray_m rounded-md px-3 py-1 text-sm"
               >
                 {availableYears.map((year) => (
                   <option key={year} value={year}>
@@ -657,12 +657,12 @@ const Metrics = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray_b rounded-xl shadow-md shadow-gray_m p-5 border border-gray_xl dark:border-gray_b ">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="bg-purple-100 dark:bg-purple-900 p-2 rounded-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-purple-500 dark:text-purple-300"
+                  className="h-5 w-5 text-purple-600 dark:text-purple-300"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -677,21 +677,21 @@ const Metrics = () => {
             </h2>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-100 dark:bg-green-500/30 rounded-lg">
-                <span className="text-sm font-medium">Ingresos</span>
+              <div className="flex justify-between items-center p-3 bg-green_xl dark:bg-green_b rounded-lg">
+                <span className="text-sm font-medium ">Ingresos</span>
                 <span className="font-bold">
                   {formatCurrency(monthlySummary.ingresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-500/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-red_xl dark:bg-red_b/30 rounded-lg">
                 <span className="text-sm font-medium">Egresos</span>
                 <span className="font-bold">
                   {formatCurrency(monthlySummary.egresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-500/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-600/30 rounded-lg">
                 <span className="text-sm font-medium">Ganancia</span>
                 <span className="font-bold">
                   {formatCurrency(monthlySummary.ganancia)}
@@ -700,7 +700,7 @@ const Metrics = () => {
             </div>
 
             <div className="mt-4">
-              <div className="flex bg-gray_l dark:bg-gray_m text-white items-center mb-2 px-2">
+              <div className="flex bg-gradient-to-bl from-blue_m to-blue_b dark:bg-gray_m text-white items-center mb-2 px-2">
                 <h3 className="w-full p-2 font-medium text-md ">
                   5 Productos por{" "}
                   {monthlyRankingUnit === "unidad"
@@ -721,7 +721,7 @@ const Metrics = () => {
                     )
                   }
                   disabled={rubro === "indumentaria"}
-                  className={`text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm ${
+                  className={`text-black dark:text-white bg-white dark:bg-gray_b border border-gray_l dark:border-gray_m rounded-sm px-2 py-1 text-sm ${
                     rubro === "indumentaria"
                       ? "opacity-50 cursor-not-allowed"
                       : ""
@@ -753,13 +753,13 @@ const Metrics = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray_m dark:text-gray_m">
                   No hay datos de ventas este mes
                 </p>
               )}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray_b rounded-xl shadow-md shadow-gray_m p-5 border border-gray_xl dark:border-gray_b">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="bg-indigo-100 dark:bg-indigo-900 p-2 rounded-full">
                 <svg
@@ -779,21 +779,21 @@ const Metrics = () => {
             </h2>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-100 dark:bg-green-500/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-green_xl dark:bg-green_b rounded-lg">
                 <span className="text-sm font-medium">Ingresos</span>
                 <span className="font-bold">
                   {formatCurrency(annualSummary.ingresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-500/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-red_xl dark:bg-red_b/30 rounded-lg">
                 <span className="text-sm font-medium">Egresos</span>
                 <span className="font-bold">
                   {formatCurrency(annualSummary.egresos)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-500/30 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-600/30  rounded-lg">
                 <span className="text-sm font-medium">Ganancia</span>
                 <span className="font-bold">
                   {formatCurrency(annualSummary.ganancia)}
@@ -802,7 +802,7 @@ const Metrics = () => {
             </div>
 
             <div className="mt-4">
-              <div className="flex bg-gray_l dark:bg-gray_m text-white items-center mb-2 px-2">
+              <div className="flex bg-gradient-to-bl from-blue_m to-blue_b dark:bg-gray_m text-white items-center mb-2 px-2">
                 <h3 className="w-full p-2 font-medium text-md ">
                   5 Productos por{" "}
                   {yearlyRankingUnit === "unidad"
@@ -823,7 +823,7 @@ const Metrics = () => {
                     )
                   }
                   disabled={rubro === "indumentaria"}
-                  className={`text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-sm px-2 py-1 text-sm ${
+                  className={`text-black dark:text-white bg-white dark:bg-gray_b border border-gray_l dark:border-gray_m rounded-sm px-2 py-1 text-sm ${
                     rubro === "indumentaria"
                       ? "opacity-50 cursor-not-allowed"
                       : ""
@@ -856,7 +856,7 @@ const Metrics = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray_m dark:text-gray_m">
                   No hay datos de ventas este año
                 </p>
               )}
@@ -864,7 +864,7 @@ const Metrics = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray_b rounded-xl shadow-md shadow-gray_m p-5 border border-gray_xl dark:border-gray_b">
             <h2 className="text-lg font-semibold mb-4">
               Ingresos | Egresos -{" "}
               {format(
@@ -904,7 +904,7 @@ const Metrics = () => {
               }}
             />
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray_b rounded-xl shadow-md shadow-gray_m p-5 border border-gray_xl dark:border-gray_b">
             <h2 className="text-lg font-semibold mb-4">
               Ganancia Diaria -{" "}
               {format(
@@ -946,7 +946,7 @@ const Metrics = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray_b rounded-xl shadow-md shadow-gray_m p-5 border border-gray_xl dark:border-gray_b">
             <h2 className="text-lg font-semibold mb-4">
               Ingresos | Egresos - Año {selectedYear}
             </h2>
@@ -981,7 +981,7 @@ const Metrics = () => {
               }}
             />
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray_b rounded-xl shadow-md shadow-gray_m p-5 border border-gray_xl dark:border-gray_b">
             <h2 className="text-lg font-semibold mb-4">
               Distribución Mensual -{" "}
               {format(

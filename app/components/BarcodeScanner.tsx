@@ -15,7 +15,7 @@ export default function BarcodeScanner({
   value,
   onChange,
   onScanComplete,
-  placeholder = "Escanea un código de barras",
+  placeholder = "Escanear o ingresar código manualmente",
 }: BarcodeScannerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);

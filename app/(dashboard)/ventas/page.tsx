@@ -1061,7 +1061,7 @@ const VentasPage = () => {
 
         <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
           <table className="table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
-            <thead className="text-white bg-blue_b">
+            <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b">
               <tr>
                 <th className="text-sm 2xl:text-lg px-4 py-2 text-start ">
                   Producto
@@ -1209,8 +1209,8 @@ const VentasPage = () => {
               }
             >
               <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
-                <div className="space-y-3 p-4 bg-gray-50 rounded-md border border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+                <div className="space-y-3 p-4 bg-gray_xl rounded-md border border-gray_l">
+                  <h3 className="text-lg font-semibold text-gray_b border-b pb-2">
                     Resumen de Venta
                   </h3>
 
@@ -1253,11 +1253,11 @@ const VentasPage = () => {
                   </div>
                 </div>
 
-                <div className="space-y-3 p-4 bg-gray-50 rounded-md border border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+                <div className="space-y-3 p-4 bg-gray_xl rounded-md border border-gray_l">
+                  <h3 className="text-lg font-semibold text-gray_b border-b pb-2">
                     Detalles de Productos
                   </h3>
-                  <ul className="divide-y divide-gray-200">
+                  <ul className="divide-y divide-gray_l">
                     {selectedSale.products.map((product, index) => (
                       <li
                         key={index}
@@ -1385,7 +1385,7 @@ const VentasPage = () => {
             </div>
             {newSale.products.length > 0 && (
               <table className="table-auto w-full  ">
-                <thead className=" bg-blue_b text-white text-sm 2xl:text-lg">
+                <thead className=" bg-gradient-to-bl from-blue_m to-blue_b text-white text-sm 2xl:text-lg">
                   <tr>
                     <th className="px-4 py-2">Producto</th>
                     <th className="px-4 py-2 text-center">Unidad</th>
@@ -1421,7 +1421,7 @@ const VentasPage = () => {
                               className="text-black"
                             />
                           ) : (
-                            <div className="text-center py-2 text-gray-500">
+                            <div className="text-center py-2 text-gray_m">
                               {product.unit}
                             </div>
                           )}
@@ -1471,7 +1471,7 @@ const VentasPage = () => {
                         <td className=" px-4 py-2 text-center">
                           <button
                             onClick={() => handleRemoveProduct(product.id)}
-                            className="cursor-pointer hover:bg-red-500 text-gray_b hover:text-white p-1 rounded-sm transition-all duration-200"
+                            className="cursor-pointer hover:bg-red_b text-gray_b hover:text-white p-1 rounded-sm transition-all duration-200"
                           >
                             <Trash size={20} />
                           </button>
@@ -1545,7 +1545,7 @@ const VentasPage = () => {
                               0
                             ) >
                               newSale.total + 0.1 && (
-                              <span className="text-xs text-red-500 ml-2">
+                              <span className="text-xs text-red_m ml-2">
                                 Exceso: $
                                 {(
                                   newSale.paymentMethods.reduce(
@@ -1561,7 +1561,7 @@ const VentasPage = () => {
                           <button
                             type="button"
                             onClick={() => removePaymentMethod(index)}
-                            className="cursor-pointer text-red-500 hover:text-red-700"
+                            className="cursor-pointer text-red_m hover:text-red_b"
                           >
                             <Trash size={16} />
                           </button>
@@ -1652,7 +1652,7 @@ const VentasPage = () => {
                 newSale.paymentMethods.reduce((sum, m) => sum + m.amount, 0) -
                   newSale.total
               ) > 0.1 && (
-                <p className="text-red-500 text-sm">
+                <p className="text-red_m text-sm">
                   La suma de los métodos no coincide con el total
                 </p>
               )}

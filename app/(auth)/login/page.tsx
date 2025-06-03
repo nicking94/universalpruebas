@@ -176,8 +176,8 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex">
       <AuthForm type="login" onSubmit={handleLogin} />
-      <div className="w-[65%] xl:w-[75%]  flex flex-col justify-center bg-blue_l">
-        <div className="bg-blue_xl flex justify-center text-center relative">
+      <div className="w-[65%] xl:w-[75%]  flex flex-col justify-center bg-gradient-to-bl from-blue_m to-blue_xl">
+        <div className="bg-gradient-to-bl from-blue_xl to-blue_xl flex justify-center text-center relative">
           <div
             className="shadow-lg shadow-yellow-100 rounded-full w-75 h-75 z-10 space-y-2 flex flex-col items-center justify-center text-center relative overflow-visible"
             style={{

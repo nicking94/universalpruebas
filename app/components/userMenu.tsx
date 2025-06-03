@@ -48,7 +48,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
               handleTheme();
               setIsMenuOpen(false);
             }}
-            className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray-100 dark:hover:bg-gray_b transition-all duration-200 rounded-t-md"
+            className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray_xl dark:hover:bg-gray_b transition-all duration-200 rounded-t-md"
           >
             {theme === "dark" ? (
               <Sun className="mr-2" />
@@ -58,7 +58,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
             {theme === "dark" ? "Modo Claro" : "Modo Oscuro"}
           </button>
           <a
-            className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray-100 dark:hover:bg-gray_b transition-all duration-200 rounded-b-md"
+            className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray_xl dark:hover:bg-gray_b transition-all duration-200 rounded-b-md"
             href="https://www.youtube.com/watch?v=q6U8XRMTxJg&list=PLANJYSrB0A_HqQIHQs9ZIrwLOvMVGrA6W"
             target="_blank"
           >
@@ -70,7 +70,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
               handleCloseSession();
               setIsMenuOpen(false);
             }}
-            className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray-100 dark:hover:bg-gray_b transition-all duration-200 rounded-b-md"
+            className="cursor-pointer flex items-center w-full px-4 py-2 text-sm text-gray_b dark:text-white hover:bg-gray_xl dark:hover:bg-gray_b transition-all duration-200 rounded-b-md"
           >
             <LogOut className="mr-2" />
             Cerrar sesión

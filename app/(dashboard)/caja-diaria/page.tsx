@@ -614,15 +614,15 @@ const CajaDiariaPage = () => {
         minheight="min-h-[23rem]"
       >
         <div className="mb-4 grid grid-cols-2 gap-2">
-          <div className="bg-green-100 p-3 rounded-lg">
-            <h3 className="font-semibold text-green-800">Total Ingresos</h3>
-            <p className="text-xl font-bold text-green-800">
+          <div className="bg-green_xl p-3 rounded-lg">
+            <h3 className="font-semibold text-green_b">Total Ingresos</h3>
+            <p className="text-xl font-bold text-green_b">
               {formatCurrency(totalIngresos)}
             </p>
           </div>
-          <div className="bg-red-100 p-3 rounded-lg">
-            <h3 className="font-semibold text-red-800">Total Egresos</h3>
-            <p className="text-xl font-bold text-red-800">
+          <div className="bg-red_l p-3 rounded-lg">
+            <h3 className="font-semibold text-red_b">Total Egresos</h3>
+            <p className="text-xl font-bold text-red_b">
               {formatCurrency(totalEgresos)}
             </p>
           </div>
@@ -650,7 +650,7 @@ const CajaDiariaPage = () => {
                 option &&
                 setFilterType(option.value as "TODOS" | "INGRESO" | "EGRESO")
               }
-              className="w-full"
+              className="w-full text-black"
             />
           </div>
           <div>
@@ -668,29 +668,29 @@ const CajaDiariaPage = () => {
                 option &&
                 setFilterPaymentMethod(option.value as PaymentMethod | "TODOS")
               }
-              className="w-full"
+              className="w-full text-black"
             />
           </div>
         </div>
 
         <div className="max-h-[50vh] overflow-y-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray_l">
+            <thead className="bg-gray_xl">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
                   Tipo
                 </th>
 
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
                   Producto
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
                   Descripción
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
                   Métodos de Pago
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 capitalize tracking-wider">
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray_m capitalize tracking-wider">
                   Total
                 </th>
               </tr>
@@ -700,21 +700,21 @@ const CajaDiariaPage = () => {
                 Object.values(groupedMovements).map((movement, index) => (
                   <tr
                     key={index}
-                    className={movement.type === "EGRESO" ? "bg-red-50" : ""}
+                    className={movement.type === "EGRESO" ? "bg-red_xl" : ""}
                   >
                     <td className="px-4 py-2 whitespace-nowrap text-sm">
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
                           movement.type === "INGRESO"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            ? "bg-green_xl text-green_b"
+                            : "bg-red_l text-red_b"
                         }`}
                       >
                         {movement.type}
                       </span>
                     </td>
 
-                    <td className="px-4 py-2 text-sm text-gray-500">
+                    <td className="px-4 py-2 text-sm text-gray_m">
                       {Array.isArray(movement.items) &&
                       movement.items.length > 0 ? (
                         <div className="flex flex-col">
@@ -758,10 +758,10 @@ const CajaDiariaPage = () => {
                         "-"
                       )}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
+                    <td className="px-4 py-2 text-sm text-gray_m">
                       {movement.description}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
+                    <td className="px-4 py-2 text-sm text-gray_m">
                       {movement.combinedPaymentMethods ? (
                         <div className="flex flex-col">
                           {movement.combinedPaymentMethods.map((method, i) => (
@@ -777,7 +777,7 @@ const CajaDiariaPage = () => {
                       )}
                     </td>
 
-                    <td className="px-4 py-2 text-sm text-center font-medium text-green-600">
+                    <td className="px-4 py-2 text-sm text-center font-medium text-green_b">
                       {formatCurrency(movement.amount)}
                     </td>
                   </tr>
@@ -822,26 +822,42 @@ const CajaDiariaPage = () => {
             {currentDailyCash ? (
               <div
                 className={`p-3 rounded-lg mb-4 ${
-                  currentDailyCash.closed ? "bg-red-100" : "bg-green-100"
+                  currentDailyCash.closed ? "bg-red_l" : "bg-green_xl"
                 }`}
               >
-                <div className="flex justify-between items-center">
-                  <div className="text-gray_m font-semibold">
-                    <h3
-                      className={`text-gray_b font-bold ${
-                        currentDailyCash.closed
-                          ? "text-red-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {currentDailyCash.closed
-                        ? "Caja Cerrada"
-                        : "Caja Abierta"}
-                    </h3>
-                    <p>
-                      Fecha:{" "}
-                      {format(parseISO(currentDailyCash.date), "dd/MM/yyyy")}
-                    </p>
+                <div className="items-center">
+                  <div className="flex justify-between items-center gap-2 pb-4">
+                    <div className="flex items-center gap-2">
+                      <h3
+                        className={`text-gray_b text-sm 2xl:text-lg font-bold  ${
+                          currentDailyCash.closed
+                            ? "text-red_b"
+                            : "text-green_b"
+                        }`}
+                      >
+                        {currentDailyCash.closed
+                          ? "Caja Cerrada"
+                          : "Caja Abierta"}
+                      </h3>
+                      <p className="text-gray_m font-medium">
+                        {format(parseISO(currentDailyCash.date), "dd/MM/yyyy")}
+                      </p>
+                    </div>
+                    <div>
+                      {!currentDailyCash.closed && (
+                        <Button
+                          icon={<X />}
+                          text="Cerrar Caja"
+                          colorText="text-white"
+                          colorTextHover="text-white"
+                          colorBg="bg-red_m"
+                          colorBgHover="hover:bg-red_b"
+                          onClick={() => setIsCloseCashModal(true)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className=" grid grid-cols-2 text-gray_m font-semibold mb-4">
                     <p>
                       Monto inicial:{" "}
                       {formatCurrency(currentDailyCash.initialAmount)}
@@ -872,32 +888,25 @@ const CajaDiariaPage = () => {
                           Efectivo contado:{" "}
                           {formatCurrency(currentDailyCash.closingAmount || 0)}
                         </p>
-                        <p
-                          className={`font-bold ${
-                            (currentDailyCash.closingDifference || 0) >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          Diferencia:{" "}
-                          {formatCurrency(
-                            currentDailyCash.closingDifference || 0
-                          )}
-                        </p>
                       </>
                     ) : null}
                   </div>
-                  {!currentDailyCash.closed && (
-                    <Button
-                      icon={<X />}
-                      text="Cerrar Caja"
-                      colorText="text-white"
-                      colorTextHover="text-white"
-                      colorBg="bg-red-500"
-                      colorBgHover="hover:bg-red-700"
-                      onClick={() => setIsCloseCashModal(true)}
-                    />
-                  )}
+                  {currentDailyCash.closed ? (
+                    <p
+                      className={`font-bold text-sm 2xl:text-lg text-center text-white p-2 ${
+                        (currentDailyCash.closingDifference || 0) >= 0
+                          ? "bg-green_m"
+                          : "bg-red_m "
+                      } w-full ${
+                        (currentDailyCash.closingDifference || 0) >= 0
+                          ? "text-green_b"
+                          : "text-red_b"
+                      }`}
+                    >
+                      Diferencia:{" "}
+                      {formatCurrency(currentDailyCash.closingDifference || 0)}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -946,7 +955,7 @@ const CajaDiariaPage = () => {
               } `}
             >
               <table className=" table-auto w-full text-center border-collapse overflow-y-auto shadow-sm shadow-gray_l">
-                <thead className="text-white bg-blue_b">
+                <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b">
                   <tr>
                     <th className="text-sm 2xl:text-lg px-4 py-2 text-start">
                       Fecha
@@ -974,10 +983,10 @@ const CajaDiariaPage = () => {
                         <td className="font-semibold px-4 py-2  border-x border-gray_xltext-start">
                           {format(parseISO(day.date), "dd/MM/yyyy")}
                         </td>
-                        <td className="font-semibold text-green-600 px-4 py-2  border-x border-gray_xl">
+                        <td className="font-semibold text-green_b px-4 py-2  border-x border-gray_xl">
                           {formatCurrency(day.ingresos)}
                         </td>
-                        <td className="font-semibold text-red-600 px-4 py-2  border-x border-gray_xl">
+                        <td className="font-semibold text-red_b px-4 py-2  border-x border-gray_xl">
                           {formatCurrency(day.egresos)}
                         </td>
                         <td className="font-semibold text-purple-600 px-4 py-2">
@@ -987,8 +996,8 @@ const CajaDiariaPage = () => {
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
                               day.closed
-                                ? "bg-red-100 text-red-800"
-                                : "bg-green-100 text-green-800"
+                                ? "bg-red_m text-white"
+                                : "bg-green_m text-white"
                             }`}
                           >
                             {day.closed ? "Cerrada" : "Abierta"}
@@ -1127,7 +1136,7 @@ const CajaDiariaPage = () => {
                     <button
                       type="button"
                       onClick={() => removePaymentMethod(index)}
-                      className={`text-red-500 hover:text-red-700 ${
+                      className={`cursor-pointer text-red_m hover:text-red_b transition-all duration-200 ${
                         paymentMethods.length > 1 ? "-mt-6 pr-2" : ""
                       }`}
                     >

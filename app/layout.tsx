@@ -4,6 +4,7 @@ import "./globals.css";
 import { SidebarProvider } from "./context/SidebarContext";
 import SessionChecker from "./components/SessionChecker";
 import { RubroProvider } from "./context/RubroContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -27,18 +28,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <RubroProvider>
-      <SidebarProvider>
-        <html lang="es">
-          <body
-            className={` ${roboto.variable} antialiased hidden md:block capitalize`}
-          >
-            <main>
-              {children} <SessionChecker />
-            </main>
-          </body>
-        </html>
-      </SidebarProvider>
-    </RubroProvider>
+    <NotificationProvider>
+      <RubroProvider>
+        <SidebarProvider>
+          <html lang="es">
+            <body
+              className={` ${roboto.variable} antialiased hidden md:block capitalize`}
+            >
+              <main>
+                {children} <SessionChecker />
+              </main>
+            </body>
+          </html>
+        </SidebarProvider>
+      </RubroProvider>
+    </NotificationProvider>
   );
 }
