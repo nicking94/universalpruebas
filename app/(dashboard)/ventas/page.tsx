@@ -664,14 +664,15 @@ const VentasPage = () => {
           phone: customerPhone,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          rubro: rubro === "todos" ? undefined : rubro,
         };
         await db.customers.add(newCustomer);
-        customerId = newCustomer.id;
         setCustomers([...customers, newCustomer]);
         setCustomerOptions([
           ...customerOptions,
           { value: newCustomer.id, label: newCustomer.name },
         ]);
+        customerId = newCustomer.id;
       }
 
       const saleToSave: CreditSale = {
@@ -762,10 +763,15 @@ const VentasPage = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       const allCustomers = await db.customers.toArray();
-      setCustomers(allCustomers);
 
+      const filtered =
+        rubro === "todos"
+          ? allCustomers
+          : allCustomers.filter((customer) => customer.rubro === rubro);
+
+      setCustomers(filtered);
       setCustomerOptions(
-        allCustomers.map((customer) => ({
+        filtered.map((customer) => ({
           value: customer.id,
           label: customer.name,
         }))
@@ -773,7 +779,7 @@ const VentasPage = () => {
     };
 
     fetchCustomers();
-  }, []);
+  }, [rubro]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -1498,7 +1504,7 @@ const VentasPage = () => {
                 </label>
 
                 {isCredit ? (
-                  <div className="p-2 bg-orange-100 text-orange-800 rounded-md">
+                  <div className="p-2 bg-orange-100 text-orange-800 rounded-md mt-1">
                     <p className="font-semibold">
                       VENTA FIADA - Métodos de pago deshabilitados
                     </p>
@@ -1607,6 +1613,8 @@ const VentasPage = () => {
                   placeholder="Buscar cliente..."
                   isClearable
                   className="text-black"
+                  classNamePrefix="react-select"
+                  noOptionsMessage={() => "No se encontraron clientes"}
                 />
                 <div className="flex items-center space-x-4 mt-4">
                   <Input

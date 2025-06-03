@@ -271,6 +271,7 @@ export type Customer = {
   phone?: string;
   createdAt: string;
   updatedAt: string;
+  rubro?: Rubro;
 };
 
 export type SupplierContact = {

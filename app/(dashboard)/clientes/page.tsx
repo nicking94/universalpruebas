@@ -41,36 +41,20 @@ const ClientesPage = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       const allCustomers = await db.customers.toArray();
+
+      const filtered = allCustomers.filter((customer) => {
+        if (rubro === "todos") return true;
+        return customer.rubro === rubro;
+      });
+
+      const searched = filtered.filter(
+        (customer) =>
+          customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
       setCustomers(allCustomers);
-
-      const filtered = await Promise.all(
-        allCustomers.map(async (customer) => {
-          if (rubro === "todos") return customer;
-
-          const customerSales = await db.sales
-            .where("customerId")
-            .equals(customer.id)
-            .toArray();
-
-          const hasRubro = customerSales.some((sale) =>
-            sale.products.some((product) => product.rubro === rubro)
-          );
-
-          return hasRubro ? customer : null;
-        })
-      );
-
-      setFilteredCustomers(
-        filtered
-          .filter(Boolean)
-          .filter(
-            (customer) =>
-              customer?.name
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-              customer?.phone?.toLowerCase().includes(searchQuery.toLowerCase())
-          ) as Customer[]
-      );
+      setFilteredCustomers(searched);
     };
 
     fetchCustomers();
@@ -113,6 +97,7 @@ const ClientesPage = () => {
         ...newCustomer,
         id: generateCustomerId(newCustomer.name),
         name: newCustomer.name.toUpperCase().trim(),
+        rubro: rubro === "todos" ? undefined : rubro,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -204,6 +189,7 @@ const ClientesPage = () => {
         ...editingCustomer,
         name: newCustomer.name.toUpperCase().trim(),
         phone: newCustomer.phone,
+        rubro: rubro === "todos" ? undefined : rubro,
         updatedAt: new Date().toISOString(),
       };
 
