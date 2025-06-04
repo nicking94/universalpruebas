@@ -49,12 +49,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
           onChange={handleChange}
           required
           placeholder="Escribe tu nombre de usuario..."
-          className="placeholder:text-gray_l outline-none p-2 border-[1px] border-blue_l rounded-sm focus:border-blue_b transition-colors duration-200"
+          className="placeholder:text-gray_l outline-none p-2 border-[1px] border-blue_l rounded-sm focus:border-blue_b transition-colors duration-300"
         />
       </div>
       <div className="text-gray_b">
         <label htmlFor="password">Contraseña</label>
-        <div className="relative border-[1px] border-blue_l rounded-sm focus:border-blue_b transition-colors duration-200">
+        <div className="relative border-[1px] border-blue_l rounded-sm focus:border-blue_b transition-colors duration-300">
           <input
             type={showPassword ? "text" : "password"}
             id="password"

@@ -69,7 +69,8 @@ const FiadosPage = () => {
       if (a.paid !== b.paid) {
         return a.paid ? 1 : -1;
       }
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
+
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
 
   const salesByCustomer = filteredSales.reduce((acc, sale) => {
@@ -629,7 +630,7 @@ const FiadosPage = () => {
                 text="Cerrar"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsInfoModalOpen(false)}
               />
@@ -722,7 +723,7 @@ const FiadosPage = () => {
             </div>
 
             {/* Listado de fiados */}
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto border border-blue_xl rounded-md">
               <h3 className="font-semibold mb-3 text-lg border-b pb-2">
                 Historial de fiados
               </h3>
@@ -889,7 +890,7 @@ const FiadosPage = () => {
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => {
                   setIsPaymentModalOpen(false);
@@ -989,7 +990,7 @@ const FiadosPage = () => {
                 <button
                   type="button"
                   onClick={addPaymentMethod}
-                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
+                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-300"
                 >
                   <Plus size={16} className="mr-1" /> Agregar otro método
                 </button>
@@ -1034,7 +1035,7 @@ const FiadosPage = () => {
                 text="No"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsDeleteModalOpen(false)}
               />

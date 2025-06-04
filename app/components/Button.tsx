@@ -53,7 +53,7 @@ const Button: React.FC<ButtonProps> = ({
       aria-label={text}
       className={`${colorText} ${colorTextHover} ${width} ${minwidth} ${height} ${px} ${py} ${colorBg} ${colorBgHover} ${
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-      } flex items-center justify-center gap-2 rounded transition-all duration-200 font-normal uppercase`}
+      } flex items-center justify-center gap-2 rounded transition-all duration-300 font-normal uppercase shadow shadow-blue_m`}
     >
       {icon && iconPosition === "left" && <span>{icon}</span>}
       {text && <span>{text}</span>}

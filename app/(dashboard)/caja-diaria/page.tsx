@@ -601,7 +601,7 @@ const CajaDiariaPage = () => {
               text="Cerrar"
               colorText="text-gray_b dark:text-white"
               colorTextHover="hover:dark:text-white"
-              colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+              colorBg="bg-transparent dark:bg-gray_m"
               colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
               onClick={() => {
                 setIsDetailModalOpen(false);
@@ -910,14 +910,16 @@ const CajaDiariaPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-6 flex items-center justify-between">
-                <p className="text-gray_m mb-2 text-md">
+              <div className="bg-gradient-to-bl from-blue_m to-blue_b p-3 rounded-lg mb-4 flex items-center space-x-10">
+                <p className="text-md text-white">
                   No hay caja abierta para hoy
                 </p>
                 <Button
                   text="Abrir Caja"
-                  colorText="text-white"
-                  colorTextHover="text-white"
+                  colorText="text-gray_b"
+                  colorTextHover="hover:text-white"
+                  colorBg="bg-blue_xl"
+                  colorBgHover="hover:bg-blue_b"
                   onClick={() => setIsOpenCashModal(true)}
                 />
               </div>
@@ -1138,7 +1140,7 @@ const CajaDiariaPage = () => {
                     <button
                       type="button"
                       onClick={() => removePaymentMethod(index)}
-                      className={`cursor-pointer text-red_m hover:text-red_b transition-all duration-200 ${
+                      className={`cursor-pointer text-red_m hover:text-red_b transition-all duration-300 ${
                         paymentMethods.length > 1 ? "-mt-6 pr-2" : ""
                       }`}
                     >
@@ -1151,7 +1153,7 @@ const CajaDiariaPage = () => {
                 <button
                   type="button"
                   onClick={addPaymentMethod}
-                  className={`cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200 ${
+                  className={`cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-300 ${
                     paymentMethods.length === 1 ? "mt-4" : "-mt-2"
                   }`}
                 >
@@ -1197,7 +1199,7 @@ const CajaDiariaPage = () => {
                 text="Abrir más tarde"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsOpenCashModal(false)}
               />

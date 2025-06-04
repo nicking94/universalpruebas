@@ -25,11 +25,11 @@ const Navbar: React.FC<NavbarProps> = ({
   const selectedRubro = rubroOptions.find((option) => option.value === rubro);
 
   return (
-    <header className="bg-white dark:bg-black text-gray_b dark:text-white w-full px-10 py-5 relative shadow-sm shadow-gray_xl dark:shadow-gray_m transition-all duration-200">
+    <header className="bg-white dark:bg-black text-gray_b dark:text-white w-full px-10 py-5 relative shadow-sm shadow-gray_xl dark:shadow-gray_m transition-all duration-300">
       <nav
         className={`${
           isSidebarOpen ? "ml-64" : "ml-30"
-        } transition-all duration-200 flex items-center justify-between h-10`}
+        } transition-all duration-300 flex items-center justify-between h-10`}
       >
         <div className="flex items-center gap-2">
           <Image className="rounded-full w-8 h-8" src={logo} alt="User Logo" />

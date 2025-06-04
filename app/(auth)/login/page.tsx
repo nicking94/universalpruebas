@@ -197,9 +197,9 @@ const LoginPage = () => {
               href="https://wa.me/5492613077147"
               target="_blank"
               rel="noopener noreferrer"
-              className="border-b-2 border-blue_xl cursor-pointer hover:text-blue-500 transition-colors duration-200"
+              className="border-b-2 border-blue_xl cursor-pointer hover:text-blue-500 transition-colors duration-300"
             >
-              <p className="text-lg text-blue_b italic hover:scale-105 transition-all duration-200">
+              <p className="text-lg text-blue_b italic hover:scale-105 transition-all duration-300">
                 Whatsapp: +54 26130771477
               </p>
             </a>

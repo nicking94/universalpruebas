@@ -1203,7 +1203,7 @@ const VentasPage = () => {
                     text="Cerrar"
                     colorText="text-gray_b dark:text-white"
                     colorTextHover="hover:dark:text-white"
-                    colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                    colorBg="bg-transparent dark:bg-gray_m"
                     colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                     onClick={() => handleCloseInfoModal()}
                   />
@@ -1321,7 +1321,7 @@ const VentasPage = () => {
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={handleCloseModal}
                 hotkey="esc"
@@ -1473,7 +1473,7 @@ const VentasPage = () => {
                         <td className=" px-4 py-2 text-center">
                           <button
                             onClick={() => handleRemoveProduct(product.id)}
-                            className="cursor-pointer hover:bg-red_b text-gray_b hover:text-white p-1 rounded-sm transition-all duration-200"
+                            className="cursor-pointer hover:bg-red_b text-gray_b hover:text-white p-1 rounded-sm transition-all duration-300"
                           >
                             <Trash size={20} />
                           </button>
@@ -1574,7 +1574,7 @@ const VentasPage = () => {
                       <button
                         type="button"
                         onClick={addPaymentMethod}
-                        className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-200"
+                        className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-300"
                       >
                         <Plus size={16} className="mr-1" /> Agregar otro método
                         de pago
@@ -1680,7 +1680,7 @@ const VentasPage = () => {
                 text="No"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsConfirmModalOpen(false)}
                 hotkey="esc"

@@ -72,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
 
   return (
     <aside
-      className={`fixed top-0 left-0  flex flex-col justify-between  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-200  ${
+      className={`fixed top-0 left-0  flex flex-col justify-between  bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-300  ${
         isSidebarOpen ? "w-64" : "w-30"
       } overflow-y-auto`}
     >
@@ -105,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
                     : ""
                 } ${
                   isSidebarOpen ? "justify-start" : "justify-center"
-                } cursor-pointer flex items-center px-2 py-4 w-full  hover:bg-blue_xl dark:hover:bg-gray_b transition-all duration-200`}
+                } cursor-pointer flex items-center px-2 py-4 w-full  hover:bg-blue_xl dark:hover:bg-gray_b transition-all duration-300`}
               >
                 {item.icon}
                 {isSidebarOpen && <span className="ml-3">{item.label}</span>}

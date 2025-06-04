@@ -545,7 +545,7 @@ const ProveedoresPage = () => {
               text="Cerrar"
               colorText="text-gray_b dark:text-white"
               colorTextHover="hover:dark:text-white"
-              colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+              colorBg="bg-transparent dark:bg-gray_m"
               colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
               onClick={() => {
                 setIsProductAssignmentModalOpen(false);
@@ -680,7 +680,7 @@ const ProveedoresPage = () => {
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => {
                   setIsModalOpen(false);
@@ -801,7 +801,7 @@ const ProveedoresPage = () => {
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBg="bg-transparent dark:bg-gray_m"
                 colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsDeleteModalOpen(false)}
               />
