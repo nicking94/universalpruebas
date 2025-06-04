@@ -422,7 +422,7 @@ const ProductsPage = () => {
   return (
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Productos</h1>
+        <h1 className="text-lg 2xl:text-xl font-semibold mb-2">Productos</h1>
 
         <div className="flex justify-between mb-2">
           <div className="w-full">
@@ -583,7 +583,7 @@ const ProductsPage = () => {
                           {formatCurrency(product.price)}
                         </td>
                         {rubro !== "indumentaria" && (
-                          <td className="px-4 py-2 border border-gray_xl">
+                          <td className="px-4 py-2 border border-gray_xl font-semibold">
                             {product.expiration &&
                             isValid(parseISO(product.expiration))
                               ? format(
@@ -685,7 +685,7 @@ const ProductsPage = () => {
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={handleCloseModal}
               />
             </>
@@ -887,7 +887,7 @@ const ProductsPage = () => {
                 colorText="text-white dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-red_m border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-red_b hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-red_b hover:dark:bg-blue_l"
                 onClick={handleConfirmDelete}
               />
               <Button
@@ -895,7 +895,7 @@ const ProductsPage = () => {
                 colorText="text-gray_b"
                 colorTextHover="text-gray_b"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsConfirmModalOpen(false)}
               />
             </>
@@ -914,7 +914,7 @@ const ProductsPage = () => {
               colorText="text-gray_b dark:text-white"
               colorTextHover="hover:dark:text-white"
               colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-              colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+              colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
               onClick={() => setIsPriceModalOpen(false)}
             />
           }
@@ -934,7 +934,7 @@ const ProductsPage = () => {
             </div>
 
             {scannedProduct && (
-              <div className="mt-4 p-4 bg-gray_xl dark:bg-gray_b rounded-lg">
+              <div className="mt-4 p-4 bg-blue_xl dark:bg-gray_b rounded-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
                     <p className="text-sm font-medium text-gray_m dark:text-gray_m">

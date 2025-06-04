@@ -608,7 +608,7 @@ const Metrics = () => {
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
-          <h1 className="text-xl 2xl:text-2xl font-semibold ">Métricas</h1>
+          <h1 className="text-lg 2xl:text-xl font-semibold ">Métricas</h1>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2">

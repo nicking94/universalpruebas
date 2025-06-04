@@ -602,7 +602,7 @@ const CajaDiariaPage = () => {
               colorText="text-gray_b dark:text-white"
               colorTextHover="hover:dark:text-white"
               colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-              colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+              colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
               onClick={() => {
                 setIsDetailModalOpen(false);
                 setFilterType("TODOS");
@@ -675,22 +675,22 @@ const CajaDiariaPage = () => {
 
         <div className="max-h-[50vh] overflow-y-auto">
           <table className="min-w-full divide-y divide-gray_l">
-            <thead className="bg-gray_xl">
+            <thead className="bg-gradient-to-bl from-blue_m to-blue_b text-white">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium tracking-wider">
                   Tipo
                 </th>
 
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium tracking-wider">
                   Producto
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium  tracking-wider">
                   Descripción
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray_m capitalize tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium  tracking-wider">
                   Métodos de Pago
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray_m capitalize tracking-wider">
+                <th className="px-4 py-2 text-center text-xs font-medium tracking-wider">
                   Total
                 </th>
               </tr>
@@ -816,13 +816,13 @@ const CajaDiariaPage = () => {
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)] flex flex-col justify-between ">
         <div className="flex flex-col justify-between h-[calc(100vh-80px)]">
           <div>
-            <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">
+            <h1 className="text-lg 2xl:text-xl font-semibold mb-2">
               Caja Diaria
             </h1>
             {currentDailyCash ? (
               <div
                 className={`p-3 rounded-lg mb-4 ${
-                  currentDailyCash.closed ? "bg-red_l" : "bg-green_xl"
+                  currentDailyCash.closed ? "bg-red_xl" : "bg-green_xl"
                 }`}
               >
                 <div className="items-center">
@@ -910,8 +910,10 @@ const CajaDiariaPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-6">
-                <p className="text-gray_m mb-2">No hay caja abierta para hoy</p>
+              <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-4 space-y-6 flex items-center justify-between">
+                <p className="text-gray_m mb-2 text-md">
+                  No hay caja abierta para hoy
+                </p>
                 <Button
                   text="Abrir Caja"
                   colorText="text-white"
@@ -1196,7 +1198,7 @@ const CajaDiariaPage = () => {
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsOpenCashModal(false)}
               />
             </div>

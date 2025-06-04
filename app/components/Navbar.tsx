@@ -9,7 +9,7 @@ import { useRubro } from "../context/RubroContext";
 import Select from "react-select";
 
 const rubroOptions = [
-  { value: "todos", label: "Todos" },
+  { value: "todos los rubros", label: "todos los rubros" },
   { value: "comercio", label: "Comercio" },
   { value: "indumentaria", label: "Indumentaria" },
 ];
@@ -33,12 +33,12 @@ const Navbar: React.FC<NavbarProps> = ({
       >
         <div className="flex items-center gap-2">
           <Image className="rounded-full w-8 h-8" src={logo} alt="User Logo" />
-          <h1 className="text-lg italic">Universal App</h1>
+          <h1 className="text-lg italic">Universal App | {rubro}</h1>
         </div>
 
         <div className="flex items-center gap-6">
-          <div className=" flex items-center gap-2 bg-gradient-to-bl from-blue_m to-blue_b p-2 rounded-sm">
-            <p className="dark:text-white italic text-md font-normal text-white">
+          <div className=" flex items-center gap-2 bg-gradient-to-bl from-blue_m to-blue_b p-2 rounded-sm shadow-sm shadow-blue_b">
+            <p className="dark:text-white italic text-md font-normal text-white border-b border-white">
               Rubro:
             </p>
             <Select
@@ -54,7 +54,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   );
                 }
               }}
-              className="w-40 text-black"
+              className="w-46 text-black rounded-none bg-blue_m"
               classNamePrefix="react-select"
               isSearchable={false}
             />

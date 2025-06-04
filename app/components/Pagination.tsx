@@ -75,7 +75,7 @@ const Pagination: React.FC<PaginationProps> = ({
               className={`cursor-pointer p-2 rounded-md ${
                 currentPage === 1
                   ? "text-gray_m "
-                  : "text-gray_b hover:bg-gray_xl"
+                  : "text-gray_b hover:bg-blue_xl"
               }`}
             >
               <ChevronLeft size={20} aria-hidden="true" />
@@ -153,7 +153,7 @@ const Pagination: React.FC<PaginationProps> = ({
               className={`cursor-pointer p-2 rounded-md ${
                 currentPage === totalPages
                   ? "text-gray_m "
-                  : "text-gray_b hover:bg-gray_xl"
+                  : "text-gray_b hover:bg-blue_xl"
               }`}
             >
               <ChevronRight size={20} aria-hidden="true" />

@@ -37,7 +37,7 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-0 left-0 w-full h-full bg-gray_b/80 dark:bg-gray_l/80 flex justify-center items-center z-50">
+    <div className="fixed top-0 left-0 w-full h-full bg-gray_b/80 dark:bg-blue_l/80 flex justify-center items-center z-50">
       <div
         className={`${bgColor} min-h-[10rem] w-[64rem] rounded-sm shadow-lg shadow-gray_b p-10 text-gray_b dark:text-white flex flex-col`}
       >
@@ -68,7 +68,7 @@ const Modal: React.FC<ModalProps> = ({
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={onClose}
                 type="button"
               />

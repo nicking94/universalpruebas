@@ -374,7 +374,7 @@ const ProveedoresPage = () => {
   return (
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Proveedores</h1>
+        <h1 className="text-lg 2xl:text-xl font-semibold mb-2">Proveedores</h1>
 
         <div className="flex justify-between mb-2">
           <div className="w-full max-w-md">
@@ -546,7 +546,7 @@ const ProveedoresPage = () => {
               colorText="text-gray_b dark:text-white"
               colorTextHover="hover:dark:text-white"
               colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-              colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+              colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
               onClick={() => {
                 setIsProductAssignmentModalOpen(false);
                 setProductSearchQuery("");
@@ -575,7 +575,7 @@ const ProveedoresPage = () => {
                     {filteredAvailableProducts.map((product) => (
                       <div
                         key={product.id}
-                        className={`p-2 border rounded hover:bg-gray_xl dark:hover:bg-gray_m flex justify-between items-center `}
+                        className={`p-2 border rounded hover:bg-blue_xl dark:hover:bg-gray_m flex justify-between items-center `}
                       >
                         <div className="flex-grow ">
                           <div className="flex justify-between">
@@ -624,7 +624,7 @@ const ProveedoresPage = () => {
                     {assignedProducts.map((product) => (
                       <div
                         key={product.id}
-                        className="p-2 border hover:bg-gray_xl dark:hover:bg-gray_m rounded"
+                        className="p-2 border hover:bg-blue_xl dark:hover:bg-gray_m rounded"
                       >
                         <div className="flex justify-between items-center">
                           <div>
@@ -681,7 +681,7 @@ const ProveedoresPage = () => {
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => {
                   setIsModalOpen(false);
                   resetForm();
@@ -802,7 +802,7 @@ const ProveedoresPage = () => {
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsDeleteModalOpen(false)}
               />
             </div>

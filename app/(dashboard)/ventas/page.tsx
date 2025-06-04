@@ -1021,7 +1021,7 @@ const VentasPage = () => {
   return (
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <h1 className="text-xl 2xl:text-2xl font-semibold mb-2">Ventas</h1>
+        <h1 className="text-lg 2xl:text-xl font-semibold mb-2">Ventas</h1>
 
         <div className="flex justify-between mb-2">
           <div className="flex w-full max-w-[20rem] gap-2">
@@ -1204,14 +1204,14 @@ const VentasPage = () => {
                     colorText="text-gray_b dark:text-white"
                     colorTextHover="hover:dark:text-white"
                     colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                    colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+                    colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                     onClick={() => handleCloseInfoModal()}
                   />
                 </div>
               }
             >
               <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
-                <div className="space-y-3 p-4 bg-gray_xl rounded-md border border-gray_l">
+                <div className="space-y-3 p-4 bg-blue_xl rounded-md border border-gray_l">
                   <h3 className="text-lg font-semibold text-gray_b border-b pb-2">
                     Resumen de Venta
                   </h3>
@@ -1255,7 +1255,7 @@ const VentasPage = () => {
                   </div>
                 </div>
 
-                <div className="space-y-3 p-4 bg-gray_xl rounded-md border border-gray_l">
+                <div className="space-y-3 p-4 bg-blue_xl rounded-md border border-gray_l">
                   <h3 className="text-lg font-semibold text-gray_b border-b pb-2">
                     Detalles de Productos
                   </h3>
@@ -1322,7 +1322,7 @@ const VentasPage = () => {
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={handleCloseModal}
                 hotkey="esc"
               />
@@ -1681,7 +1681,7 @@ const VentasPage = () => {
                 colorText="text-gray_b dark:text-white"
                 colorTextHover="hover:dark:text-white"
                 colorBg="bg-transparent border-b-1 dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-blue_l"
                 onClick={() => setIsConfirmModalOpen(false)}
                 hotkey="esc"
               />

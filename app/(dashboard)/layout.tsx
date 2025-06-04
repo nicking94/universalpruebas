@@ -65,7 +65,7 @@ export default function AppLayout({
           <main
             className={`${
               isSidebarOpen ? "ml-64" : "ml-30"
-            }   h-[calc(100vh-80px)] bg-gray_xl dark:bg-gray_b transition-all duration-200 overflow-y-auto`}
+            }   h-[calc(100vh-80px)] bg-blue_xl dark:bg-gray_b transition-all duration-200 overflow-y-auto`}
           >
             {children}
           </main>
