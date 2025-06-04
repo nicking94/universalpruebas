@@ -41,7 +41,7 @@ export default function ImportExportPage() {
       const blob = new Blob([json], { type: "application/json;charset=utf-8" });
       const formattedDate = format(new Date(), "dd-MM-yyyy");
 
-      saveAs(blob, `backup-${formattedDate}.json`);
+      saveAs(blob, `copia del dia ${formattedDate}.json`);
     } catch (error) {
       console.error("Error al exportar datos:", error);
       showNotification("Error al exportar los datos", "error");

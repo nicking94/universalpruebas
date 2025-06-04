@@ -31,6 +31,7 @@ import { Bar, Pie, Line } from "react-chartjs-2";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import { useRubro } from "@/app/context/RubroContext";
+import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 
 ChartJS.register(
   BarElement,
@@ -65,7 +66,7 @@ const Metrics = () => {
       const storedDailyCashes = await db.dailyCashes.toArray();
       setDailyCashes(storedDailyCashes);
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       const todayCash = storedDailyCashes.find((dc) => dc.date === today);
       setCurrentDailyCash(todayCash || null);
       const years = new Set<number>();

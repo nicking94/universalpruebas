@@ -23,6 +23,7 @@ import { formatCurrency } from "@/app/lib/utils/currency";
 import InputCash from "@/app/components/InputCash";
 import { useRubro } from "@/app/context/RubroContext";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 
 const CajaDiariaPage = () => {
   const { rubro } = useRubro();
@@ -139,7 +140,7 @@ const CajaDiariaPage = () => {
   };
 
   const checkCashStatus = async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
     const dailyCash = await db.dailyCashes.get({ date: today });
 
     if (!dailyCash) {
@@ -153,7 +154,7 @@ const CajaDiariaPage = () => {
     }
   };
   const checkAndCloseOldCashes = async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
     try {
       const allCashes = await db.dailyCashes.toArray();
       const openPreviousCashes = allCashes.filter(
@@ -228,7 +229,7 @@ const CajaDiariaPage = () => {
   }, []);
 
   const openCash = async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
     const allCashes = await db.dailyCashes.toArray();
     const openPreviousCashes = allCashes.filter(
       (cash) => !cash.closed && cash.date < today
@@ -286,7 +287,7 @@ const CajaDiariaPage = () => {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       if (dailyCash) {
@@ -390,7 +391,7 @@ const CajaDiariaPage = () => {
     });
 
     if (currentDailyCash) {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       if (!summary[today]) {
         summary[today] = {
           date: today,
@@ -427,7 +428,7 @@ const CajaDiariaPage = () => {
     if (!isCashOpen) return;
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       if (!dailyCash) {
@@ -799,7 +800,7 @@ const CajaDiariaPage = () => {
   useEffect(() => {
     const checkInitialCashStatus = async () => {
       await checkAndCloseOldCashes();
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       if (!dailyCash) {
@@ -1172,7 +1173,7 @@ const CajaDiariaPage = () => {
               onChange={(e) => setDescription(e.target.value)}
             />
             <div className="p-2 bg-gray_b text-white text-center">
-              <p className="font-semibold text-3xl">
+              <p className="font-bold text-3xl">
                 TOTAL:{" "}
                 {formatCurrency(
                   paymentMethods.reduce((sum, m) => sum + (m.amount || 0), 0)

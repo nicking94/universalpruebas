@@ -27,6 +27,7 @@ import { formatCurrency } from "@/app/lib/utils/currency";
 import InputCash from "@/app/components/InputCash";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import { useRubro } from "@/app/context/RubroContext";
+import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 
 type SelectOption = {
   value: number;
@@ -298,7 +299,7 @@ const VentasPage = () => {
     sale: Sale & { manualAmount?: number; credit?: boolean; paid?: boolean }
   ) => {
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       let dailyCash = await db.dailyCashes.get({ date: today });
 
       const movements: DailyCashMovement[] = [];
@@ -1217,13 +1218,6 @@ const VentasPage = () => {
                   </h3>
 
                   <div className="flex justify-between text-base text-gray_b">
-                    <span className="font-medium ">Total:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(selectedSale.total)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-base text-gray_b">
                     <span className="font-medium ">Fecha:</span>
                     <span>
                       {format(
@@ -1252,6 +1246,12 @@ const VentasPage = () => {
                         ))}
                       </div>
                     )}
+                  </div>
+                  <div className="flex justify-between text-gray_b border-t text-3xl font-bold">
+                    <span className="font-medium ">Total:</span>
+                    <span className="font-semibold">
+                      {formatCurrency(selectedSale.total)}
+                    </span>
                   </div>
                 </div>
 
@@ -1643,8 +1643,8 @@ const VentasPage = () => {
                 </div>
               </div>
             )}
-            <div className="p-2 bg-gray_b dark:bg-gray_m text-white text-center mt-4">
-              <p className="font-semibold text-3xl">
+            <div className="p-4 bg-gray_b dark:bg-gray_m text-white text-center mt-4">
+              <p className="font-bold text-3xl">
                 TOTAL:{" "}
                 {newSale.total.toLocaleString("es-AR", {
                   style: "currency",

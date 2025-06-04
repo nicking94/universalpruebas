@@ -23,6 +23,7 @@ import Pagination from "@/app/components/Pagination";
 import InputCash from "@/app/components/InputCash";
 import { useRubro } from "@/app/context/RubroContext";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 
 const FiadosPage = () => {
   const { rubro } = useRubro();
@@ -81,6 +82,15 @@ const FiadosPage = () => {
     return acc;
   }, {} as Record<string, CreditSale[]>);
 
+  const sortedCustomerNames = Object.keys(salesByCustomer).sort((a, b) => {
+    const customerAHasUnpaid = salesByCustomer[a].some((sale) => !sale.paid);
+    const customerBHasUnpaid = salesByCustomer[b].some((sale) => !sale.paid);
+    if (customerAHasUnpaid !== customerBHasUnpaid) {
+      return customerAHasUnpaid ? -1 : 1;
+    }
+    return a.localeCompare(b);
+  });
+
   const paymentOptions = [
     { value: "EFECTIVO", label: "Efectivo" },
     { value: "TRANSFERENCIA", label: "Transferencia" },
@@ -91,7 +101,7 @@ const FiadosPage = () => {
   const totalCustomers = uniqueCustomers.length;
   const indexOfLastCredit = currentPage * creditsPerPage;
   const indexOfFirstCredit = indexOfLastCredit - creditsPerPage;
-  const currentCustomers = uniqueCustomers.slice(
+  const currentCustomers = sortedCustomerNames.slice(
     indexOfFirstCredit,
     indexOfLastCredit
   );
@@ -217,7 +227,7 @@ const FiadosPage = () => {
 
   const addIncomeToDailyCash = async (sale: CreditSale) => {
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       let dailyCash = await db.dailyCashes.get({ date: today });
 
       const movements: DailyCashMovement[] = [];
@@ -375,6 +385,15 @@ const FiadosPage = () => {
     }
 
     try {
+      const [updatedSales, updatedPayments] = await Promise.all([
+        db.sales.toArray(),
+        db.payments.toArray(),
+      ]);
+
+      setCreditSales(
+        updatedSales.filter((sale) => sale.credit === true) as CreditSale[]
+      );
+      setPayments(updatedPayments);
       for (const method of paymentMethods) {
         if (method.amount > 0) {
           const newPayment: Payment = {
@@ -389,6 +408,7 @@ const FiadosPage = () => {
       }
 
       const newRemainingBalance = remainingBalance - totalPayment;
+
       if (newRemainingBalance <= 0.01) {
         await db.sales.update(currentCreditSale.id, {
           paid: true,
@@ -721,144 +741,153 @@ const FiadosPage = () => {
                 </div>
               </div>
             </div>
-
-            {/* Listado de fiados */}
             <div className="max-h-96 overflow-y-auto border border-blue_xl rounded-md">
               <h3 className="font-semibold mb-3 text-lg border-b pb-2">
                 Historial de fiados
               </h3>
 
-              {currentCustomerInfo?.sales.map((sale) => {
-                const totalPayments = payments
-                  .filter((p) => p.saleId === sale.id)
-                  .reduce((sum, p) => sum + p.amount, 0);
-                const remainingBalance = sale.total - totalPayments;
-                const isPaid = remainingBalance <= 0;
+              {currentCustomerInfo?.sales
+                .sort((a, b) => {
+                  const aBalance = calculateRemainingBalance(a);
+                  const bBalance = calculateRemainingBalance(b);
+                  const aPaid = aBalance <= 0;
+                  const bPaid = bBalance <= 0;
+                  if (aPaid !== bPaid) {
+                    return aPaid ? 1 : -1;
+                  }
+                  return (
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                  );
+                })
+                .map((sale) => {
+                  const totalPayments = payments
+                    .filter((p) => p.saleId === sale.id)
+                    .reduce((sum, p) => sum + p.amount, 0);
+                  const remainingBalance = sale.total - totalPayments;
+                  const isPaid = remainingBalance <= 0;
 
-                return (
-                  <div
-                    key={sale.id}
-                    className={`mb-4 p-4 rounded-lg shadow-sm ${
-                      isPaid
-                        ? "bg-green_xl dark:bg-gray_b"
-                        : "bg-red_xl dark:bg-gray_b"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            isPaid ? "bg-green_500" : "bg-red_b"
-                          }`}
-                        ></div>
-                        <span className="font-semibold">
-                          {format(new Date(sale.date), "dd/MM/yyyy", {
-                            locale: es,
-                          })}
-                        </span>
+                  return (
+                    <div
+                      key={sale.id}
+                      className={`mb-4 p-4 rounded-lg shadow-sm ${
+                        isPaid
+                          ? "bg-green_xl dark:bg-gray_b"
+                          : "bg-red_xl dark:bg-gray_b"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              isPaid ? "bg-green_500" : "bg-red_b"
+                            }`}
+                          ></div>
+                          <span className="font-semibold">
+                            {format(new Date(sale.date), "dd/MM/yyyy", {
+                              locale: es,
+                            })}
+                          </span>
+                        </div>
+
+                        {!isPaid && (
+                          <Button
+                            py="py-1"
+                            px="px-1"
+                            minwidth="min-w-20"
+                            colorText="text-white"
+                            colorTextHover="hover:text-white"
+                            text="Pagar"
+                            onClick={() => {
+                              setCurrentCreditSale(sale);
+                              setIsPaymentModalOpen(true);
+                              setIsInfoModalOpen(false);
+                            }}
+                          />
+                        )}
                       </div>
 
-                      {!isPaid && (
-                        <Button
-                          py="py-1"
-                          px="px-1"
-                          minwidth="min-w-20"
-                          colorText="text-white"
-                          colorTextHover="hover:text-white"
-                          text="Pagar"
-                          onClick={() => {
-                            setCurrentCreditSale(sale);
-                            setIsPaymentModalOpen(true);
-                            setIsInfoModalOpen(false);
-                          }}
-                        />
-                      )}
-                    </div>
-
-                    <div className="mb-3">
-                      <h4 className="text-sm font-medium mb-1">Productos:</h4>
-                      <div className="bg-white dark:bg-gray_m rounded-md p-2">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-1">Producto</th>
-                              <th className="text-right py-1">Cantidad</th>
-                              <th className="text-right py-1">Precio</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sale.products.map((product, idx) => (
-                              <tr
-                                key={idx}
-                                className="border-b last:border-b-0"
-                              >
-                                <td className="py-1">
-                                  {getDisplayProductName(
-                                    {
-                                      name: product.name,
-                                      size: product.size,
-                                      color: product.color,
-                                      rubro: product.rubro,
-                                    },
-                                    rubro,
-                                    true
-                                  )}
-                                </td>
-                                <td className="text-right py-1">
-                                  {product.quantity} {product.unit}
-                                </td>
-                                <td className="text-right py-1">
-                                  {product.price.toLocaleString("es-AR", {
-                                    style: "currency",
-                                    currency: "ARS",
-                                  })}
-                                </td>
+                      <div className="mb-3">
+                        <h4 className="text-sm font-medium mb-1">Productos:</h4>
+                        <div className="bg-white dark:bg-gray_m rounded-md p-2">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-1">Producto</th>
+                                <th className="text-right py-1">Cantidad</th>
+                                <th className="text-right py-1">Precio</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {sale.products.map((product, idx) => (
+                                <tr
+                                  key={idx}
+                                  className="border-b last:border-b-0"
+                                >
+                                  <td className="py-1">
+                                    {getDisplayProductName(
+                                      {
+                                        name: product.name,
+                                        size: product.size,
+                                        color: product.color,
+                                        rubro: product.rubro,
+                                      },
+                                      rubro,
+                                      true
+                                    )}
+                                  </td>
+                                  <td className="text-right py-1">
+                                    {product.quantity} {product.unit}
+                                  </td>
+                                  <td className="text-right py-1">
+                                    {product.price.toLocaleString("es-AR", {
+                                      style: "currency",
+                                      currency: "ARS",
+                                    })}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="bg-white dark:bg-gray_m p-2 rounded">
+                          <p className="font-medium">Total:</p>
+                          <p>
+                            {sale.total.toLocaleString("es-AR", {
+                              style: "currency",
+                              currency: "ARS",
+                            })}
+                          </p>
+                        </div>
+                        <div className="bg-white dark:bg-gray_m p-2 rounded">
+                          <p className="font-medium">Pagado:</p>
+                          <p>
+                            {totalPayments.toLocaleString("es-AR", {
+                              style: "currency",
+                              currency: "ARS",
+                            })}
+                          </p>
+                        </div>
+                        <div
+                          className={`p-2 rounded ${
+                            isPaid
+                              ? "bg-white dark:bg-green_b"
+                              : "bg-white dark:bg-red_b"
+                          }`}
+                        >
+                          <p className="font-medium">Saldo:</p>
+                          <p className={isPaid ? "text-green_b" : "text-red_b"}>
+                            {remainingBalance.toLocaleString("es-AR", {
+                              style: "currency",
+                              currency: "ARS",
+                            })}
+                          </p>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Resumen financiero */}
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div className="bg-white dark:bg-gray_m p-2 rounded">
-                        <p className="font-medium">Total:</p>
-                        <p>
-                          {sale.total.toLocaleString("es-AR", {
-                            style: "currency",
-                            currency: "ARS",
-                          })}
-                        </p>
-                      </div>
-                      <div className="bg-white dark:bg-gray_m p-2 rounded">
-                        <p className="font-medium">Pagado:</p>
-                        <p>
-                          {totalPayments.toLocaleString("es-AR", {
-                            style: "currency",
-                            currency: "ARS",
-                          })}
-                        </p>
-                      </div>
-                      <div
-                        className={`p-2 rounded ${
-                          isPaid
-                            ? "bg-white dark:bg-green_b"
-                            : "bg-white dark:bg-red_b"
-                        }`}
-                      >
-                        <p className="font-medium">Saldo:</p>
-                        <p className={isPaid ? "text-green_b" : "text-red_b"}>
-                          {remainingBalance.toLocaleString("es-AR", {
-                            style: "currency",
-                            currency: "ARS",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         </Modal>

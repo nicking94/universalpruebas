@@ -16,7 +16,7 @@ export async function exportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `backup-${new Date().toISOString()}.json`;
+  a.download = `copia del dia ${new Date().toISOString()}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
