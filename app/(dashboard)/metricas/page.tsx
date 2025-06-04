@@ -135,7 +135,10 @@ const Metrics = () => {
         if (movement.type === "INGRESO" && movement.items) {
           movement.items.forEach((item) => {
             const product = products.find((p) => p.id === item.productId);
-            if (product && (rubro === "todos" || product.rubro === rubro)) {
+            if (
+              product &&
+              (rubro === "todos los rubros" || product.rubro === rubro)
+            ) {
               const existing = productMap.get(item.productId) || {
                 name: item.productName,
                 quantity: 0,
@@ -170,7 +173,6 @@ const Metrics = () => {
 
     const allProducts = Array.from(productMap.values())
       .map(({ name, quantity, amount, profit, unit, rubro }) => {
-        // Crear objeto con la estructura que espera getDisplayProductName
         const productInfo = {
           name,
           size: products.find((p) => p.name === name)?.size,
@@ -243,9 +245,8 @@ const Metrics = () => {
           const ingresos = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (rubro === "todos") return sum + (Number(m.amount) || 0);
-
-              // Filtrar por rubro si no es "todos"
+              if (rubro === "todos los rubros")
+                return sum + (Number(m.amount) || 0);
               const itemsTotal =
                 m.items?.reduce((itemSum, item) => {
                   const product = products.find((p) => p.id === item.productId);
@@ -265,7 +266,7 @@ const Metrics = () => {
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (rubro === "todos") {
+              if (rubro === "todos los rubros") {
                 if (m.profit !== undefined) return sum + m.profit;
                 const costPrice = m.costPrice || 0;
                 const sellPrice = m.sellPrice || 0;
@@ -310,7 +311,7 @@ const Metrics = () => {
           const ingresos = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (rubro === "todos") return sum + m.amount;
+              if (rubro === "todos los rubros") return sum + m.amount;
 
               const itemsTotal =
                 m.items?.reduce((itemSum, item) => {
@@ -331,7 +332,7 @@ const Metrics = () => {
           const ganancia = cash.movements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => {
-              if (rubro === "todos") {
+              if (rubro === "todos los rubros") {
                 if (m.profit !== undefined) return sum + m.profit;
                 const costPrice = m.costPrice || 0;
                 const sellPrice = m.sellPrice || 0;
@@ -379,7 +380,7 @@ const Metrics = () => {
         const ingresos = dailyCash.movements
           .filter((m) => m.type === "INGRESO")
           .reduce((sum, m) => {
-            if (rubro === "todos") return sum + m.amount;
+            if (rubro === "todos los rubros") return sum + m.amount;
 
             // Filtrar por rubro si no es "todos"
             const itemsTotal =
@@ -401,7 +402,7 @@ const Metrics = () => {
         const ganancia = dailyCash.movements
           .filter((m) => m.type === "INGRESO")
           .reduce((sum, m) => {
-            if (rubro === "todos") {
+            if (rubro === "todos los rubros") {
               if (m.profit !== undefined) return sum + m.profit;
               const costPrice = m.costPrice || 0;
               const sellPrice = m.sellPrice || 0;
@@ -446,7 +447,7 @@ const Metrics = () => {
             const ingresos = cash.movements
               .filter((m) => m.type === "INGRESO")
               .reduce((sum, m) => {
-                if (rubro === "todos") return sum + m.amount;
+                if (rubro === "todos los rubros") return sum + m.amount;
 
                 // Filtrar ingresos por rubro
                 const itemsTotal =
@@ -470,7 +471,7 @@ const Metrics = () => {
             const ganancia = cash.movements
               .filter((m) => m.type === "INGRESO")
               .reduce((sum, m) => {
-                if (rubro === "todos") {
+                if (rubro === "todos los rubros") {
                   if (m.sellPrice && m.costPrice && m.quantity) {
                     return (
                       sum +

@@ -12,7 +12,7 @@ const getDisplayProductName = (
   const color =
     typeof productOrName !== "string" ? productOrName.color : undefined;
 
-  if ((showSizeAndColor || rubro === "todos") && (size || color)) {
+  if ((showSizeAndColor || rubro === "todos los rubros") && (size || color)) {
     const sizePart = size ? ` (Talle: ${size})` : "";
     const colorPart = color ? ` | Color: ${color.toUpperCase()}` : "";
     displayName = `${displayName}${sizePart}${colorPart}`;

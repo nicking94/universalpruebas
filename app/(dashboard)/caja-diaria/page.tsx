@@ -135,7 +135,7 @@ const CajaDiariaPage = () => {
     setIsNotificationOpen(true);
     setTimeout(() => {
       setIsNotificationOpen(false);
-    }, 3000);
+    }, 2500);
   };
 
   const checkCashStatus = async () => {
@@ -600,9 +600,9 @@ const CajaDiariaPage = () => {
             <Button
               text="Cerrar"
               colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              colorTextHover="hover:dark:text-white"
+              colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+              colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
               onClick={() => {
                 setIsDetailModalOpen(false);
                 setFilterType("TODOS");
@@ -978,7 +978,7 @@ const CajaDiariaPage = () => {
                     currentItems.map((day, index) => (
                       <tr
                         key={index}
-                        className="text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_xl"
+                        className="text-xs 2xl:text-[.9rem] bg-white text-gray_b border border-gray_xl"
                       >
                         <td className="font-semibold px-4 py-2  border-x border-gray_xltext-start">
                           {format(parseISO(day.date), "dd/MM/yyyy")}
@@ -1194,9 +1194,9 @@ const CajaDiariaPage = () => {
               <Button
                 text="Abrir más tarde"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={() => setIsOpenCashModal(false)}
               />
             </div>

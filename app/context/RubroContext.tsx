@@ -20,9 +20,9 @@ export function RubroProvider({ children }: { children: ReactNode }) {
   const [rubro, setRubro] = useState<Rubro>(() => {
     if (typeof window !== "undefined") {
       const savedRubro = localStorage.getItem("selectedRubro");
-      return (savedRubro as Rubro) || "todos";
+      return (savedRubro as Rubro) || "todos los rubros";
     }
-    return "todos";
+    return "todos los rubros";
   });
 
   useEffect(() => {

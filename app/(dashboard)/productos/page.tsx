@@ -123,7 +123,7 @@ const ProductsPage = () => {
   const sortedProducts = useMemo(() => {
     const filtered = products.filter(
       (product) =>
-        (rubro === "todos" || product.rubro === rubro) &&
+        (rubro === "todos los rubros" || product.rubro === rubro) &&
         (product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           product.barcode?.includes(searchQuery))
     );
@@ -210,7 +210,7 @@ const ProductsPage = () => {
     setIsNotificationOpen(true);
     setTimeout(() => {
       setIsNotificationOpen(false);
-    }, 3000);
+    }, 2500);
   };
   const handleAddProduct = () => {
     setIsOpenModal(true);
@@ -466,9 +466,9 @@ const ProductsPage = () => {
                   Stock
                   <button className="ml-2 cursor-pointer">
                     {sortOrder === "asc" ? (
-                      <SortAsc size={20} />
+                      <SortAsc size={18} />
                     ) : (
-                      <SortDesc size={20} />
+                      <SortDesc size={18} />
                     )}
                   </button>
                 </th>
@@ -518,7 +518,7 @@ const ProductsPage = () => {
                     return (
                       <tr
                         key={index}
-                        className={` text-xs 2xl:text-[.9rem] border-b border-gray_xl ${
+                        className={` text-xs 2xl:text-[.9rem] border border-gray_xl ${
                           isExpired
                             ? "border-l-2 border-l-red_m text-gray_b bg-white"
                             : expiredToday
@@ -569,7 +569,7 @@ const ProductsPage = () => {
                             Number(product.stock) > 0
                               ? ""
                               : "text-red_b"
-                          } font-normal px-4 py-2 border border-gray_xl`}
+                          }px-4 py-2 border border-gray_xl`}
                         >
                           {!isNaN(Number(product.stock)) &&
                           Number(product.stock) > 0
@@ -610,7 +610,7 @@ const ProductsPage = () => {
                         <td className="px-4 py-2 border border-gray_xl">
                           {productSuppliers[product.id] || "Sin asignar"}
                         </td>
-                        <td className="px-4 py-2 flex justify-center gap-2">
+                        <td className="px-4 py-2 flex justify-center gap-2 ">
                           <Button
                             icon={<Edit size={20} />}
                             colorText="text-gray_b"
@@ -683,9 +683,9 @@ const ProductsPage = () => {
               <Button
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={handleCloseModal}
               />
             </>
@@ -884,16 +884,18 @@ const ProductsPage = () => {
             <>
               <Button
                 text="Si"
-                colorText="text-white"
-                colorTextHover="text-white"
+                colorText="text-white dark:text-white"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-red_m border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_b hover:dark:bg-gray_l"
                 onClick={handleConfirmDelete}
               />
               <Button
                 text="No"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorText="text-gray_b"
+                colorTextHover="text-gray_b"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
                 onClick={() => setIsConfirmModalOpen(false)}
               />
             </>
@@ -910,9 +912,9 @@ const ProductsPage = () => {
             <Button
               text="Cerrar"
               colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              colorTextHover="hover:dark:text-white"
+              colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+              colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
               onClick={() => setIsPriceModalOpen(false)}
             />
           }

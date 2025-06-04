@@ -43,7 +43,7 @@ const ClientesPage = () => {
       const allCustomers = await db.customers.toArray();
 
       const filtered = allCustomers.filter((customer) => {
-        if (rubro === "todos") return true;
+        if (rubro === "todos los rubros") return true;
         return customer.rubro === rubro;
       });
 
@@ -74,7 +74,7 @@ const ClientesPage = () => {
     setNotificationMessage(message);
     setNotificationType(type);
     setIsNotificationOpen(true);
-    setTimeout(() => setIsNotificationOpen(false), 3000);
+    setTimeout(() => setIsNotificationOpen(false), 2500);
   };
 
   const handleAddCustomer = async () => {
@@ -97,7 +97,7 @@ const ClientesPage = () => {
         ...newCustomer,
         id: generateCustomerId(newCustomer.name),
         name: newCustomer.name.toUpperCase().trim(),
-        rubro: rubro === "todos" ? undefined : rubro,
+        rubro: rubro === "todos los rubros" ? undefined : rubro,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -189,7 +189,7 @@ const ClientesPage = () => {
         ...editingCustomer,
         name: newCustomer.name.toUpperCase().trim(),
         phone: newCustomer.phone,
-        rubro: rubro === "todos" ? undefined : rubro,
+        rubro: rubro === "todos los rubros" ? undefined : rubro,
         updatedAt: new Date().toISOString(),
       };
 
@@ -363,9 +363,9 @@ const ClientesPage = () => {
               <Button
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingCustomer(null);
@@ -415,9 +415,9 @@ const ClientesPage = () => {
               <Button
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={() => setIsDeleteModalOpen(false)}
                 hotkey="esc"
               />

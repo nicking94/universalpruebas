@@ -60,7 +60,7 @@ const FiadosPage = () => {
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
       const matchesRubro =
-        rubro === "todos" ||
+        rubro === "todos los rubros" ||
         sale.products.some((product) => product.rubro === rubro);
 
       return matchesSearch && matchesRubro;
@@ -129,14 +129,15 @@ const FiadosPage = () => {
     setNotificationMessage(message);
     setNotificationType(type);
     setIsNotificationOpen(true);
-    setTimeout(() => setIsNotificationOpen(false), 3000);
+    setTimeout(() => setIsNotificationOpen(false), 2500);
   };
 
   const calculateCustomerBalance = (customerName: string) => {
     const customerSales = creditSales.filter(
       (sale) =>
         sale.customerName === customerName &&
-        (rubro === "todos" || sale.products.some((p) => p.rubro === rubro))
+        (rubro === "todos los rubros" ||
+          sale.products.some((p) => p.rubro === rubro))
     );
 
     const customerPayments = payments.filter((p) =>
@@ -627,9 +628,9 @@ const FiadosPage = () => {
               <Button
                 text="Cerrar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={() => setIsInfoModalOpen(false)}
               />
             </div>
@@ -887,9 +888,9 @@ const FiadosPage = () => {
                 hotkey="esc"
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={() => {
                   setIsPaymentModalOpen(false);
                   setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
@@ -1032,9 +1033,9 @@ const FiadosPage = () => {
               <Button
                 text="No"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
                 onClick={() => setIsDeleteModalOpen(false)}
               />
             </>

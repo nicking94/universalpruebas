@@ -48,7 +48,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 if (selectedOption) {
                   setRubro(
                     selectedOption.value as
-                      | "todos"
+                      | "todos los rubros"
                       | "comercio"
                       | "indumentaria"
                   );

@@ -227,7 +227,9 @@ const VentasPage = () => {
 
   const productOptions = useMemo(() => {
     return products
-      .filter((product) => rubro === "todos" || product.rubro === rubro)
+      .filter(
+        (product) => rubro === "todos los rubros" || product.rubro === rubro
+      )
       .map((product) => {
         const stock = Number(product.stock);
         const isValidStock = !isNaN(stock);
@@ -274,7 +276,7 @@ const VentasPage = () => {
         : true;
 
       const matchesRubro =
-        rubro === "todos" ||
+        rubro === "todos los rubros" ||
         sale.products.some((product) => product.rubro === rubro);
 
       return matchesMonth && matchesYear && matchesRubro;
@@ -290,7 +292,7 @@ const VentasPage = () => {
     setIsNotificationOpen(true);
     setTimeout(() => {
       setIsNotificationOpen(false);
-    }, 3000);
+    }, 2500);
   };
   const addIncomeToDailyCash = async (
     sale: Sale & { manualAmount?: number; credit?: boolean; paid?: boolean }
@@ -664,7 +666,7 @@ const VentasPage = () => {
           phone: customerPhone,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          rubro: rubro === "todos" ? undefined : rubro,
+          rubro: rubro === "todos los rubros" ? undefined : rubro,
         };
         await db.customers.add(newCustomer);
         setCustomers([...customers, newCustomer]);
@@ -765,7 +767,7 @@ const VentasPage = () => {
       const allCustomers = await db.customers.toArray();
 
       const filtered =
-        rubro === "todos"
+        rubro === "todos los rubros"
           ? allCustomers
           : allCustomers.filter((customer) => customer.rubro === rubro);
 
@@ -1095,7 +1097,7 @@ const VentasPage = () => {
                   return (
                     <tr
                       key={sale.id || Date.now()}
-                      className=" text-xs 2xl:text-[.9rem] bg-white text-gray_b border-b border-gray_xl"
+                      className=" text-xs 2xl:text-[.9rem] bg-white text-gray_b border border-gray_xl"
                     >
                       <td
                         className="font-semibold px-2 text-start capitalize border border-gray_xl truncate max-w-[200px]"
@@ -1200,9 +1202,9 @@ const VentasPage = () => {
                   <Button
                     text="Cerrar"
                     colorText="text-gray_b dark:text-white"
-                    colorTextHover="hover:text-white hover:dark:text-white"
-                    colorBg="bg-gray_xl dark:bg-gray_m"
-                    colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                    colorTextHover="hover:dark:text-white"
+                    colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                    colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                     onClick={() => handleCloseInfoModal()}
                   />
                 </div>
@@ -1318,9 +1320,9 @@ const VentasPage = () => {
               <Button
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={handleCloseModal}
                 hotkey="esc"
               />
@@ -1588,8 +1590,9 @@ const VentasPage = () => {
                 id="creditCheckbox"
                 checked={isCredit}
                 onChange={(e) => setIsCredit(e.target.checked)}
+                className="cursor-pointer"
               />
-              <label htmlFor="creditCheckbox">Registrar Fiado</label>
+              <label>Registrar Fiado</label>
             </div>
 
             {isCredit && (
@@ -1676,9 +1679,9 @@ const VentasPage = () => {
               <Button
                 text="No"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
                 onClick={() => setIsConfirmModalOpen(false)}
                 hotkey="esc"
               />

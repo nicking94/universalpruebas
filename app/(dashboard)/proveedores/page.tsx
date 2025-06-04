@@ -69,10 +69,8 @@ const ProveedoresPage = () => {
           .equals(supplier.id)
           .primaryKeys(),
       ]);
-
-      // Filtrar productos por rubro
       const filteredProducts = allProducts.filter(
-        (product) => rubro === "todos" || product.rubro === rubro
+        (product) => rubro === "todos los rubros" || product.rubro === rubro
       );
 
       const assignedProductIds = assignedProductKeys.map(
@@ -162,12 +160,10 @@ const ProveedoresPage = () => {
           .primaryKeys();
 
         const productIds = productKeys.map(([, productId]) => productId);
-
-        // Filtrar productos por rubro
         const filteredProducts = allProducts.filter(
           (p) =>
             productIds.includes(p.id) &&
-            (rubro === "todos" || p.rubro === rubro)
+            (rubro === "todos los rubros" || p.rubro === rubro)
         );
 
         counts[supplier.id] = filteredProducts.length;
@@ -187,7 +183,7 @@ const ProveedoresPage = () => {
     try {
       console.log(`Fetching suppliers for rubro: ${rubro}`);
 
-      if (rubro === "todos") {
+      if (rubro === "todos los rubros") {
         const allSuppliers = await db.suppliers.toArray();
         setSuppliers(allSuppliers);
         setFilteredSuppliers(allSuppliers);
@@ -243,7 +239,7 @@ const ProveedoresPage = () => {
     setNotificationMessage(message);
     setNotificationType(type);
     setIsNotificationOpen(true);
-    setTimeout(() => setIsNotificationOpen(false), 3000);
+    setTimeout(() => setIsNotificationOpen(false), 2500);
   };
 
   const handleSearch = (query: string) => {
@@ -301,7 +297,7 @@ const ProveedoresPage = () => {
         nextVisit: nextVisit || undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        rubro: rubro === "todos" ? undefined : rubro,
+        rubro: rubro === "todos los rubros" ? undefined : rubro,
       };
 
       if (editingSupplier) {
@@ -548,9 +544,9 @@ const ProveedoresPage = () => {
             <Button
               text="Cerrar"
               colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:text-white hover:dark:text-white"
-              colorBg="bg-gray_xl dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+              colorTextHover="hover:dark:text-white"
+              colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+              colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
               onClick={() => {
                 setIsProductAssignmentModalOpen(false);
                 setProductSearchQuery("");
@@ -683,9 +679,9 @@ const ProveedoresPage = () => {
               <Button
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={() => {
                   setIsModalOpen(false);
                   resetForm();
@@ -804,9 +800,9 @@ const ProveedoresPage = () => {
               <Button
                 text="Cancelar"
                 colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:text-white hover:dark:text-white"
-                colorBg="bg-gray_xl dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_m hover:dark:bg-gray_l"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent border-b-1 dark:bg-gray_m"
+                colorBgHover="hover:bg-red_xl hover:dark:bg-gray_l"
                 onClick={() => setIsDeleteModalOpen(false)}
               />
             </div>

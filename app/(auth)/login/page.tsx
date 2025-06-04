@@ -21,7 +21,7 @@ const LoginPage = () => {
       setNotificationMessage("Su periodo de prueba ha expirado");
       setNotificationType("error");
       setIsOpenNotification(true);
-      setTimeout(() => setIsOpenNotification(false), 3000);
+      setTimeout(() => setIsOpenNotification(false), 2500);
     }
 
     const initializeUsers = async () => {
@@ -100,7 +100,7 @@ const LoginPage = () => {
         setNotificationMessage("El periodo de prueba ha finalizado");
         setNotificationType("error");
         setIsOpenNotification(true);
-        setTimeout(() => setIsOpenNotification(false), 2000);
+        setTimeout(() => setIsOpenNotification(false), 2500);
         return;
       }
 
@@ -119,7 +119,7 @@ const LoginPage = () => {
             );
             setNotificationType("error");
             setIsOpenNotification(true);
-            setTimeout(() => setIsOpenNotification(false), 2000);
+            setTimeout(() => setIsOpenNotification(false), 2500);
             return;
           }
         }
@@ -136,7 +136,7 @@ const LoginPage = () => {
       setNotificationMessage("Usuario o contraseña incorrectos");
       setNotificationType("error");
       setIsOpenNotification(true);
-      setTimeout(() => setIsOpenNotification(false), 2000);
+      setTimeout(() => setIsOpenNotification(false), 2500);
       return;
     }
 
@@ -156,7 +156,7 @@ const LoginPage = () => {
         setNotificationMessage("El periodo de prueba de 1 semana ha expirado");
         setNotificationType("error");
         setIsOpenNotification(true);
-        setTimeout(() => setIsOpenNotification(false), 2000);
+        setTimeout(() => setIsOpenNotification(false), 2500);
         return;
       }
     }
@@ -170,7 +170,7 @@ const LoginPage = () => {
     setTimeout(() => {
       setIsOpenNotification(false);
       router.replace("/caja-diaria");
-    }, 2000);
+    }, 2500);
   };
 
   return (
