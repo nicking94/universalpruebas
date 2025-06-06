@@ -308,7 +308,12 @@ const VentasPage = () => {
         const movement: DailyCashMovement = {
           id: Date.now(),
           amount: totalSaleAmount,
-          description: "Venta",
+          description:
+            (sale.manualAmount ?? 0) > 0 && !sale.credit
+              ? `Venta con monto manual de: ${formatCurrency(
+                  sale.manualAmount ?? 0
+                )}`
+              : "Venta",
           items: sale.products.map((p) => ({
             productId: p.id,
             productName: p.name,
@@ -432,6 +437,18 @@ const VentasPage = () => {
       manualAmount: value,
       total: calculateTotal(prev.products, value),
     }));
+  };
+  const handleCreditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isCredit = e.target.checked;
+    setIsCredit(isCredit);
+
+    if (isCredit) {
+      setNewSale((prev) => ({
+        ...prev,
+        manualAmount: 0,
+        total: calculateTotal(prev.products, 0),
+      }));
+    }
   };
   const handleMonthChange = (
     selectedOption: { value: string; label: string } | null
@@ -1486,12 +1503,19 @@ const VentasPage = () => {
               </table>
             )}
             <div className="flex items-center space-x-4">
-              <div className="w-full flex flex-col ">
-                <InputCash
-                  label="Monto manual (opcional)"
-                  value={newSale.manualAmount || 0}
-                  onChange={handleManualAmountChange}
-                />
+              <div className="w-full flex flex-col">
+                {isCredit ? (
+                  <div className="p-2 bg-gray-100 text-gray-800 rounded-md mt-6">
+                    <p className="font-semibold">MONTO MANUAL DESHABILITADO</p>
+                  </div>
+                ) : (
+                  <InputCash
+                    label="Monto manual (opcional)"
+                    value={newSale.manualAmount || 0}
+                    onChange={handleManualAmountChange}
+                    disabled={isCredit}
+                  />
+                )}
               </div>
 
               <div
@@ -1589,7 +1613,7 @@ const VentasPage = () => {
                 type="checkbox"
                 id="creditCheckbox"
                 checked={isCredit}
-                onChange={(e) => setIsCredit(e.target.checked)}
+                onChange={handleCreditChange}
                 className="cursor-pointer"
               />
               <label>Registrar Fiado</label>

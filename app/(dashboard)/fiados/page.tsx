@@ -846,6 +846,21 @@ const FiadosPage = () => {
                                   </td>
                                 </tr>
                               ))}
+
+                              {sale.manualAmount && sale.manualAmount > 0 && (
+                                <tr className="border-b last:border-b-0">
+                                  <td className="py-1">
+                                    Monto manual adicional
+                                  </td>
+                                  <td className="text-right py-1">-</td>
+                                  <td className="text-right py-1">
+                                    {sale.manualAmount.toLocaleString("es-AR", {
+                                      style: "currency",
+                                      currency: "ARS",
+                                    })}
+                                  </td>
+                                </tr>
+                              )}
                             </tbody>
                           </table>
                         </div>

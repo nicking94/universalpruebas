@@ -573,6 +573,7 @@ const CajaDiariaPage = () => {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = dailySummaries.slice(indexOfFirstItem, indexOfLastItem);
+
   const DetailModal = () => {
     const filteredMovements = getFilteredMovements();
     const { totalIngresos, totalEgresos } = calculateFilteredTotals();
@@ -761,6 +762,13 @@ const CajaDiariaPage = () => {
                     </td>
                     <td className="px-4 py-2 text-sm text-gray_m">
                       {movement.description}
+                      {(movement.manualAmount ?? 0) > 0 &&
+                        !movement.isCreditPayment && (
+                          <div className="text-xs text-gray-500">
+                            (Incluye monto manual:{" "}
+                            {formatCurrency(movement.manualAmount ?? 0)}
+                          </div>
+                        )}
                     </td>
                     <td className="px-4 py-2 text-sm text-gray_m">
                       {movement.combinedPaymentMethods ? (

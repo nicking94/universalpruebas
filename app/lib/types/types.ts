@@ -208,6 +208,7 @@ export type DailyCashMovement = {
   subMovements?: PaymentSplit[];
   method?: PaymentMethod;
   amount: number;
+  manualAmount?: number;
   description: string;
   type: "INGRESO" | "EGRESO";
   date: string;
