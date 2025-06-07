@@ -197,7 +197,12 @@ const ProductsPage = () => {
       originalProduct.price !== updatedProduct.price ||
       originalProduct.expiration !== updatedProduct.expiration ||
       originalProduct.unit !== updatedProduct.unit ||
-      originalProduct.barcode !== updatedProduct.barcode
+      originalProduct.barcode !== updatedProduct.barcode ||
+      (rubro === "indumentaria" &&
+        (originalProduct.category !== updatedProduct.category ||
+          originalProduct.color !== updatedProduct.color ||
+          originalProduct.size !== updatedProduct.size ||
+          originalProduct.brand !== updatedProduct.brand))
     );
   };
   const showNotification = (
@@ -230,8 +235,7 @@ const ProductsPage = () => {
       !newProduct.stock ||
       !newProduct.costPrice ||
       !newProduct.price ||
-      !newProduct.unit ||
-      (rubro === "indumentaria" && (!newProduct.category || !newProduct.size))
+      !newProduct.unit
     ) {
       showNotification("Por favor, complete todos los campos", "error");
       return;
@@ -329,7 +333,12 @@ const ProductsPage = () => {
   };
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setNewProduct(product);
+    setNewProduct({
+      ...product,
+      category: product.category || "",
+      size: product.size || "",
+      color: product.color || "",
+    });
     setIsOpenModal(true);
   };
   const handleDeleteProduct = (product: Product) => {
@@ -518,11 +527,11 @@ const ProductsPage = () => {
                     return (
                       <tr
                         key={index}
-                        className={` text-xs 2xl:text-[.9rem] border border-gray_xl ${
+                        className={`text-xs 2xl:text-[.9rem] border border-gray_xl ${
                           isExpired
-                            ? "border-l-2 border-l-red_m text-gray_b bg-white"
+                            ? "border-l-2 border-l-red_m text-gray_b bg-white animate-pulse"
                             : expiredToday
-                            ? "border-l-2 border-l-red_m text-white bg-red_b"
+                            ? "border-l-2 border-l-red_m text-white bg-red_m"
                             : isExpiringSoon
                             ? "border-l-2 border-l-red_m text-gray_b bg-red_l "
                             : "text-gray_b bg-white"
@@ -613,7 +622,7 @@ const ProductsPage = () => {
                         <td className="px-4 py-2 flex justify-center gap-2 ">
                           <Button
                             icon={<Edit size={20} />}
-                            colorText="text-gray_b"
+                            colorText={` ${isExpired ? "text-gray_b" : ""}`}
                             colorTextHover="hover:text-white"
                             colorBg="bg-transparent"
                             px="px-1"

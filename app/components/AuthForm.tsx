@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import Button from "./Button";
 import { AuthData } from "../lib/types/types";
 import Image from "next/image";
-import logo from "../../public/logo.png";
+import Logo from "../../public/logo.png";
 
 interface AuthFormProps {
   type?: "login" | "register";
@@ -33,7 +33,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = "login", onSubmit }) => {
       className="bg-blue_xl text-gray_b flex flex-col justify-center w-[35%] xl:w-[25%] p-10 space-y-10 shadow-2xl shadow-blue_b z-99"
     >
       <div className="flex justify-center">
-        <Image src={logo} alt="logo" width={100} height={100} />
+        <Image src={Logo} alt="logo" width={100} height={100} />
       </div>
       <h2 className="font-semibold text-3xl 2xl:text-4xl text-center text-gray_b">
         Iniciar sesión
