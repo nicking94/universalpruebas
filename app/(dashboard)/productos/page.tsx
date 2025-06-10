@@ -505,11 +505,11 @@ const ProductsPage = () => {
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
         <h1 className="text-lg 2xl:text-xl font-semibold mb-2">Productos</h1>
 
-        <div className="flex justify-between mb-2">
-          <div className="w-full flex gap-2">
+        <div className="flex justify-between mb-2 w-full">
+          <div className="w-full flex items-center gap-2 ">
             <SearchBar onSearch={handleSearch} />
 
-            <div className="w-50">
+            <div className="w-60">
               <Select
                 options={getFilterOptionsByRubro().flatMap((group) => ({
                   label: group.label,
@@ -547,7 +547,7 @@ const ProductsPage = () => {
                 }}
                 placeholder="Filtrar por..."
                 isClearable
-                className="text-black"
+                className="text-black "
                 formatGroupLabel={(group) => (
                   <div className="text-gray-700 font-semibold">
                     {group.label}
@@ -556,7 +556,7 @@ const ProductsPage = () => {
               />
             </div>
           </div>
-          <div className="w-full flex justify-end gap-2 ">
+          <div className="w-full flex justify-end items-center gap-2 ">
             <Button
               text="Ver Precio [F5]"
               colorText="text-white"
@@ -613,7 +613,7 @@ const ProductsPage = () => {
                   </th>
                 )}
                 <th className="text-sm 2xl:text-lg px-4 py-2">Proveedor</th>
-                <th className="w-40 max-w-[10rem] text-sm 2xl:text-lg px-4 py-2">
+                <th className="w-40 max-w-[5rem] 2xl:max-w-[10rem] text-sm 2xl:text-lg px-4 py-2">
                   Acciones
                 </th>
               </tr>
