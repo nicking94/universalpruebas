@@ -1106,6 +1106,10 @@ const VentasPage = () => {
               placeholder="Mes"
               className="w-full h-[2rem] 2xl:h-auto text-black"
               classNamePrefix="react-select"
+              menuPosition="fixed"
+              styles={{
+                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+              }}
             />
             <Select
               value={
@@ -1120,6 +1124,10 @@ const VentasPage = () => {
               isClearable
               className="w-full h-[2rem] 2xl:h-auto text-black"
               classNamePrefix="react-select"
+              menuPosition="fixed"
+              styles={{
+                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+              }}
             />
           </div>
           <div className="w-full  flex justify-end">
@@ -1351,10 +1359,9 @@ const VentasPage = () => {
               />
             </div>
           }
-          minheight="min-h-[26rem] "
         >
           <div className="overflow-y-auto">
-            <div className="flex flex-col min-h-[24rem] max-h-[24rem] 2xl:max-h-[27rem] justify-between overflow-y-auto">
+            <div className="flex flex-col min-h-[50vh] max-h-[50vh] 2xl:max-h-[27rem] justify-between overflow-y-auto">
               <form
                 onSubmit={handleConfirmAddSale}
                 className="flex flex-col gap-2"
@@ -1390,6 +1397,7 @@ const VentasPage = () => {
                     </label>
                     <Select
                       placeholder="Seleccionar productos..."
+                      noOptionsMessage={() => "No se encontraron productos"}
                       isMulti
                       options={productOptions}
                       value={newSale.products.map((p) => ({
@@ -1401,7 +1409,12 @@ const VentasPage = () => {
                       onChange={handleProductSelect}
                       className="text-black"
                       classNamePrefix="react-select"
+                      menuPosition="fixed"
                       styles={{
+                        menuPortal: (base) => ({
+                          ...base,
+                          zIndex: 9999,
+                        }),
                         control: (provided) => ({
                           ...provided,
                           maxHeight: "100px",
@@ -1423,9 +1436,10 @@ const VentasPage = () => {
                           <th className="px-4 py-2">Producto</th>
                           <th className="px-4 py-2 text-center">Unidad</th>
                           <th className="px-4 py-2 text-center">Cantidad</th>
+                          <th className="w-22">% descuento</th>
                           <th className="px-4 py-2 text-center">Total</th>
-                          <th>descuento</th>
-                          <th className="w-40 max-w-[10rem] px-4 py-2 text-center">
+
+                          <th className="w-30 max-w-[8rem] px-4 py-2 text-center">
                             Acciones
                           </th>
                         </tr>
@@ -1458,6 +1472,13 @@ const VentasPage = () => {
                                       );
                                     }}
                                     className="text-black"
+                                    menuPosition="fixed"
+                                    styles={{
+                                      menuPortal: (base) => ({
+                                        ...base,
+                                        zIndex: 9999,
+                                      }),
+                                    }}
                                   />
                                 ) : (
                                   <div className="text-center py-2 text-gray_m">
@@ -1498,18 +1519,7 @@ const VentasPage = () => {
                                     }
                                   }}
                                 />
-                              </td>
-                              <td className="w-30 max-w-30 px-4 py-2 text-center ">
-                                {formatCurrency(
-                                  calculatePrice({
-                                    ...product,
-                                    price: product.price || 0,
-                                    quantity: product.quantity || 0,
-                                    unit: product.unit || "Unid.",
-                                  })
-                                )}
-                              </td>
-
+                              </td>{" "}
                               <td className="w-20 max-w-20 px-4 py-2">
                                 <Input
                                   textPosition="text-center"
@@ -1540,12 +1550,22 @@ const VentasPage = () => {
                                   step="1"
                                 />
                               </td>
+                              <td className="w-30 max-w-30 px-4 py-2 text-center ">
+                                {formatCurrency(
+                                  calculatePrice({
+                                    ...product,
+                                    price: product.price || 0,
+                                    quantity: product.quantity || 0,
+                                    unit: product.unit || "Unid.",
+                                  })
+                                )}
+                              </td>
                               <td className=" px-4 py-2 text-center">
                                 <button
                                   onClick={() =>
                                     handleRemoveProduct(product.id)
                                   }
-                                  className="cursor-pointer hover:bg-red_b text-gray_b hover:text-white p-1 rounded-sm transition-all duration-300"
+                                  className="cursor-pointer hover:bg-red_m text-gray_b hover:text-white p-1 rounded-sm transition-all duration-300"
                                 >
                                   <Trash size={20} />
                                 </button>
@@ -1576,7 +1596,7 @@ const VentasPage = () => {
                           onChange={handleManualAmountChange}
                           disabled={isCredit}
                         />
-                        <div className="w-full">
+                        <div className="w-full mt-1 max-w-[5rem]">
                           <label className="block text-sm font-medium text-gray_m dark:text-white">
                             % Ganancia
                           </label>
@@ -1645,7 +1665,15 @@ const VentasPage = () => {
                                 )
                               }
                               options={paymentOptions}
+                              noOptionsMessage={() => "No hay opciones"}
                               className="w-60 max-w-60 text-gray_b"
+                              menuPosition="fixed"
+                              styles={{
+                                menuPortal: (base) => ({
+                                  ...base,
+                                  zIndex: 9999,
+                                }),
+                              }}
                               isDisabled={isCredit}
                             />
 
@@ -1691,7 +1719,7 @@ const VentasPage = () => {
                             )}
                           </div>
                         ))}
-                        {!isCredit && (
+                        {!isCredit && newSale.paymentMethods.length < 3 && (
                           <button
                             type="button"
                             onClick={addPaymentMethod}
@@ -1738,7 +1766,11 @@ const VentasPage = () => {
                       isClearable
                       className="text-black"
                       classNamePrefix="react-select"
-                      noOptionsMessage={() => "No se encontraron clientes"}
+                      noOptionsMessage={() => "No hay opciones"}
+                      menuPosition="fixed"
+                      styles={{
+                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      }}
                     />
                     <div className="flex items-center space-x-4 mt-4">
                       <Input
@@ -1766,8 +1798,8 @@ const VentasPage = () => {
                 )}
               </div>
             </div>
-            <div className="p-2 xl:p-4 bg-gray_b dark:bg-gray_m text-white text-center mt-4">
-              <p className="font-bold text-3xl">
+            <div className="p-2 2xl:p-4 bg-gray_b dark:bg-gray_m text-white text-center mt-4">
+              <p className="font-bold text-2xl 2xl:text-3xl">
                 TOTAL:{" "}
                 {newSale.total.toLocaleString("es-AR", {
                   style: "currency",
