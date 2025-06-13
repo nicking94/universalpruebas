@@ -452,11 +452,23 @@ const VentasPage = () => {
   };
 
   const handleManualAmountChange = (value: number) => {
-    setNewSale((prev) => ({
-      ...prev,
-      manualAmount: value,
-      total: calculateCombinedTotal(prev.products) + value,
-    }));
+    setNewSale((prev) => {
+      const productsTotal = calculateCombinedTotal(prev.products);
+      const newTotal = productsTotal + value;
+
+      // Actualizar el monto del método de pago si solo hay uno
+      const updatedMethods = [...prev.paymentMethods];
+      if (updatedMethods.length === 1) {
+        updatedMethods[0].amount = newTotal;
+      }
+
+      return {
+        ...prev,
+        manualAmount: value,
+        total: newTotal,
+        paymentMethods: updatedMethods,
+      };
+    });
   };
   const handleCreditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isCredit = e.target.checked;
@@ -494,7 +506,9 @@ const VentasPage = () => {
   ) => {
     setNewSale((prev) => {
       const updatedMethods = [...prev.paymentMethods];
-      const total = calculateCombinedTotal(prev.products || 0);
+      const productsTotal = calculateCombinedTotal(prev.products || []);
+      const manualAmount = prev.manualAmount || 0;
+      const total = productsTotal + manualAmount;
 
       if (field === "amount") {
         const numericValue =
@@ -506,30 +520,14 @@ const VentasPage = () => {
           ...updatedMethods[index],
           amount: parseFloat(numericValue.toFixed(2)),
         };
+
         if (updatedMethods.length === 2) {
-          let sum = 0;
-          for (let i = 0; i < updatedMethods.length; i++) {
-            sum += updatedMethods[i].amount;
-          }
-
-          const difference = total - sum;
-
-          if (updatedMethods.length > 1) {
-            const numOtherInputs = updatedMethods.length - 1;
-            const share = difference / numOtherInputs;
-
-            for (let i = 0; i < updatedMethods.length; i++) {
-              if (i !== index) {
-                const newAmount = parseFloat(
-                  Math.max(0, updatedMethods[i].amount + share).toFixed(2)
-                );
-                updatedMethods[i] = {
-                  ...updatedMethods[i],
-                  amount: newAmount,
-                };
-              }
-            }
-          }
+          const otherIndex = index === 0 ? 1 : 0;
+          const remaining = total - numericValue;
+          updatedMethods[otherIndex] = {
+            ...updatedMethods[otherIndex],
+            amount: parseFloat(Math.max(0, remaining).toFixed(2)),
+          };
         }
 
         return {
@@ -541,50 +539,85 @@ const VentasPage = () => {
           ...updatedMethods[index],
           method: value as "EFECTIVO" | "TRANSFERENCIA" | "TARJETA",
         };
+        return {
+          ...prev,
+          paymentMethods: updatedMethods,
+        };
       }
-
-      return {
-        ...prev,
-        paymentMethods: updatedMethods,
-      };
     });
   };
 
   const addPaymentMethod = () => {
     setNewSale((prev) => {
       if (prev.paymentMethods.length >= paymentOptions.length) return prev;
-      const newMethods = [...prev.paymentMethods];
-      if (newMethods.length === 2) {
-        newMethods.forEach((method) => {
-          method.amount = 0;
-        });
-      }
 
-      return {
-        ...prev,
-        paymentMethods: [
-          ...newMethods,
-          {
-            method: paymentOptions[prev.paymentMethods.length].value as
-              | "EFECTIVO"
-              | "TRANSFERENCIA"
-              | "TARJETA",
-            amount: 0,
-          },
-        ],
-      };
+      const productsTotal = calculateCombinedTotal(prev.products || []);
+      const manualAmount = prev.manualAmount || 0;
+      const total = productsTotal + manualAmount;
+
+      // Solo distribuimos automáticamente si hay menos de 2 métodos
+      if (prev.paymentMethods.length < 2) {
+        const newMethodCount = prev.paymentMethods.length + 1;
+        const share = total / newMethodCount;
+
+        const updatedMethods = prev.paymentMethods.map((method) => ({
+          ...method,
+          amount: share,
+        }));
+
+        return {
+          ...prev,
+          paymentMethods: [
+            ...updatedMethods,
+            {
+              method: paymentOptions[prev.paymentMethods.length].value as
+                | "EFECTIVO"
+                | "TRANSFERENCIA"
+                | "TARJETA",
+              amount: share,
+            },
+          ],
+        };
+      } else {
+        // Para el tercer método en adelante, agregamos con monto 0
+        return {
+          ...prev,
+          paymentMethods: [
+            ...prev.paymentMethods,
+            {
+              method: paymentOptions[prev.paymentMethods.length].value as
+                | "EFECTIVO"
+                | "TRANSFERENCIA"
+                | "TARJETA",
+              amount: 0,
+            },
+          ],
+        };
+      }
     });
   };
 
   const removePaymentMethod = (index: number) => {
     setNewSale((prev) => {
       if (prev.paymentMethods.length <= 1) return prev;
+
       const updatedMethods = [...prev.paymentMethods];
       updatedMethods.splice(index, 1);
-      if (updatedMethods.length === 2) {
-        const total = calculateCombinedTotal(prev.products || 0);
-        updatedMethods[0].amount = total / 2;
-        updatedMethods[1].amount = total / 2;
+
+      const productsTotal = calculateCombinedTotal(prev.products || []);
+      const manualAmount = prev.manualAmount || 0;
+      const total = productsTotal + manualAmount;
+
+      if (updatedMethods.length === 1) {
+        updatedMethods[0].amount = total;
+      } else {
+        const share = total / updatedMethods.length;
+        updatedMethods.forEach((m, i) => {
+          updatedMethods[i] = {
+            ...m,
+            amount: share,
+          };
+        });
       }
 
       return {
@@ -850,22 +883,27 @@ const VentasPage = () => {
   }, []);
   useEffect(() => {
     setNewSale((prev) => {
-      const total = calculateCombinedTotal(prev.products || 0);
-      const updatedMethods = [...prev.paymentMethods];
-      if (updatedMethods.length === 1) {
-        updatedMethods[0].amount = total;
-      } else if (updatedMethods.length === 2) {
-        const sumOthers = updatedMethods
-          .slice(0, -1)
-          .reduce((sum, m) => sum + m.amount, 0);
-        const remaining = total - sumOthers;
+      const productsTotal = calculateCombinedTotal(prev.products || []);
+      const manualAmount = prev.manualAmount || 0;
+      const total = productsTotal + manualAmount;
 
-        if (remaining >= 0) {
-          updatedMethods[updatedMethods.length - 1].amount = parseFloat(
-            remaining.toFixed(2)
-          );
+      const updatedMethods = [...prev.paymentMethods];
+
+      // Solo sincronizamos automáticamente si hay 1 o 2 métodos
+      if (updatedMethods.length <= 2) {
+        if (updatedMethods.length === 1) {
+          updatedMethods[0].amount = total;
+        } else {
+          const share = total / updatedMethods.length;
+          updatedMethods.forEach((m, i) => {
+            updatedMethods[i] = {
+              ...m,
+              amount: share,
+            };
+          });
         }
       }
+
       return {
         ...prev,
         paymentMethods: updatedMethods,
@@ -1165,7 +1203,7 @@ const VentasPage = () => {
                         {format(saleDate, "dd/MM/yyyy", { locale: es })}
                       </td>
 
-                      <td className="2xl:w-70 px-4 py-2 border border-gray_xl">
+                      <td className="w-55 px-4 py-2 border border-gray_xl">
                         {sale.credit ? (
                           <span className="text-orange-500 font-semibold">
                             VENTA FIADA
