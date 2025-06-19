@@ -55,6 +55,12 @@ class MyDatabase extends Dexie {
         businessData: "++id",
       })
       .upgrade(async (trans) => {
+        await trans
+          .table("products")
+          .toCollection()
+          .modify((product) => {
+            product.lot = "";
+          });
         const adminUser = await trans
           .table("users")
           .where("username")
