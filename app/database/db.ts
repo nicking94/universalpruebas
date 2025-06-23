@@ -11,6 +11,8 @@ import {
   SupplierProduct,
   UserPreferences,
   BusinessData,
+  Budget,
+  Note,
 } from "../lib/types/types";
 
 class MyDatabase extends Dexie {
@@ -32,10 +34,12 @@ class MyDatabase extends Dexie {
   appState!: Table<{ id: number; lastActiveDate: Date }, number>;
   userPreferences!: Table<UserPreferences, number>;
   businessData!: Table<BusinessData, number>;
+  budgets!: Table<Budget, string>;
+  notes!: Table<Note, number>;
 
   constructor() {
     super("MyDatabase");
-    this.version(13)
+    this.version(15)
       .stores({
         theme: "id",
         products: "++id, name, barcode, stock",
@@ -53,6 +57,9 @@ class MyDatabase extends Dexie {
         trialPeriods: "&userId, firstAccessDate",
         userPreferences: "++id, userId",
         businessData: "++id",
+        budgets:
+          "++id, customerName, customerPhone, createdAt, updatedAt, status",
+        notes: "++id, customerId, budgetId, createdAt",
       })
       .upgrade(async (trans) => {
         await trans

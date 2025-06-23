@@ -5,8 +5,8 @@ export type Theme = {
 
 export type User = {
   id: number;
-  username: string;
-  password: string;
+  username?: string;
+  password?: string;
   logo?: string;
 };
 
@@ -80,7 +80,7 @@ export type InputProps = {
   colorLabel?: string;
   type?: string;
   name?: string;
-  value?: string;
+  value?: string | number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   border?: string;
@@ -202,6 +202,7 @@ export type SaleItem = {
   size?: string;
   color?: string;
   discount?: number;
+  basePrice?: number;
 };
 
 export type PaginationProps = {
@@ -221,6 +222,7 @@ export type Option = {
 export type ProductOption = {
   value: number;
   label: string;
+  product: Product;
   isDisabled?: boolean;
 };
 
@@ -329,6 +331,8 @@ export type Customer = {
   createdAt: string;
   updatedAt: string;
   rubro?: Rubro;
+  notes?: string;
+  isTemporary?: boolean;
 };
 
 export type SupplierContact = {
@@ -466,4 +470,34 @@ export type MonthlyData = {
   ingresos: number;
   egresos: number;
   ganancia: number;
+};
+
+export interface Note {
+  id?: number;
+  customerId?: string;
+  budgetId?: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+}
+export interface CustomerNotesProps {
+  customerName: string;
+  customerId: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+export type Budget = {
+  id: string;
+  date: string;
+  customerName: string;
+  customerPhone?: string;
+  customerId?: string;
+  items: SaleItem[];
+  total: number;
+  createdAt: string;
+  updatedAt: string;
+  expirationDate?: string;
+  notes?: string;
+  status?: "pendiente" | "aprobado" | "rechazado";
 };

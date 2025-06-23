@@ -47,7 +47,7 @@ const Modal: React.FC<ModalProps> = ({
           className={`overflow-y-auto ${minheight} py-10 flex-1`}
           style={{ overflow: "visible" }}
         >
-          <div style={{ position: "relative" }}>{children}</div>
+          <div className="relative">{children}</div>
         </div>
         <div className="flex justify-end space-x-4 ">
           {buttons ? (

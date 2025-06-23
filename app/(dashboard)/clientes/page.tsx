@@ -295,7 +295,6 @@ const ClientesPage = () => {
                             py="py-1"
                             minwidth="min-w-0"
                             onClick={() => handleEditClick(customer)}
-                            disabled={customer.name === "CLIENTE OCASIONAL"}
                           />
                           <Button
                             icon={<Trash size={20} />}
@@ -307,7 +306,6 @@ const ClientesPage = () => {
                             py="py-1"
                             minwidth="min-w-0"
                             onClick={() => handleDeleteClick(customer)}
-                            disabled={customer.name === "CLIENTE OCASIONAL"}
                           />
                         </div>
                       </td>
