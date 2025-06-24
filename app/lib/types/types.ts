@@ -107,7 +107,7 @@ export type ProductTableProps = {
   onDelete: (id: number) => void;
   onEdit: (product: Product) => void;
 };
-export type Rubro = "todos los rubros" | "comercio" | "indumentaria";
+export type Rubro = "todos los rubros" | "comercio" | "indumentaria" | "";
 
 export type Product = {
   id: number;
@@ -203,6 +203,8 @@ export type SaleItem = {
   color?: string;
   discount?: number;
   basePrice?: number;
+  notes?: string;
+  description?: string;
 };
 
 export type PaginationProps = {
@@ -410,15 +412,6 @@ export type GroupedFilterOption = {
   options: FilterOption[];
 };
 
-declare global {
-  export interface Navigator {
-    serial?: {
-      requestPort(options?: SerialPortRequestOptions): Promise<SerialPort>;
-      getPorts(): Promise<SerialPort[]>;
-    };
-  }
-}
-
 export interface SerialPortRequestOptions {
   filters: SerialPortFilter[];
 }
@@ -490,14 +483,18 @@ export interface CustomerNotesProps {
 export type Budget = {
   id: string;
   date: string;
+  name?: string;
   customerName: string;
   customerPhone?: string;
   customerId?: string;
   items: SaleItem[];
   total: number;
+  deposit: string;
+  remaining: number;
   createdAt: string;
   updatedAt: string;
   expirationDate?: string;
   notes?: string;
   status?: "pendiente" | "aprobado" | "rechazado";
+  rubro?: Rubro;
 };

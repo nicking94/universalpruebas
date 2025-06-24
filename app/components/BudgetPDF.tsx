@@ -1,135 +1,381 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { Budget } from "../lib/types/types";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Image,
+} from "@react-pdf/renderer";
+import { Budget, BusinessData } from "../lib/types/types";
+
+// Paleta de colores profesional
+const COLORS = {
+  primary: "#2d3748", // Azul oscuro/gris
+  secondary: "#4a5568", // Gris medio
+  accent: "#4299e1", // Azul brillante
+  lightGray: "#f7fafc",
+  border: "#e2e8f0",
+  text: "#1a202c",
+};
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
-    fontSize: 12,
+    padding: 40,
+    fontSize: 10,
+    fontFamily: "Helvetica",
+    color: COLORS.text,
+  },
+  container: {
+    flex: 1,
+    position: "relative",
+  },
+  watermarkContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    zIndex: -1,
+    overflow: "hidden",
+  },
+  watermark: {
+    position: "absolute",
+    opacity: 0.03,
+    fontSize: 80,
+    color: COLORS.primary,
+    transform: "rotate(-45deg)",
+    transformOrigin: "0 0",
+    left: "10%",
+    top: "50%",
+    width: "200%",
   },
   header: {
-    marginBottom: 20,
-    textAlign: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 30,
+    borderBottom: `1px solid ${COLORS.border}`,
+    paddingBottom: 20,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
+  businessInfo: {
+    width: "60%",
+  },
+  logo: {
+    width: 100,
+    height: 50,
     marginBottom: 10,
   },
-  subtitle: {
-    fontSize: 14,
+  businessName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: COLORS.primary,
     marginBottom: 5,
   },
-  section: {
-    marginBottom: 15,
+  businessContact: {
+    fontSize: 9,
+    color: COLORS.secondary,
+    marginBottom: 2,
   },
-  row: {
+  documentInfo: {
+    width: "35%",
+    textAlign: "right",
+  },
+  documentTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.accent,
+    marginBottom: 5,
+  },
+  documentNumber: {
+    fontSize: 12,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  documentDate: {
+    fontSize: 9,
+    color: COLORS.secondary,
+  },
+  customerSection: {
+    marginBottom: 20,
+    backgroundColor: COLORS.lightGray,
+    padding: 15,
+    borderRadius: 4,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: COLORS.primary,
+    marginBottom: 8,
+  },
+  customerInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  customerColumn: {
+    width: "48%",
+  },
+  table: {
+    width: "100%",
+    marginBottom: 30,
+  },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: COLORS.primary,
+    color: "#fff",
+    paddingVertical: 8,
+    paddingHorizontal: 5,
+    fontWeight: "bold",
+    fontSize: 10,
+  },
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 5,
+    borderBottom: `1px solid ${COLORS.border}`,
+    fontSize: 9,
+  },
+  col1: { width: "40%", paddingRight: 5 },
+  col2: { width: "10%", textAlign: "right", paddingRight: 5 },
+  col3: { width: "15%", textAlign: "right", paddingRight: 5 },
+  col4: { width: "10%", textAlign: "right", paddingRight: 5 },
+  col5: { width: "15%", textAlign: "right", paddingRight: 5 },
+  totalsAndPaymentSection: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  paymentBox: {
+    width: "48%",
+    border: `1px solid ${COLORS.border}`,
+    padding: 10,
+    borderRadius: 4,
+  },
+  totalsBox: {
+    width: "48%",
+    border: `1px solid ${COLORS.border}`,
+    padding: 10,
+  },
+  totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 5,
   },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#f0f0f0",
-    padding: 5,
+  totalLabel: {
     fontWeight: "bold",
   },
-  tableRow: {
-    flexDirection: "row",
-    padding: 5,
-    borderBottom: "1px solid #e0e0e0",
-  },
-  col1: { width: "40%" },
-  col2: { width: "15%", textAlign: "right" },
-  col3: { width: "15%", textAlign: "right" },
-  col4: { width: "15%", textAlign: "right" },
-  col5: { width: "15%", textAlign: "right" },
-  total: {
-    marginTop: 10,
-    textAlign: "right",
+  grandTotal: {
+    fontSize: 12,
     fontWeight: "bold",
+    color: COLORS.primary,
+    borderTop: `1px solid ${COLORS.border}`,
+    paddingTop: 5,
+    marginTop: 5,
   },
-  notes: {
+  paymentTitle: {
+    fontWeight: "bold",
+    marginBottom: 5,
+    color: COLORS.primary,
+  },
+  notesSection: {
     marginTop: 20,
+    paddingTop: 15,
+    borderTop: `1px solid ${COLORS.border}`,
+  },
+  statusBadge: {
+    marginTop: 20,
+    padding: 8,
+    color: COLORS.primary,
+    textAlign: "center",
+    borderRadius: 4,
+    fontWeight: "bold",
+    fontSize: 12,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
+    textAlign: "center",
+    fontSize: 8,
+    color: COLORS.secondary,
+    borderTop: `1px solid ${COLORS.border}`,
     paddingTop: 10,
-    borderTop: "1px solid #e0e0e0",
   },
 });
 
-// Props del componente
 interface BudgetPDFProps {
   budget: Budget;
+  businessData?: BusinessData;
+  logo?: string; // URL o base64 del logo
 }
 
-const BudgetPDF: React.FC<BudgetPDFProps> = ({ budget }) => {
+const BudgetPDF: React.FC<BudgetPDFProps> = ({
+  budget,
+  businessData,
+  logo,
+}) => {
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("es-AR");
+    return date.toLocaleDateString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const calculateSubtotal = (item: Budget["items"][0]) => {
+    return item.price * item.quantity * (1 - (item.discount ?? 0) / 100);
+  };
+
+  const subtotal = budget.items.reduce(
+    (sum, item) => sum + calculateSubtotal(item),
+    0
+  );
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.title}>PRESUPUESTO</Text>
-          <Text style={styles.subtitle}>N°: {budget.id}</Text>
-          <Text>Fecha: {formatDate(budget.createdAt)}</Text>
-          {budget.expirationDate && (
-            <Text>Válido hasta: {formatDate(budget.expirationDate)}</Text>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text>Cliente: {budget.customerName}</Text>
-          {budget.customerPhone && (
-            <Text>Teléfono: {budget.customerPhone}</Text>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.col1}>Producto</Text>
-            <Text style={styles.col2}>Cantidad</Text>
-            <Text style={styles.col3}>P. Unit.</Text>
-            <Text style={styles.col4}>Desc. %</Text>
-            <Text style={styles.col5}>Subtotal</Text>
+        <View style={styles.container}>
+          {/* Marca de agua diagonal que cubre toda la página */}
+          <View style={styles.watermarkContainer}>
+            <Text style={styles.watermark}>
+              {businessData?.name || "PRESUPUESTO"}
+            </Text>
           </View>
 
-          {budget.items.map((item, index) => (
-            <View key={index} style={styles.tableRow}>
-              <Text style={styles.col1}>
-                {item.productName}
-                {item.size && ` (${item.size})`}
-                {item.color && ` - ${item.color}`}
+          {/* Encabezado */}
+          <View style={styles.header}>
+            <View style={styles.businessInfo}>
+              {logo && <Image src={logo} style={styles.logo} />}
+              <Text style={styles.businessName}>{businessData?.name}</Text>
+              <Text style={styles.businessContact}>
+                {businessData?.address}
               </Text>
-              <Text style={styles.col2}>{item.quantity}</Text>
-              <Text style={styles.col3}>${item.price.toFixed(2)}</Text>
-              <Text style={styles.col4}>{item.discount ?? 0}%</Text>
-              <Text style={styles.col5}>
-                $
-                {(
-                  item.price *
-                  item.quantity *
-                  (1 - (item.discount ?? 0) / 100)
-                ).toFixed(2)}
+              <Text style={styles.businessContact}>
+                Tel: {businessData?.phone}
+              </Text>
+              <Text style={styles.businessContact}>
+                CUIT: {businessData?.cuit}
               </Text>
             </View>
-          ))}
 
-          <View style={styles.total}>
-            <Text>TOTAL: ${budget.total.toFixed(2)}</Text>
+            <View style={styles.documentInfo}>
+              <Text style={styles.documentTitle}>PRESUPUESTO</Text>
+              <Text style={styles.documentNumber}>N°: {budget.id}</Text>
+              <Text style={styles.documentDate}>
+                Fecha: {formatDate(budget.createdAt)}
+              </Text>
+              {budget.expirationDate && (
+                <Text style={styles.documentDate}>
+                  Válido hasta: {formatDate(budget.expirationDate)}
+                </Text>
+              )}
+            </View>
           </View>
-        </View>
 
-        {budget.notes && (
-          <View style={styles.notes}>
-            <Text>Notas:</Text>
-            <Text>{budget.notes}</Text>
+          {/* Información del cliente */}
+          <View style={styles.customerSection}>
+            <Text style={styles.sectionTitle}>DATOS DEL CLIENTE</Text>
+            <View style={styles.customerInfo}>
+              <View style={styles.customerColumn}>
+                <Text>Nombre: {budget.customerName}</Text>
+              </View>
+              <View style={styles.customerColumn}>
+                {budget.customerPhone && (
+                  <Text>Teléfono: {budget.customerPhone}</Text>
+                )}
+              </View>
+            </View>
           </View>
-        )}
 
-        <View style={{ marginTop: 30, textAlign: "center" }}>
-          <Text>Estado: {budget.status?.toUpperCase()}</Text>
+          {/* Tabla de productos */}
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={styles.col1}>DESCRIPCIÓN</Text>
+              <Text style={styles.col2}>CANT.</Text>
+              <Text style={styles.col3}>PRECIO UNIT.</Text>
+              <Text style={styles.col4}>DESC.</Text>
+              <Text style={styles.col5}>SUBTOTAL</Text>
+            </View>
+
+            {budget.items.map((item, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={styles.col1}>
+                  {item.productName}
+                  {item.size && ` (Talle: ${item.size})`}
+                  {item.color && ` - Color: ${item.color}`}
+                  {item.notes && ` - ${item.notes}`}
+                </Text>
+                <Text style={styles.col2}>
+                  {item.quantity} {item.unit}
+                </Text>
+                <Text style={styles.col3}>{formatCurrency(item.price)}</Text>
+                <Text style={styles.col4}>{item.discount ?? 0}%</Text>
+                <Text style={styles.col5}>
+                  {formatCurrency(calculateSubtotal(item))}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Sección combinada de Totales y Condiciones de Pago */}
+          <View style={styles.totalsAndPaymentSection}>
+            {/* Condiciones de Pago */}
+            <View style={styles.paymentBox}>
+              <Text style={styles.paymentTitle}>CONDICIONES DE PAGO</Text>
+              <Text>
+                Seña:{" "}
+                {budget.deposit
+                  ? formatCurrency(parseFloat(budget.deposit))
+                  : "-"}
+              </Text>
+              <Text>Saldo restante: {formatCurrency(budget.remaining)}</Text>
+            </View>
+
+            {/* Totales */}
+            <View style={styles.totalsBox}>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Subtotal:</Text>
+                <Text>{formatCurrency(subtotal)}</Text>
+              </View>
+              <View style={[styles.totalRow, styles.grandTotal]}>
+                <Text style={styles.totalLabel}>TOTAL:</Text>
+                <Text>{formatCurrency(budget.total)}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Notas */}
+          {budget.notes && (
+            <View style={styles.notesSection}>
+              <Text style={styles.sectionTitle}>NOTAS</Text>
+              <Text>{budget.notes}</Text>
+            </View>
+          )}
+
+          {/* Estado */}
+          <View style={styles.statusBadge}>
+            <Text>ESTADO: {budget.status?.toUpperCase()}</Text>
+          </View>
+
+          {/* Pie de página */}
+          <View style={styles.footer}>
+            <Text>
+              {businessData?.name} - {businessData?.address} - Tel:{" "}
+              {businessData?.phone}
+            </Text>
+            <Text>
+              Este presupuesto es válido por 15 días desde su emisión.
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>

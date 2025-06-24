@@ -32,9 +32,11 @@ import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import BudgetPDF from "@/app/components/BudgetPDF";
 import CustomerNotes from "@/app/components/CustomerNotes";
+import { useBusinessData } from "@/app/context/BusinessDataContext";
 
 const PresupuestosPage = () => {
   const { rubro } = useRubro();
+  const { businessData } = useBusinessData();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [filteredBudgets, setFilteredBudgets] = useState<Budget[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,6 +51,8 @@ const PresupuestosPage = () => {
     customerPhone: "",
     items: [],
     total: 0,
+    deposit: "",
+    remaining: 0,
     expirationDate: "",
     notes: "",
     status: "pendiente",
@@ -199,8 +203,14 @@ const PresupuestosPage = () => {
     const fetchCustomers = async () => {
       const allCustomers = await db.customers.toArray();
       setCustomers(allCustomers);
+
+      const filteredCustomers =
+        rubro === "todos los rubros"
+          ? allCustomers
+          : allCustomers.filter((c) => c.rubro === rubro);
+
       setCustomerOptions(
-        allCustomers.map((customer) => ({
+        filteredCustomers.map((customer) => ({
           value: customer.id,
           label: customer.name,
         }))
@@ -208,18 +218,14 @@ const PresupuestosPage = () => {
     };
 
     fetchCustomers();
-  }, []);
+  }, [rubro]);
 
   useEffect(() => {
     const fetchBudgets = async () => {
       const allBudgets = await db.budgets.toArray();
 
-      const filtered = allBudgets.filter(() => {
-        if (rubro === "todos los rubros") return true;
-        return true;
-      });
-
-      const searched = filtered.filter(
+      // Primero filtrar por búsqueda
+      const searched = allBudgets.filter(
         (budget) =>
           budget.customerName
             .toLowerCase()
@@ -229,8 +235,13 @@ const PresupuestosPage = () => {
             .includes(searchQuery.toLowerCase())
       );
 
+      const filtered =
+        rubro === "todos los rubros"
+          ? searched
+          : searched.filter((budget) => budget.rubro === rubro);
+
       setBudgets(allBudgets);
-      setFilteredBudgets(searched);
+      setFilteredBudgets(filtered);
     };
 
     fetchBudgets();
@@ -253,14 +264,18 @@ const PresupuestosPage = () => {
     setTimeout(() => setIsNotificationOpen(false), 2500);
   };
 
-  const calculateTotal = (
-    items: Array<SaleItem & { basePrice?: number }>
-  ): number => {
-    return items.reduce(
+  const calculateTotalAndRemaining = (
+    items: Array<SaleItem & { basePrice?: number }>,
+    deposit: string
+  ) => {
+    const total = items.reduce(
       (total, item) =>
         total + item.price * item.quantity * (1 - (item.discount || 0) / 100),
       0
     );
+    const depositValue = deposit === "" ? 0 : parseFloat(deposit);
+    const remaining = total - (isNaN(depositValue) ? 0 : depositValue);
+    return { total, remaining };
   };
   const checkStockAvailability = (
     product: Product,
@@ -325,10 +340,16 @@ const PresupuestosPage = () => {
       };
     });
 
+    const { total, remaining } = calculateTotalAndRemaining(
+      selectedProducts,
+      newBudget.deposit
+    );
+
     setNewBudget((prev) => ({
       ...prev,
       items: selectedProducts,
-      total: calculateTotal(selectedProducts),
+      total,
+      remaining,
     }));
   };
 
@@ -341,7 +362,6 @@ const PresupuestosPage = () => {
       const product = products.find((p) => p.id === productId);
       if (!product) return prevState;
 
-      // Verificación de stock (similar a ventas)
       const stockCheck = checkStockAvailability(product, quantity, unit);
       if (!stockCheck.available) {
         showNotification(
@@ -355,7 +375,6 @@ const PresupuestosPage = () => {
         return prevState;
       }
 
-      // Actualizar items (similar pero con estructura de SaleItem)
       const updatedItems = prevState.items.map((item) => {
         if (item.productId === productId) {
           const newPrice =
@@ -373,13 +392,16 @@ const PresupuestosPage = () => {
         return item;
       });
 
-      // Calcular nuevo total
-      const newTotal = calculateTotal(updatedItems);
+      const { total, remaining } = calculateTotalAndRemaining(
+        updatedItems,
+        prevState.deposit
+      );
 
       return {
         ...prevState,
         items: updatedItems,
-        total: newTotal,
+        total,
+        remaining,
       };
     });
   };
@@ -426,7 +448,7 @@ const PresupuestosPage = () => {
       return {
         ...prev,
         items: updatedItems,
-        total: calculateTotal(updatedItems),
+        total: calculateTotalAndRemaining(updatedItems, prev.deposit).total,
       };
     });
   };
@@ -444,10 +466,16 @@ const PresupuestosPage = () => {
           : item
       );
 
+      const { total, remaining } = calculateTotalAndRemaining(
+        updatedItems,
+        prev.deposit
+      );
+
       return {
         ...prev,
         items: updatedItems,
-        total: calculateTotal(updatedItems),
+        total,
+        remaining,
       };
     });
   };
@@ -458,10 +486,16 @@ const PresupuestosPage = () => {
         (item) => item.productId !== productId
       );
 
+      const { total, remaining } = calculateTotalAndRemaining(
+        updatedItems,
+        prev.deposit
+      );
+
       return {
         ...prev,
         items: updatedItems,
-        total: calculateTotal(updatedItems),
+        total,
+        remaining,
       };
     });
   };
@@ -500,20 +534,33 @@ const PresupuestosPage = () => {
         customerPhone: newBudget.customerPhone || "",
         customerId,
         items: newBudget.items,
-        total: calculateTotal(newBudget.items),
+        total: calculateTotalAndRemaining(newBudget.items, newBudget.deposit)
+          .total,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        rubro: rubro === "todos los rubros" ? "comercio" : rubro,
       };
 
       await db.budgets.add(budgetToAdd);
-      setBudgets([...budgets, budgetToAdd]);
-      setFilteredBudgets([...filteredBudgets, budgetToAdd]);
+
+      // Actualizar la lista de presupuestos inmediatamente
+      const allBudgets = await db.budgets.toArray();
+      const filtered = allBudgets.filter((budget) => {
+        if (rubro === "todos los rubros") return true;
+        return budget.rubro === rubro;
+      });
+      setBudgets(allBudgets);
+      setFilteredBudgets(filtered);
+
+      // Limpiar el estado
       setNewBudget({
         date: new Date().toISOString(),
         customerName: "",
         customerPhone: "",
         items: [],
         total: 0,
+        deposit: "",
+        remaining: 0,
         expirationDate: "",
         notes: "",
         status: "pendiente",
@@ -533,7 +580,7 @@ const PresupuestosPage = () => {
       .replace(/\s+/g, "-")
       .replace(/[^a-zA-Z0-9-]/g, "");
     const timestamp = Date.now().toString().slice(-5);
-    return `PRES-${cleanName}-${timestamp}`;
+    return `${cleanName}-${timestamp}`;
   };
 
   const handleDeleteClick = (budget: Budget) => {
@@ -575,6 +622,8 @@ const PresupuestosPage = () => {
             convertToBaseUnit(1, item.unit),
       })),
       total: budget.total,
+      deposit: budget.deposit,
+      remaining: budget.remaining,
       expirationDate: budget.expirationDate || "",
       notes: budget.notes || "",
       status: budget.status || "pendiente",
@@ -602,13 +651,20 @@ const PresupuestosPage = () => {
     }
 
     try {
+      const { total, remaining } = calculateTotalAndRemaining(
+        newBudget.items,
+        newBudget.deposit
+      );
+
       const updatedBudget = {
         ...editingBudget,
         customerName: newBudget.customerName.trim(),
         customerPhone: newBudget.customerPhone,
         customerId: selectedCustomer?.value || "",
         items: newBudget.items,
-        total: calculateTotal(newBudget.items),
+        total,
+        deposit: newBudget.deposit,
+        remaining,
         expirationDate: newBudget.expirationDate,
         notes: newBudget.notes,
         status: newBudget.status,
@@ -633,6 +689,8 @@ const PresupuestosPage = () => {
         customerPhone: "",
         items: [],
         total: 0,
+        deposit: "",
+        remaining: 0,
         expirationDate: "",
         notes: "",
         status: "pendiente",
@@ -650,7 +708,16 @@ const PresupuestosPage = () => {
   const handleDownloadPDF = (budget: Budget) => {
     return (
       <PDFDownloadLink
-        document={<BudgetPDF budget={budget} />}
+        document={
+          <BudgetPDF
+            budget={{
+              ...budget,
+              deposit: budget.deposit || "0",
+              remaining: budget.remaining || budget.total,
+            }}
+            businessData={businessData}
+          />
+        }
         fileName={`Presupuesto de ${budget.customerName} - ${new Date(
           budget.createdAt
         ).toLocaleDateString("es-ES")}.pdf`}
@@ -661,11 +728,12 @@ const PresupuestosPage = () => {
             colorText="text-gray_b"
             colorTextHover="hover:text-white"
             colorBg="bg-transparent"
-            colorBgHover="hover:bg-blue-500"
+            colorBgHover="hover:bg-blue_b"
             px="px-1"
             py="py-1"
             minwidth="min-w-0"
             disabled={loading}
+            title="Descargar presupuesto"
           />
         )}
       </PDFDownloadLink>
@@ -730,9 +798,11 @@ const PresupuestosPage = () => {
             <table className="w-full table-auto divide-y divide-gray_xl">
               <thead className="bg-gradient-to-bl from-blue_m to-blue_b text-white">
                 <tr>
-                  <th className="p-2 text-start">Cliente | Empresa</th>
+                  <th className="p-2 text-start">Cliente</th>
                   <th className="p-2 text-center">Teléfono</th>
                   <th className="p-2 text-center">Total</th>
+                  <th className="p-2 text-center">Seña</th>
+                  <th className="p-2 text-center">Saldo restante</th>
                   <th className="p-2 text-center">Fecha Presupuesto</th>
                   <th className="p-2 text-center">Fecha Expiración</th>
                   <th className="p-2 text-center">Estado</th>
@@ -751,6 +821,18 @@ const PresupuestosPage = () => {
                       </td>
                       <td className="p-2 border border-gray_xl text-center">
                         ${budget.total.toFixed(2)}
+                      </td>
+                      <td className="p-2 border border-gray_xl text-center">
+                        {budget.deposit
+                          ? `$${parseFloat(budget.deposit).toFixed(2)}`
+                          : "-"}
+                      </td>
+                      <td className="p-2 border border-gray_xl text-center">
+                        $
+                        {(
+                          budget.total -
+                          (budget.deposit ? parseFloat(budget.deposit) : 0)
+                        ).toFixed(2)}
                       </td>
                       <td className="p-2 border border-gray_xl text-center">
                         {new Date(budget.createdAt).toLocaleDateString("es-AR")}
@@ -783,7 +865,7 @@ const PresupuestosPage = () => {
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
                             colorBg="bg-transparent"
-                            colorBgHover="hover:bg-blue-500"
+                            colorBgHover="hover:bg-blue_b"
                             px="px-1"
                             py="py-1"
                             minwidth="min-w-0"
@@ -800,11 +882,12 @@ const PresupuestosPage = () => {
                             colorText="text-gray_b"
                             colorTextHover="hover:text-white"
                             colorBg="bg-transparent"
-                            colorBgHover="hover:bg-blue-500"
+                            colorBgHover="hover:bg-blue_b"
                             px="px-1"
                             py="py-1"
                             minwidth="min-w-0"
                             onClick={() => handleEditClick(budget)}
+                            title="Editar presupuesto"
                           />
                           <Button
                             icon={<Trash size={20} />}
@@ -816,6 +899,7 @@ const PresupuestosPage = () => {
                             py="py-1"
                             minwidth="min-w-0"
                             onClick={() => handleDeleteClick(budget)}
+                            title="Eliminar presupuesto"
                           />
                         </div>
                       </td>
@@ -823,7 +907,7 @@ const PresupuestosPage = () => {
                   ))
                 ) : (
                   <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                    <td colSpan={7} className="py-4 text-center w-full">
+                    <td colSpan={9} className="py-4 text-center w-full">
                       <div className="flex flex-col items-center justify-center text-gray_m dark:text-white w-full">
                         <FileText size={64} className="mb-4 text-gray_m" />
                         <p className="text-gray_m">
@@ -859,6 +943,8 @@ const PresupuestosPage = () => {
               customerPhone: "",
               items: [],
               total: 0,
+              deposit: "",
+              remaining: 0,
               expirationDate: "",
               notes: "",
               status: "pendiente",
@@ -890,6 +976,8 @@ const PresupuestosPage = () => {
                     customerPhone: "",
                     items: [],
                     total: 0,
+                    deposit: "",
+                    remaining: 0,
                     expirationDate: "",
                     notes: "",
                     status: "pendiente",
@@ -935,7 +1023,10 @@ const PresupuestosPage = () => {
                 label="Teléfono (opcional)"
                 value={newBudget.customerPhone || ""}
                 onChange={(e) =>
-                  setNewBudget({ ...newBudget, customerPhone: e.target.value })
+                  setNewBudget({
+                    ...newBudget,
+                    customerPhone: e.target.value,
+                  })
                 }
                 placeholder="Ingrese el teléfono..."
                 disabled={!!selectedCustomer}
@@ -1036,29 +1127,29 @@ const PresupuestosPage = () => {
 
               {newBudget.items.length > 0 && (
                 <div className="border border-gray_xl rounded-lg overflow-hidden">
-                  <div className="overflow-y-auto max-h-[15vh] 2xl:max-h-[28vh]">
+                  <div className="overflow-y-auto max-h-[13vh] 2xl:max-h-[26vh]">
                     <table className="min-w-full divide-y divide-gray-200 text-gray_b">
                       <thead className="bg-gradient-to-r from-blue_b to-blue_m text-white">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">
+                          <th className="p-2 text-left text-xs font-medium uppercase tracking-wider">
                             Producto
                           </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium uppercase tracking-wider">
+                          <th className="p-2 text-center text-xs font-medium uppercase tracking-wider">
                             Unidad
                           </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium uppercase tracking-wider">
+                          <th className="p-2 text-center text-xs font-medium uppercase tracking-wider">
                             Cantidad
                           </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium uppercase tracking-wider">
+                          <th className="p-2 text-center text-xs font-medium uppercase tracking-wider">
                             Descuento (%)
                           </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium uppercase tracking-wider">
+                          <th className="p-2 text-center text-xs font-medium uppercase tracking-wider">
                             Precio Unit.
                           </th>
-                          <th className=" px-4 py-2 text-center text-xs font-medium uppercase tracking-wider">
+                          <th className=" p-2 text-center text-xs font-medium uppercase tracking-wider">
                             Subtotal
                           </th>
-                          <th className=" px-4 py-2 text-center text-xs font-medium uppercase tracking-wider">
+                          <th className=" p-2 text-center text-xs font-medium uppercase tracking-wider">
                             Acciones
                           </th>
                         </tr>
@@ -1070,12 +1161,12 @@ const PresupuestosPage = () => {
                           );
                           return (
                             <tr key={item.productId}>
-                              <td className="px-4 py-2 whitespace-nowrap">
+                              <td className="p-2 whitespace-nowrap">
                                 {item.productName}
                                 {item.size && ` (${item.size})`}
                                 {item.color && ` - ${item.color}`}
                               </td>
-                              <td className="px-4 py-2 whitespace-nowrap w-50 max-w-50">
+                              <td className="p-2 whitespace-nowrap w-50 max-w-50">
                                 {product?.unit === "Unid." ? (
                                   <div className="flex items-center justify-center h-full text-gray-700">
                                     Unidad
@@ -1105,7 +1196,7 @@ const PresupuestosPage = () => {
                                   />
                                 )}
                               </td>
-                              <td className="px-4 py-2 whitespace-nowrap w-10 max-w-10">
+                              <td className="p-2 whitespace-nowrap w-10 max-w-10">
                                 <Input
                                   type="number"
                                   step={
@@ -1149,23 +1240,54 @@ const PresupuestosPage = () => {
                                   }}
                                 />
                               </td>
-                              <td className="px-4 py-2 whitespace-nowrap w-10 max-w-10">
+                              <td className="p-2 whitespace-nowrap w-10 max-w-10">
                                 <Input
                                   type="number"
                                   step="1"
-                                  value={item.discount}
-                                  onChange={(e) =>
-                                    handleDiscountChange(
-                                      item.productId,
-                                      e.target.value
-                                    )
+                                  value={
+                                    item.discount === 0 ? "" : item.discount
                                   }
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (
+                                      value === "" ||
+                                      /^[0-9]*$/.test(value)
+                                    ) {
+                                      handleDiscountChange(
+                                        item.productId,
+                                        value
+                                      );
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      handleDiscountChange(item.productId, "0");
+                                    } else {
+                                      const numValue = parseInt(e.target.value);
+                                      if (isNaN(numValue)) {
+                                        handleDiscountChange(
+                                          item.productId,
+                                          "0"
+                                        );
+                                      } else if (numValue < 0) {
+                                        handleDiscountChange(
+                                          item.productId,
+                                          "0"
+                                        );
+                                      } else if (numValue > 100) {
+                                        handleDiscountChange(
+                                          item.productId,
+                                          "100"
+                                        );
+                                      }
+                                    }
+                                  }}
                                 />
                               </td>
-                              <td className="text-center px-4 py-2 whitespace-nowrap ">
+                              <td className="text-center p-2 whitespace-nowrap ">
                                 {formatCurrency(item.price)}
                               </td>
-                              <td className=" text-center px-4 py-2 whitespace-nowrap">
+                              <td className=" text-center p-2 whitespace-nowrap">
                                 {formatCurrency(
                                   item.price *
                                     item.quantity *
@@ -1188,7 +1310,56 @@ const PresupuestosPage = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="bg-gray_xxl px-4 py-3 text-right text-gray_b">
+                  <div className="flex justify-between items-center bg-gray_xxl px-4 py-3 text-gray_b">
+                    <div className="flex w-full max-w-[30vw] items-center space-x-4">
+                      <Input
+                        label="Seña (opcional)"
+                        type="number"
+                        value={newBudget.deposit}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
+                            const depositValue =
+                              value === "" ? 0 : parseFloat(value);
+                            const remaining =
+                              newBudget.total -
+                              (isNaN(depositValue) ? 0 : depositValue);
+                            setNewBudget({
+                              ...newBudget,
+                              deposit: value,
+                              remaining,
+                            });
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewBudget({
+                              ...newBudget,
+                              deposit: "",
+                              remaining: newBudget.total,
+                            });
+                          } else {
+                            const numValue = parseFloat(e.target.value);
+                            if (isNaN(numValue)) {
+                              setNewBudget({
+                                ...newBudget,
+                                deposit: "",
+                                remaining: newBudget.total,
+                              });
+                            }
+                          }
+                        }}
+                        placeholder="Ingrese el monto de la seña..."
+                      />
+                      <div className="w-full">
+                        <label className="block text-sm font-medium text-gray_b dark:text-white mb-1">
+                          Saldo restante
+                        </label>
+                        <div className="p-2 border border-gray_xl rounded-md bg-gray-100">
+                          {formatCurrency(newBudget.remaining)}
+                        </div>
+                      </div>
+                    </div>
                     <span className="font-bold">
                       Total: {formatCurrency(newBudget.total)}
                     </span>

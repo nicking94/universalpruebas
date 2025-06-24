@@ -41,6 +41,7 @@ export default function ImportExportPage() {
       const suppliers = await db.suppliers.toArray();
       const supplierProducts = await db.supplierProducts.toArray();
       const notes = await db.notes.toArray();
+      const budgets = await db.budgets.toArray();
 
       const data = {
         theme,
@@ -52,13 +53,14 @@ export default function ImportExportPage() {
         customers,
         suppliers,
         supplierProducts,
+        budgets,
         notes,
       };
       const json = JSON.stringify(data, null, 2);
       const blob = new Blob([json], { type: "application/json;charset=utf-8" });
       const formattedDate = format(new Date(), "dd-MM-yyyy");
 
-      saveAs(blob, `copia_seguridad_${formattedDate}.json`);
+      saveAs(blob, `copia de seguridad del ${formattedDate}.json`);
     } catch (error) {
       console.error("Error al exportar datos:", error);
       showNotification("Error al exportar los datos", "error");

@@ -517,7 +517,6 @@ const VentasPage = () => {
 
     try {
       await ticketRef.current.print();
-      showNotification("Ticket enviado a impresión", "success");
     } catch (error) {
       console.error("Error al imprimir ticket:", error);
       showNotification("Error al imprimir ticket", "error");
