@@ -258,11 +258,19 @@ const ProductsPage = () => {
     );
   };
   const getFilterOptionsByRubro = () => {
+    // Cuando el rubro es "todos los rubros", mostrar todas las categorías sin filtrar
+    const filteredCategories =
+      rubro === "todos los rubros"
+        ? globalCustomCategories
+        : globalCustomCategories.filter(
+            (cat) => cat.rubro === rubro || cat.rubro === "todos los rubros"
+          );
+
     if (rubro === "indumentaria") {
       return [
         {
           type: "category",
-          options: globalCustomCategories,
+          options: filteredCategories,
           label: "Categoría",
         },
         {
@@ -285,7 +293,7 @@ const ProductsPage = () => {
       return [
         {
           type: "category",
-          options: globalCustomCategories.map((cat) => cat.name),
+          options: filteredCategories,
           label: "Categoría",
         },
       ];
