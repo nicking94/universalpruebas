@@ -429,6 +429,10 @@ export type GroupedFilterOption = {
   label: string;
   options: FilterOption[];
 };
+export type MonthOption = {
+  value: number;
+  label: string;
+};
 
 export interface SerialPortRequestOptions {
   filters: SerialPortFilter[];

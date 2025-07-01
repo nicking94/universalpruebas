@@ -5,6 +5,7 @@ import Notification from "@/app/components/Notification";
 import {
   DailyCash,
   DailyCashMovement,
+  MonthOption,
   Option,
   PaymentMethod,
   PaymentSplit,
@@ -75,8 +76,12 @@ const CajaDiariaPage = () => {
     { method: "EFECTIVO", amount: 0 },
   ]);
   const { currentPage, itemsPerPage } = usePagination();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    () => new Date().getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(() =>
+    new Date().getFullYear()
+  );
 
   type MovementType = "INGRESO" | "EGRESO";
 
@@ -119,7 +124,7 @@ const CajaDiariaPage = () => {
     setIsDetailModalOpen(true);
   };
 
-  const monthOptions = [...Array(12)].map((_, i) => ({
+  const monthOptions: MonthOption[] = [...Array(12)].map((_, i) => ({
     value: i + 1,
     label: format(new Date(2022, i), "MMMM", { locale: es }),
   }));
@@ -211,6 +216,17 @@ const CajaDiariaPage = () => {
       showNotification("Error al cerrar cajas de días anteriores", "error");
     }
   };
+  useEffect(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+
+    // Solo actualiza si el mes o año actual es diferente al seleccionado
+    if (selectedMonth !== currentMonth || selectedYear !== currentYear) {
+      setSelectedMonth(currentMonth);
+      setSelectedYear(currentYear);
+    }
+  }, [new Date().getMonth()]);
 
   useEffect(() => {
     const checkMidnightAndClose = () => {

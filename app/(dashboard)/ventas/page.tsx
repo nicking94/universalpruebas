@@ -7,6 +7,7 @@ import {
   CreditSale,
   Customer,
   DailyCashMovement,
+  MonthOption,
   PaymentSplit,
   Product,
   Sale,
@@ -65,10 +66,12 @@ const VentasPage = () => {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [type, setType] = useState<"success" | "error" | "info">("success");
   const { currentPage, itemsPerPage } = usePagination();
-  const [selectedMonth, setSelectedMonth] = useState<string>(
-    (new Date().getMonth() + 1).toString().padStart(2, "0")
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    () => new Date().getMonth() + 1
   );
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedYear, setSelectedYear] = useState<number>(() =>
+    new Date().getFullYear()
+  );
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isCredit, setIsCredit] = useState(false);
@@ -338,13 +341,10 @@ const VentasPage = () => {
       });
   }, [products, rubro]);
 
-  const monthOptions = [...Array(12)].map((_, i) => {
-    const month = (i + 1).toString().padStart(2, "0");
-    return {
-      value: month,
-      label: format(new Date(2022, i), "MMMM", { locale: es }),
-    };
-  });
+  const monthOptions: MonthOption[] = [...Array(12)].map((_, i) => ({
+    value: i + 1,
+    label: format(new Date(2022, i), "MMMM", { locale: es }),
+  }));
   const yearOptions = Array.from({ length: 10 }, (_, i) => {
     const year = currentYear - i;
     return { value: year, label: String(year) };
@@ -361,7 +361,10 @@ const VentasPage = () => {
       const saleMonth = (saleDate.getMonth() + 1).toString().padStart(2, "0");
       const saleYear = saleDate.getFullYear().toString();
 
-      const matchesMonth = selectedMonth ? saleMonth === selectedMonth : true;
+      const matchesMonth =
+        selectedMonth !== undefined
+          ? Number(saleMonth) === selectedMonth
+          : true;
       const matchesYear = selectedYear
         ? saleYear === selectedYear.toString()
         : true;
@@ -552,11 +555,7 @@ const VentasPage = () => {
       }));
     }
   };
-  const handleMonthChange = (
-    selectedOption: { value: string; label: string } | null
-  ) => {
-    setSelectedMonth(selectedOption ? selectedOption.value : "");
-  };
+
   const handleYearChange = (
     selectedOption: { value: number; label: string } | null
   ) => {
@@ -888,6 +887,17 @@ const VentasPage = () => {
     setIsInfoModalOpen(false);
     setSelectedSale(null);
   };
+  useEffect(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+
+    // Solo actualiza si el mes o año actual es diferente al seleccionado
+    if (selectedMonth !== currentMonth || selectedYear !== currentYear) {
+      setSelectedMonth(currentMonth);
+      setSelectedYear(currentYear);
+    }
+  }, [new Date().getMonth()]);
 
   useEffect(() => {
     if (newSale.paymentMethods.length === 1) {
@@ -1172,11 +1182,13 @@ const VentasPage = () => {
           <div className="flex w-full max-w-[20rem] gap-2">
             <Select
               noOptionsMessage={() => "No se encontraron opciones"}
+              options={monthOptions}
               value={monthOptions.find(
                 (option) => option.value === selectedMonth
               )}
-              onChange={handleMonthChange}
-              options={monthOptions}
+              onChange={(option) =>
+                setSelectedMonth(option?.value ?? new Date().getMonth() + 1)
+              }
               placeholder="Mes"
               className="w-full h-[2rem] 2xl:h-auto text-black"
               classNamePrefix="react-select"
