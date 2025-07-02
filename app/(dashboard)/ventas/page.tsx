@@ -229,6 +229,13 @@ const VentasPage = () => {
     },
     [calculatePrice]
   );
+  const checkSalesLimit = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const salesCount = await db.sales
+      .filter((sale) => sale.date.startsWith(today))
+      .count();
+    return salesCount >= 20;
+  };
   const checkStockAvailability = (
     product: Product,
     requestedQuantity: number,
@@ -714,6 +721,17 @@ const VentasPage = () => {
   };
 
   const handleConfirmAddSale = async () => {
+    const authData = await db.auth.get(1);
+    if (authData?.userId === 2) {
+      const isLimitReached = await checkSalesLimit();
+      if (isLimitReached) {
+        showNotification(
+          `Límite alcanzado: máximo 20 ventas por día para el administrador`,
+          "error"
+        );
+        return;
+      }
+    }
     if (!validatePaymentMethods(newSale.paymentMethods, newSale.total)) {
       showNotification(
         "La suma de los métodos de pago no coincide con el total",

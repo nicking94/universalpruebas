@@ -341,17 +341,14 @@ const CajaDiariaPage = () => {
           .filter((m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO")
           .reduce((sum, m) => sum + m.amount, 0);
 
-        // Calcular egresos (todos)
         const cashExpense = dailyCash.movements
           .filter((m) => m.type === "EGRESO")
           .reduce((sum, m) => sum + m.amount, 0);
 
-        // Calcular otros ingresos (no EFECTIVO)
         const otherIncome = dailyCash.movements
           .filter((m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO")
           .reduce((sum, m) => sum + m.amount, 0);
 
-        // Monto esperado solo considera efectivo
         const expectedAmount =
           dailyCash.initialAmount + cashIncome - cashExpense;
         const difference = actualCashCountNumber - expectedAmount;
@@ -360,9 +357,9 @@ const CajaDiariaPage = () => {
           ...dailyCash,
           closed: true,
           closingAmount: actualCashCountNumber,
-          cashIncome, // Solo ingresos en efectivo
-          cashExpense, // Todos los egresos
-          otherIncome, // Ingresos no en efectivo
+          cashIncome,
+          cashExpense,
+          otherIncome,
           closingDifference: difference,
           closingDate: new Date().toISOString(),
         };
@@ -948,18 +945,6 @@ const CajaDiariaPage = () => {
                     </p>
                     {currentDailyCash.closed ? (
                       <>
-                        <p>
-                          Ingresos en efectivo:{" "}
-                          {formatCurrency(currentDailyCash.cashIncome || 0)}
-                        </p>
-                        <p>
-                          Otros ingresos:{" "}
-                          {formatCurrency(currentDailyCash.otherIncome || 0)}
-                        </p>
-                        <p>
-                          Egresos:{" "}
-                          {formatCurrency(currentDailyCash.cashExpense || 0)}
-                        </p>
                         <p className="font-semibold">
                           Monto esperado (solo efectivo):{" "}
                           {formatCurrency(
@@ -969,8 +954,16 @@ const CajaDiariaPage = () => {
                           )}
                         </p>
                         <p>
+                          Ingresos en efectivo:{" "}
+                          {formatCurrency(currentDailyCash.cashIncome || 0)}
+                        </p>
+                        <p>
                           Efectivo contado:{" "}
                           {formatCurrency(currentDailyCash.closingAmount || 0)}
+                        </p>
+                        <p>
+                          Egresos:{" "}
+                          {formatCurrency(currentDailyCash.cashExpense || 0)}
                         </p>
                       </>
                     ) : null}
