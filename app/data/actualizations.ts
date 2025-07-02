@@ -1,4 +1,5 @@
 import { db } from "../database/db";
+import { APP_VERSION } from "../lib/constants/constants";
 
 export type Actualization = {
   id: number;
@@ -11,9 +12,9 @@ export type Actualization = {
 export const systemActualizations: Actualization[] = [
   {
     id: 1,
-    title: "Versión 1.4.1",
+    title: `Versión ${APP_VERSION}`,
     message:
-      "- Agregado sistema de notificaciones\n- Ordenadas alfabéticamente las tablas de productos, clientes y proveedores\n- Corrección de errores\n- Mejoras en el rendimiento",
+      "- Agregado sistema de notificaciones.\n- Ordenadas alfabéticamente las tablas de productos, clientes y proveedores\n- Los filtros de meses ahora se actualizan automáticamente acorde al mes actual.\n- Corrección de errores.\n- Mejoras en el rendimiento.",
     date: new Date().toISOString(),
   },
 ];
