@@ -276,7 +276,7 @@ const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                         options={sizeOptions}
                         value={selectedSize}
                         onChange={(newValue) => setSelectedSize(newValue)}
-                        placeholder="Seleccionar talles..."
+                        placeholder="Seleccionar talle..."
                         isClearable
                         className="text-sm"
                       />
@@ -290,7 +290,7 @@ const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                         options={colorOptions}
                         value={selectedColors}
                         onChange={(newValue) => setSelectedColors(newValue)}
-                        placeholder="Seleccionar colores..."
+                        placeholder="Seleccionar color..."
                         isClearable
                         className="text-sm"
                       />
@@ -304,7 +304,7 @@ const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                         options={brandOptions}
                         value={selectedBrands}
                         onChange={(newValue) => setSelectedBrands(newValue)}
-                        placeholder="Seleccionar marcas..."
+                        placeholder="Seleccionar marca..."
                         isClearable
                         className="text-sm"
                       />
