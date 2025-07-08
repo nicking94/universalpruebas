@@ -25,7 +25,7 @@ import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 import { usePagination } from "@/app/context/PaginationContext";
 
-const FiadosPage = () => {
+const CuentasCorrientesPage = () => {
   const { rubro } = useRubro();
   const { currentPage, itemsPerPage } = usePagination();
   const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
@@ -125,7 +125,7 @@ const FiadosPage = () => {
         setCustomers(customers);
       } catch (error) {
         console.error("Error loading data:", error);
-        showNotification("Error al cargar los fiados", "error");
+        showNotification("Error al cargar las cuentas corrientes", "error");
       }
     };
 
@@ -184,8 +184,6 @@ const FiadosPage = () => {
       );
 
       if (!availableMethod) return prev;
-
-      // Si hay menos de 2 métodos, distribuimos el monto
       if (prev.length < 2) {
         const newMethodCount = prev.length + 1;
         const share = total / newMethodCount;
@@ -204,7 +202,6 @@ const FiadosPage = () => {
         ];
       }
 
-      // Si hay 2 o más, agregamos con amount 0
       return [
         ...prev,
         {
@@ -222,15 +219,12 @@ const FiadosPage = () => {
 
       const movements: DailyCashMovement[] = [];
       const totalSaleAmount = sale.total;
-
-      // Calcular la ganancia total de todos los productos
       const totalProfit = sale.products.reduce((sum, product) => {
         const productProfit =
           (product.price - (product.costPrice || 0)) * product.quantity;
         return sum + productProfit;
       }, 0);
 
-      // Crear un solo movimiento por método de pago que incluya todos los productos
       sale.paymentMethods.forEach((payment) => {
         const paymentRatio = payment.amount / totalSaleAmount;
         const paymentProfit = totalProfit * paymentRatio;
@@ -238,7 +232,7 @@ const FiadosPage = () => {
         movements.push({
           id: Date.now(),
           amount: payment.amount,
-          description: `Fiado de ${sale.products.length} productos`,
+          description: `Cuenta corriente de ${sale.products.length} productos`,
           type: "INGRESO",
           date: new Date().toISOString(),
           paymentMethod: payment.method,
@@ -315,15 +309,15 @@ const FiadosPage = () => {
       setPayments(payments.filter((p) => !salesToDelete.includes(p.saleId)));
 
       showNotification(
-        `Todos los fiados de ${customerToDelete} eliminados`,
+        `Todas las cuentas corrientes de ${customerToDelete} eliminadas`,
         "success"
       );
       setIsDeleteModalOpen(false);
       setCustomerToDelete(null);
       setIsInfoModalOpen(false);
     } catch (error) {
-      console.error("Error al eliminar fiados:", error);
-      showNotification("Error al eliminar fiados", "error");
+      console.error("Error al eliminar cuentas corrientes:", error);
+      showNotification("Error al eliminar cuentas corrientes", "error");
     }
   };
 
@@ -514,7 +508,7 @@ const FiadosPage = () => {
     <ProtectedRoute>
       <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
         <h1 className="text-lg 2xl:text-xl font-semibold mb-2">
-          Listado de fiados
+          Cuentas corrientes
         </h1>
         <div className="w-full mb-2">
           <SearchBar onSearch={handleSearch} />
@@ -524,11 +518,11 @@ const FiadosPage = () => {
           <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
             <table className="table-auto w-full text-center border-collapse shadow-sm shadow-gray_l">
               <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b text-sm 2xl:text-lg">
-                <tr>
+                <tr className="text-xs lg:text-md 2xl:text-lg">
                   <th className="p-2 text-start">Cliente</th>
                   <th className="p-2">Fecha</th>
                   <th className="p-2">Deuda</th>
-                  <th className="w-40 max-w-[10rem] p-2">Acciones</th>
+                  <th className="w-40 max-w-40 p-2">Acciones</th>
                 </tr>
               </thead>
               <tbody
@@ -605,7 +599,7 @@ const FiadosPage = () => {
                       <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                         <Wallet size={64} className="mb-4 text-gray_m" />
                         <p className="text-gray_m">
-                          No hay fiados registrados.
+                          No hay cuentas corrientes registradas.
                         </p>
                       </div>
                     </td>
@@ -616,8 +610,8 @@ const FiadosPage = () => {
           </div>
           {totalCustomers > 0 && (
             <Pagination
-              text="Fiados por página"
-              text2="Total de fiados"
+              text="Cuentas corrientes por página"
+              text2="Total de cuentas corrientes"
               totalItems={totalCustomers}
             />
           )}
@@ -626,7 +620,7 @@ const FiadosPage = () => {
         <Modal
           isOpen={isInfoModalOpen}
           onClose={() => setIsInfoModalOpen(false)}
-          title={`Detalles de fiados - ${currentCustomerInfo?.name}`}
+          title={`Cuentas corrientes de ${currentCustomerInfo?.name}`}
           buttons={
             <div className="w-full flex justify-end">
               <Button
@@ -640,27 +634,26 @@ const FiadosPage = () => {
             </div>
           }
         >
-          <div className="space-y-6">
-            {/* Resumen destacado */}
+          <div className=" max-h-[70vh] overflow-y-auto space-y-6">
             <div className="bg-gradient-to-bl from-blue_l to-blue_xl dark:from-gray_m dark:to-gray_b p-4 rounded-lg shadow-sm shadow-blue_ll dark:shadow-gray_m">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-sm font-medium text-gray_b dark:text-gray_xl">
+                  <h3 className="text-lg font-semibold text-gray_b dark:text-white">
                     Cliente
                   </h3>
-                  <p className="text-md text-gray_b dark:text-white">
+                  <p className="text-sm text-gray_m dark:text-gray_xl mt-1">
                     {currentCustomerInfo?.name}
                   </p>
                 </div>
                 <div className="text-right">
-                  <h3 className="text-sm font-medium text-gray_b dark:text-gray_xl">
+                  <h3 className="text-lg font-semibold text-gray_b dark:text-white mb-2">
                     Estado
                   </h3>
                   <p
-                    className={`text-lg font-bold ${
+                    className={`uppercase min-w-20 text-center text-sm px-2 py-1 rounded-md text-white font-bold ${
                       (currentCustomerInfo?.balance ?? 0) <= 0
-                        ? "text-green_m"
-                        : "text-red_m"
+                        ? "bg-green_b"
+                        : "bg-red_m "
                     }`}
                   >
                     {(currentCustomerInfo?.balance ?? 0) <= 0
@@ -671,24 +664,21 @@ const FiadosPage = () => {
               </div>
 
               <div className="mt-4 grid grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-gray_m p-3 rounded-lg shadow">
-                  <p className="text-xs text-gray_m dark:text-gray_l">
-                    Total fiado
-                  </p>
-                  <p className="font-semibold">
-                    {currentCustomerInfo?.sales
-                      .reduce((sum, sale) => sum + sale.total, 0)
-                      .toLocaleString("es-AR", {
+                <div className="bg-blue_m dark:bg-gray_m p-3 rounded-lg shadow text-white text-lg font-semibold">
+                  <p>Saldo pendiente</p>
+                  <p>
+                    {(currentCustomerInfo?.balance ?? 0).toLocaleString(
+                      "es-AR",
+                      {
                         style: "currency",
                         currency: "ARS",
-                      })}
+                      }
+                    )}
                   </p>
                 </div>
-                <div className="bg-white dark:bg-gray_m p-3 rounded-lg shadow">
-                  <p className="text-xs text-gray_m dark:text-gray_l">
-                    Total pagado
-                  </p>
-                  <p className="font-semibold">
+                <div className="bg-blue_m dark:bg-gray_m p-3 rounded-lg shadow text-white text-lg font-semibold">
+                  <p>Total pagado</p>
+                  <p>
                     {currentCustomerInfo?.sales
                       .reduce((sum, sale) => {
                         const paymentsForSale = payments
@@ -702,31 +692,23 @@ const FiadosPage = () => {
                       })}
                   </p>
                 </div>
-                <div className="bg-white dark:bg-gray_m p-3 rounded-lg shadow">
-                  <p className="text-xs text-gray_m dark:text-gray_l">
-                    Saldo pendiente
-                  </p>
-                  <p
-                    className={`font-semibold ${
-                      (currentCustomerInfo?.balance ?? 0) <= 0
-                        ? "text-green_b"
-                        : "text-red_b"
-                    }`}
-                  >
-                    {(currentCustomerInfo?.balance ?? 0).toLocaleString(
-                      "es-AR",
-                      {
+
+                <div className="bg-blue_m dark:bg-gray_m p-3 rounded-lg shadow text-white text-lg font-semibold">
+                  <p>Total</p>
+                  <p>
+                    {currentCustomerInfo?.sales
+                      .reduce((sum, sale) => sum + sale.total, 0)
+                      .toLocaleString("es-AR", {
                         style: "currency",
                         currency: "ARS",
-                      }
-                    )}
+                      })}
                   </p>
                 </div>
               </div>
             </div>
             <div className="max-h-96 overflow-y-auto">
               <h3 className="font-semibold mb-3 text-lg border-b pb-2">
-                Historial de fiados
+                Historial de cuentas corrientes
               </h3>
 
               {currentCustomerInfo?.sales
@@ -754,47 +736,51 @@ const FiadosPage = () => {
                       key={sale.id}
                       className={`mb-4 p-4 rounded-lg shadow-sm ${
                         isPaid
-                          ? "bg-green_xl dark:bg-gray_b"
-                          : "bg-red_xl dark:bg-gray_b"
+                          ? "bg-green_xl dark:bg-green_l shadow-green_l border-t border-green_l"
+                          : "bg-red_xl dark:bg-red_l shadow-red_l border-t border-red_l "
                       }`}
                     >
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="flex items-center space-x-3">
+                      <div className="flex justify-between items-center mb-3 ">
+                        <div className="flex items-center space-x-2">
                           <div
                             className={`w-3 h-3 rounded-full ${
-                              isPaid ? "bg-green_500" : "bg-red_b"
+                              isPaid ? "bg-green_m" : "bg-red_m"
                             }`}
                           ></div>
-                          <span className="font-semibold">
+                          <span className="text-gray_b font-semibold">
                             {format(new Date(sale.date), "dd/MM/yyyy", {
                               locale: es,
                             })}
                           </span>
                         </div>
 
-                        {!isPaid && (
-                          <Button
-                            py="py-1"
-                            px="px-1"
-                            minwidth="min-w-20"
-                            colorText="text-white"
-                            colorTextHover="hover:text-white"
-                            text="Pagar"
-                            onClick={() => {
-                              setCurrentCreditSale(sale);
-                              setIsPaymentModalOpen(true);
-                              setIsInfoModalOpen(false);
-                            }}
-                          />
-                        )}
+                        <div className="mt-2">
+                          {!isPaid && (
+                            <Button
+                              py="py-1"
+                              px="px-1"
+                              minwidth="min-w-20"
+                              colorText="text-white"
+                              colorTextHover="hover:text-white"
+                              text="Pagar"
+                              onClick={() => {
+                                setCurrentCreditSale(sale);
+                                setIsPaymentModalOpen(true);
+                                setIsInfoModalOpen(false);
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
 
-                      <div className="mb-3">
-                        <h4 className="text-sm font-medium mb-1">Productos:</h4>
+                      <div className="mb-1">
+                        <h4 className="text-sm text-gray_b font-medium mb-1">
+                          Detalles
+                        </h4>
                         <div className="bg-white dark:bg-gray_m rounded-md p-2">
                           <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b">
+                            <thead className="text-md">
+                              <tr className="text-xs border-b">
                                 <th className="text-left py-1">Producto</th>
                                 <th className="text-right py-1">Cantidad</th>
                                 <th className="text-right py-1">Precio</th>
@@ -852,18 +838,30 @@ const FiadosPage = () => {
                           </table>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="bg-white dark:bg-gray_m p-2 rounded">
-                          <p className="font-medium">Total:</p>
-                          <p>
-                            {sale.total.toLocaleString("es-AR", {
+                      <div className="grid grid-cols-3 gap-2 text-md font-semibold">
+                        <div
+                          className={` p-2 rounded ${
+                            isPaid
+                              ? "bg-white dark:bg-green_b"
+                              : "bg-white dark:bg-red_b"
+                          }`}
+                        >
+                          <p>Saldo:</p>
+                          <p
+                            className={
+                              isPaid
+                                ? "text-green_b"
+                                : "text-red_b dark:text-white"
+                            }
+                          >
+                            {remainingBalance.toLocaleString("es-AR", {
                               style: "currency",
                               currency: "ARS",
                             })}
                           </p>
                         </div>
                         <div className="bg-white dark:bg-gray_m p-2 rounded">
-                          <p className="font-medium">Pagado:</p>
+                          <p>Pagado:</p>
                           <p>
                             {totalPayments.toLocaleString("es-AR", {
                               style: "currency",
@@ -871,16 +869,11 @@ const FiadosPage = () => {
                             })}
                           </p>
                         </div>
-                        <div
-                          className={`p-2 rounded ${
-                            isPaid
-                              ? "bg-white dark:bg-green_b"
-                              : "bg-white dark:bg-red_b"
-                          }`}
-                        >
-                          <p className="font-medium">Saldo:</p>
-                          <p className={isPaid ? "text-green_b" : "text-red_b"}>
-                            {remainingBalance.toLocaleString("es-AR", {
+
+                        <div className="bg-white dark:bg-gray_m p-2 rounded">
+                          <p>Total:</p>
+                          <p>
+                            {sale.total.toLocaleString("es-AR", {
                               style: "currency",
                               currency: "ARS",
                             })}
@@ -935,14 +928,10 @@ const FiadosPage = () => {
             <div>
               <p className="flex items-center gap-2">
                 <div className="flex justify-between w-full ">
-                  <div className="flex items-center gap-2">
-                    <span>Deuda pendiente:</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg">Deuda pendiente:</span>
                     <span
-                      className={`px-2 py-1 rounded ${
-                        calculateRemainingBalance(currentCreditSale!) <= 0
-                          ? "bg-white text-green_b"
-                          : "bg-white text-red_b"
-                      } font-semibold`}
+                      className={`px-2 py-1 rounded text-white font-semibold`}
                     >
                       {calculateRemainingBalance(
                         currentCreditSale!
@@ -997,7 +986,7 @@ const FiadosPage = () => {
                       )
                     }
                     options={paymentOptions}
-                    className="min-w-40 text-gray_b"
+                    className="text-gray_l min-w-40"
                     classNamePrefix="react-select"
                   />
                   <InputCash
@@ -1011,7 +1000,7 @@ const FiadosPage = () => {
                     <button
                       type="button"
                       onClick={() => removePaymentMethod(index)}
-                      className="cursor-pointer text-red_m hover:text-red_m"
+                      className="bg-red_m rounded p-2 cursor-pointer text-red_l  transition-all duration-300"
                     >
                       <Trash size={16} />
                     </button>
@@ -1022,7 +1011,7 @@ const FiadosPage = () => {
                 <button
                   type="button"
                   onClick={addPaymentMethod}
-                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-300"
+                  className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_xl flex items-center transition-all duration-300 mt-4"
                 >
                   <Plus size={16} className="mr-1" /> Agregar otro método
                 </button>
@@ -1030,7 +1019,7 @@ const FiadosPage = () => {
             </div>
 
             <div className="p-2 bg-gray_b dark:bg-gray_m text-white text-center mt-4">
-              <p className="font-semibold uppercase py-2 text-lg">
+              <p className="font-semibold uppercase py-2 text-2xl">
                 Total a pagar:{" "}
                 {paymentMethods
                   .reduce((sum, m) => sum + m.amount, 0)
@@ -1041,7 +1030,7 @@ const FiadosPage = () => {
               </p>
               {paymentMethods.reduce((sum, m) => sum + m.amount, 0) >
                 calculateRemainingBalance(currentCreditSale!) && (
-                <p className="text-red_m text-sm">
+                <p className="text-red_m text-md">
                   El monto total excede la deuda pendiente
                 </p>
               )}
@@ -1052,7 +1041,7 @@ const FiadosPage = () => {
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
-          title="Eliminar Fiados"
+          title="Eliminar Cuentas corrientes"
           buttons={
             <>
               <Button
@@ -1076,7 +1065,7 @@ const FiadosPage = () => {
         >
           <div className="space-y-6">
             <p>
-              ¿Está seguro que desea eliminar TODOS los fiados de{" "}
+              ¿Está seguro que desea eliminar TODAS las cuentas corrientes de{" "}
               {customerToDelete}?
             </p>
             <p className="font-semibold text-red_b">
@@ -1102,4 +1091,4 @@ const FiadosPage = () => {
   );
 };
 
-export default FiadosPage;
+export default CuentasCorrientesPage;
