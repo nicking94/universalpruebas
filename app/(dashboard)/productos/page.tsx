@@ -154,16 +154,6 @@ const ProductsPage = () => {
         selectedReturnProduct.unit
       );
 
-      // Validar que no se supere el stock actual
-      if (baseQuantity > currentStockInBase) {
-        showNotification(
-          `No se puede devolver ${returnQuantity} ${returnUnit}. ` +
-            `Stock actual: ${currentStock} ${selectedReturnProduct.unit}`,
-          "error"
-        );
-        return;
-      }
-
       // Obtener la caja diaria actual
       const today = getLocalDateString();
       const dailyCash = await db.dailyCashes.get({ date: today });
@@ -213,9 +203,9 @@ const ProductsPage = () => {
 
       await db.dailyCashes.update(dailyCash.id, updatedCash);
 
-      // Actualizar el stock del producto
+      // Actualizar el stock del producto (SUMAR la cantidad devuelta)
       const updatedStock = convertFromBaseUnit(
-        currentStockInBase - baseQuantity,
+        currentStockInBase + baseQuantity, // Cambiado de - a +
         selectedReturnProduct.unit
       );
       await db.products.update(selectedReturnProduct.id, {
@@ -252,9 +242,9 @@ const ProductsPage = () => {
       showNotification(
         `Producto ${getDisplayProductName(
           selectedReturnProduct
-        )} devuelto correctamente. Monto restado: ${formatCurrency(
-          amountToSubtract
-        )}`,
+        )} devuelto correctamente. Stock actualizado: ${updatedStock} ${
+          selectedReturnProduct.unit
+        }. Monto restado: ${formatCurrency(amountToSubtract)}`,
         "success"
       );
 
