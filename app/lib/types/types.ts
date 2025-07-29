@@ -289,7 +289,7 @@ export type DailyCashMovement = {
   discount?: number;
   manualProfitPercentage?: number;
   description: string;
-  type: "INGRESO" | "EGRESO";
+  type: "INGRESO" | "EGRESO" | "TODOS";
   date: string;
   paymentMethod?: "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "CHEQUE" | "MIXTO";
   productId?: number;
@@ -334,6 +334,7 @@ export type DailyCashMovement = {
   profitPercentage?: number;
   budgetId?: string;
   fromBudget?: boolean;
+  expenseCategory?: string;
 };
 
 export type DailyCash = {
@@ -445,15 +446,34 @@ export type TicketProps = {
   paymentMethods?: { method: string; amount: number }[];
   isCredit?: boolean;
 };
-export type ProductFilter = {
+export type UnifiedFilter = {
+  field: string;
+  value: string;
+};
+export type ProductFilter = UnifiedFilter & {
   field: keyof Product;
-  value: string | number;
+};
+
+export type ExpenseFilter = UnifiedFilter & {
+  field: keyof Expense;
 };
 
 export type ProductFilters = ProductFilter[];
+export type ExpenseFilters = ExpenseFilter[];
 
-export type SortConfig = {
-  field: keyof Product;
+export type SortConfig<T> = {
+  field: keyof T;
+  direction: "asc" | "desc";
+};
+
+export type Filter<T> = {
+  field: keyof T;
+  value: string;
+};
+
+export type Filters<T> = Filter<T>[];
+export type ExpenseSortConfig = {
+  field: keyof Expense;
   direction: "asc" | "desc";
 };
 export type CategoryOption = {
@@ -500,7 +520,7 @@ export type GroupedOption = {
 export type FilterOption = {
   value: string;
   label: string;
-  groupType: keyof ProductFilters;
+  groupType: keyof UnifiedFilter;
   name?: string;
   rubro?: Rubro;
 };
@@ -602,3 +622,25 @@ export type Budget = {
   convertedToSale?: boolean;
 };
 export type ChequeFilter = "todos" | "pendiente" | "cobrado";
+
+export interface ExpenseCategory {
+  id?: number;
+  name: string;
+  rubro: Rubro;
+  type: "INGRESO" | "EGRESO" | "TODOS";
+}
+
+export interface Expense {
+  id?: number;
+  amount: number;
+  date: string;
+  description: string;
+  category: string;
+  paymentMethod: PaymentMethod;
+  receipt: string | null;
+  installments?: number;
+  rubro: Rubro;
+  supplier?: string;
+  type: "INGRESO" | "EGRESO" | "TODOS";
+  combinedPaymentMethods?: PaymentSplit[];
+}

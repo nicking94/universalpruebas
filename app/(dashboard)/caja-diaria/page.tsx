@@ -8,10 +8,8 @@ import {
   MonthOption,
   Option,
   PaymentMethod,
-  PaymentSplit,
-  Supplier,
 } from "@/app/lib/types/types";
-import { Plus, X, Check, Info, Trash } from "lucide-react";
+import { Plus, X, Check, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import { format, parseISO, isSameMonth } from "date-fns";
@@ -19,7 +17,6 @@ import { es } from "date-fns/locale";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
 import Select from "react-select";
-import Input from "@/app/components/Input";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import InputCash from "@/app/components/InputCash";
 import { useRubro } from "@/app/context/RubroContext";
@@ -38,7 +35,6 @@ const CajaDiariaPage = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [type, setType] = useState<"success" | "error" | "info">("success");
-  const [isOpenModal, setIsOpenModal] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDayMovements, setSelectedDayMovements] = useState<
     DailyCashMovement[]
@@ -50,16 +46,10 @@ const CajaDiariaPage = () => {
   const [filterType, setFilterType] = useState<"TODOS" | "INGRESO" | "EGRESO">(
     "TODOS"
   );
-  const [amount, setAmount] = useState("");
+
   const [filterPaymentMethod, setFilterPaymentMethod] = useState<
     PaymentMethod | "TODOS"
   >("TODOS");
-
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [selectedSupplier, setSelectedSupplier] = useState<{
-    value: number;
-    label: string;
-  } | null>(null);
 
   const paymentOptions: Option[] = [
     { value: "EFECTIVO", label: "Efectivo" },
@@ -68,14 +58,6 @@ const CajaDiariaPage = () => {
     { value: "CHEQUE", label: "Cheque" },
   ];
 
-  const [description, setDescription] = useState("");
-  const [movementType, setMovementType] = useState<"INGRESO" | "EGRESO">(
-    "INGRESO"
-  );
-
-  const [paymentMethods, setPaymentMethods] = useState<PaymentSplit[]>([
-    { method: "EFECTIVO", amount: 0 },
-  ]);
   const { currentPage, itemsPerPage } = usePagination();
   const [selectedMonth, setSelectedMonth] = useState<number>(
     () => new Date().getMonth() + 1
@@ -83,13 +65,6 @@ const CajaDiariaPage = () => {
   const [selectedYear, setSelectedYear] = useState<number>(() =>
     new Date().getFullYear()
   );
-
-  type MovementType = "INGRESO" | "EGRESO";
-
-  const movementTypes: Option[] = [
-    { value: "INGRESO", label: "Ingreso" },
-    { value: "EGRESO", label: "Egreso" },
-  ];
 
   const getFilteredMovements = () => {
     return selectedDayMovements.filter((movement) => {
@@ -166,20 +141,6 @@ const CajaDiariaPage = () => {
     }, 2500);
   };
 
-  const checkCashStatus = async () => {
-    const today = getLocalDateString();
-    const dailyCash = await db.dailyCashes.get({ date: today });
-
-    if (!dailyCash) {
-      setIsOpenCashModal(true);
-      return false;
-    } else if (!dailyCash.closed) {
-      return true;
-    } else {
-      setIsOpenCashModal(true);
-      return false;
-    }
-  };
   const checkAndCloseOldCashes = async () => {
     const today = getLocalDateString();
     try {
@@ -460,187 +421,6 @@ const CajaDiariaPage = () => {
   };
   const dailySummaries = getDailySummary();
 
-  const addMovement = async () => {
-    const totalPayment = paymentMethods.reduce(
-      (sum, m) => sum + (m.amount || 0),
-      0
-    );
-
-    const isCashOpen = await checkCashStatus();
-    if (!isCashOpen) return;
-
-    try {
-      const today = getLocalDateString();
-      const dailyCash = await db.dailyCashes.get({ date: today });
-
-      if (!dailyCash) {
-        showNotification("La caja no está abierta", "error");
-        return;
-      }
-
-      const movement: DailyCashMovement = {
-        id: Date.now() + Math.random(),
-        amount: totalPayment || 0,
-        description,
-        type: movementType,
-        paymentMethod: paymentMethods[0].method,
-        date: new Date().toISOString(),
-        supplierId: selectedSupplier?.value,
-        supplierName: selectedSupplier?.label,
-        combinedPaymentMethods: paymentMethods,
-        discount: 0,
-        profit: 0,
-        manualAmount: 0,
-        manualProfitPercentage: 0,
-        rubro: movementType === "EGRESO" ? rubro : undefined,
-      };
-
-      const updatedCash = {
-        ...dailyCash,
-        movements: [...dailyCash.movements, movement],
-        totalIncome:
-          movementType === "INGRESO"
-            ? (dailyCash.totalIncome || 0) + totalPayment
-            : dailyCash.totalIncome,
-        totalExpense:
-          movementType === "EGRESO"
-            ? (dailyCash.totalExpense || 0) + totalPayment
-            : dailyCash.totalExpense,
-      };
-
-      await db.dailyCashes.update(dailyCash.id, updatedCash);
-
-      setDailyCashes((prev) =>
-        prev.map((dc) => (dc.id === dailyCash.id ? updatedCash : dc))
-      );
-      setCurrentDailyCash(updatedCash);
-
-      setAmount("");
-      setDescription("");
-      setMovementType("INGRESO");
-      setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
-      setIsOpenModal(false);
-      showNotification("Movimiento registrado correctamente", "success");
-    } catch (error) {
-      console.error("Error al registrar movimiento:", error);
-      showNotification("Error al registrar movimiento", "error");
-    }
-  };
-  const handlePaymentMethodChange = (
-    index: number,
-    field: keyof PaymentSplit,
-    value: string | number
-  ) => {
-    setPaymentMethods((prev) => {
-      const updated = [...prev];
-
-      if (field === "amount") {
-        const numericValue =
-          typeof value === "string" ? parseFloat(value) || 0 : value;
-        updated[index] = {
-          ...updated[index],
-          amount: numericValue,
-        };
-
-        if (updated.length === 2) {
-          const otherIndex = index === 0 ? 1 : 0;
-          const totalAmount = parseFloat(amount) || 0;
-          const remaining = totalAmount - numericValue;
-          updated[otherIndex] = {
-            ...updated[otherIndex],
-            amount: Math.max(0, remaining),
-          };
-        }
-      } else {
-        updated[index] = {
-          ...updated[index],
-          method: value as PaymentMethod,
-        };
-      }
-      const newTotal = updated.reduce((sum, m) => sum + (m.amount || 0), 0);
-      setAmount(newTotal.toString());
-
-      return updated;
-    });
-  };
-
-  const addPaymentMethod = () => {
-    setPaymentMethods((prev) => {
-      if (prev.length >= paymentOptions.length) return prev;
-
-      const totalAmount = parseFloat(amount) || 0;
-      if (prev.length < 2) {
-        const newMethodCount = prev.length + 1;
-        const share = totalAmount / newMethodCount;
-
-        const updatedMethods = prev.map((method) => ({
-          ...method,
-          amount: share,
-        }));
-
-        const newMethods = [
-          ...updatedMethods,
-          {
-            method:
-              (paymentOptions.find(
-                (option) => !prev.some((m) => m.method === option.value)
-              )?.value as PaymentMethod) || "EFECTIVO",
-            amount: share,
-          },
-        ];
-
-        setAmount(totalAmount.toString());
-
-        return newMethods;
-      } else {
-        const newMethods = [
-          ...prev,
-          {
-            method:
-              (paymentOptions.find(
-                (option) => !prev.some((m) => m.method === option.value)
-              )?.value as PaymentMethod) || "EFECTIVO",
-            amount: 0,
-          },
-        ];
-
-        return newMethods;
-      }
-    });
-  };
-  const removePaymentMethod = (index: number) => {
-    setPaymentMethods((prev) => {
-      if (prev.length <= 1) return prev;
-
-      const updated = [...prev];
-      updated.splice(index, 1);
-
-      if (updated.length <= 2) {
-        const totalAmount = parseFloat(amount) || 0;
-        const share = totalAmount / updated.length;
-        updated.forEach((m, i) => {
-          updated[i] = {
-            ...m,
-            amount: share,
-          };
-        });
-      }
-
-      const newTotal = updated.reduce((sum, m) => sum + (m.amount || 0), 0);
-      setAmount(newTotal.toString());
-
-      return updated;
-    });
-  };
-
-  useEffect(() => {
-    const fetchSuppliers = async () => {
-      const allSuppliers = await db.suppliers.toArray();
-      setSuppliers(allSuppliers);
-    };
-    fetchSuppliers();
-  }, []);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -760,7 +540,7 @@ const CajaDiariaPage = () => {
                 { value: "INGRESO", label: "Ingreso" },
                 { value: "EGRESO", label: "Egreso" },
               ]}
-              noOptionsMessage={() => "No se encontraron opciones"}
+              noOptionsMessage={() => "Sin opciones"}
               value={
                 filterType === "TODOS"
                   ? { value: "TODOS", label: "Todos" }
@@ -782,7 +562,7 @@ const CajaDiariaPage = () => {
             </label>
             <Select
               options={[{ value: "TODOS", label: "Todos" }, ...paymentOptions]}
-              noOptionsMessage={() => "No se encontraron opciones"}
+              noOptionsMessage={() => "Sin opciones"}
               value={
                 filterPaymentMethod === "TODOS"
                   ? { value: "TODOS", label: "Todos" }
@@ -1055,7 +835,7 @@ const CajaDiariaPage = () => {
               <div className="flex gap-2">
                 <Select
                   options={monthOptions}
-                  noOptionsMessage={() => "No se encontraron opciones"}
+                  noOptionsMessage={() => "Sin opciones"}
                   value={monthOptions.find((m) => m.value === selectedMonth)}
                   onChange={(option) =>
                     option && setSelectedMonth(option.value)
@@ -1064,7 +844,7 @@ const CajaDiariaPage = () => {
                 />
                 <Select
                   options={yearOptions}
-                  noOptionsMessage={() => "No se encontraron opciones"}
+                  noOptionsMessage={() => "Sin opciones"}
                   value={yearOptions.find((y) => y.value === selectedYear)}
                   onChange={(option) => option && setSelectedYear(option.value)}
                   className="text-gray_m min-w-40"
@@ -1072,21 +852,11 @@ const CajaDiariaPage = () => {
               </div>
               {rubro !== "Todos los rubros" && (
                 <div className="flex gap-2 mt-2">
-                  <Button
-                    icon={<Plus className="w-4 h-4" />}
-                    text="Nuevo Movimiento"
-                    colorText="text-white"
-                    colorTextHover="text-white"
-                    onClick={async () => {
-                      const isCashOpen = await checkCashStatus();
-                      if (isCashOpen) setIsOpenModal(true);
-                    }}
-                  />
                   {currentDailyCash ? (
                     <div>
                       {currentDailyCash.closed ? (
                         <Button
-                          icon={<Plus size={20} />}
+                          icon={<Plus size={18} />}
                           text="Reabrir Caja"
                           colorText="text-white"
                           colorTextHover="text-white"
@@ -1094,7 +864,7 @@ const CajaDiariaPage = () => {
                         />
                       ) : (
                         <Button
-                          icon={<X size={20} />}
+                          icon={<X size={18} />}
                           text="Cerrar Caja"
                           colorText="text-white"
                           colorTextHover="text-white"
@@ -1170,7 +940,7 @@ const CajaDiariaPage = () => {
                           </td>
                           <td className="p-2 flex justify-center items-center gap-2 border-x border-gray_xl">
                             <Button
-                              icon={<Info size={20} />}
+                              icon={<Info size={18} />}
                               colorText="text-gray_b"
                               colorTextHover="hover:text-white"
                               colorBg="bg-transparent"
@@ -1212,142 +982,7 @@ const CajaDiariaPage = () => {
             />
           )}
         </div>
-        <Modal
-          isOpen={isOpenModal}
-          onClose={() => {
-            setIsOpenModal(false);
-            setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
-          }}
-          title="Nuevo Movimiento"
-          onConfirm={addMovement}
-        >
-          <div className="flex flex-col justify-between min-h-[40vh]">
-            <div className="flex flex-col gap-2">
-              <div className="w-full flex justify-between space-x-4">
-                <div className="flex flex-col w-full">
-                  <label className="block text-gray_m dark:text-white text-sm font-semibold">
-                    Tipo de Movimiento
-                  </label>
-                  <Select
-                    options={movementTypes}
-                    noOptionsMessage={() => "No se encontraron opciones"}
-                    value={movementTypes.find((m) => m.value === movementType)}
-                    onChange={(option) =>
-                      option && setMovementType(option.value as MovementType)
-                    }
-                    className="text-gray_m min-w-40"
-                  />
-                </div>
-                {movementType === "EGRESO" && (
-                  <div className="flex flex-col w-full">
-                    <label className="block text-sm font-medium text-gray_m dark:text-white">
-                      Proveedor (opcional)
-                    </label>
-                    <Select
-                      options={suppliers.map((s) => ({
-                        value: s.id,
-                        label: s.companyName,
-                      }))}
-                      noOptionsMessage={() => "No se encontraron opciones"}
-                      value={selectedSupplier}
-                      onChange={(option) => setSelectedSupplier(option)}
-                      isClearable
-                      placeholder="Seleccionar proveedor"
-                      className="text-gray_m min-w-40"
-                    />
-                  </div>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Métodos de Pago
-                </label>
-                {paymentMethods.map((method, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-2 ${
-                      paymentMethods.length > 1 ? "space-y-2" : ""
-                    }`}
-                  >
-                    <Select
-                      noOptionsMessage={() => "No se encontraron opciones"}
-                      value={paymentOptions.find(
-                        (option) => option.value === method.method
-                      )}
-                      onChange={(selectedOption) =>
-                        handlePaymentMethodChange(
-                          index,
-                          "method",
-                          (selectedOption?.value as PaymentMethod) || "EFECTIVO"
-                        )
-                      }
-                      options={paymentOptions}
-                      className="text-gray_m min-w-40"
-                      classNamePrefix="react-select"
-                    />
-                    <InputCash
-                      placeholder="Monto"
-                      value={method.amount}
-                      onChange={(value) => {
-                        handlePaymentMethodChange(index, "amount", value);
-                        const newTotal = paymentMethods.reduce(
-                          (sum, m) => sum + (m.amount || 0),
-                          0
-                        );
-                        setAmount(newTotal.toString());
-                      }}
-                      className="w-32"
-                    />
-
-                    {paymentMethods.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removePaymentMethod(index)}
-                        className={`cursor-pointer text-red_m hover:text-red_b transition-all duration-300 ${
-                          paymentMethods.length > 1 ? "-mt-2" : ""
-                        }`}
-                      >
-                        <Trash size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {paymentMethods.length < 3 && (
-                  <button
-                    type="button"
-                    onClick={addPaymentMethod}
-                    className={`cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-300 ${
-                      paymentMethods.length === 1 ? "mt-4" : "-mt-2"
-                    }`}
-                  >
-                    <Plus size={16} className="mr-1" /> Agregar otro método de
-                    pago
-                  </button>
-                )}
-              </div>
-
-              <Input
-                label="Descripción"
-                type="text"
-                name="description"
-                placeholder="Ingrese una descripción"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-            <div>
-              <div className="p-2 bg-gray_b text-white text-center">
-                <p className="font-bold text-3xl">
-                  TOTAL:{" "}
-                  {formatCurrency(
-                    paymentMethods.reduce((sum, m) => sum + (m.amount || 0), 0)
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Modal>
         <Modal
           isOpen={isOpenCashModal}
           onClose={() => {

@@ -610,7 +610,7 @@ const Metrics = () => {
               </label>
               <Select
                 placeholder="Seleccionar año"
-                noOptionsMessage={() => "No se encontraron opciones"}
+                noOptionsMessage={() => "Sin opciones"}
                 options={availableYears.map((year) => ({
                   value: year,
                   label: year.toString(),
@@ -685,7 +685,7 @@ const Metrics = () => {
                 </h3>
                 <Select
                   placeholder="Seleccionar unidad"
-                  noOptionsMessage={() => "No se encontraron opciones"}
+                  noOptionsMessage={() => "Sin opciones"}
                   options={unitOptions}
                   value={
                     rubro === "indumentaria"
@@ -786,7 +786,7 @@ const Metrics = () => {
                 </h3>
                 <Select
                   placeholder="Seleccionar unidad"
-                  noOptionsMessage={() => "No se encontraron opciones"}
+                  noOptionsMessage={() => "Sin opciones"}
                   options={unitOptions}
                   value={
                     rubro === "indumentaria"

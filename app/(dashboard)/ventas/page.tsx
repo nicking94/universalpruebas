@@ -1227,7 +1227,7 @@ const VentasPage = () => {
         <div className="flex justify-between mb-2">
           <div className="flex w-full max-w-[20rem] gap-2">
             <Select
-              noOptionsMessage={() => "No se encontraron opciones"}
+              noOptionsMessage={() => "Sin opciones"}
               options={monthOptions}
               value={monthOptions.find(
                 (option) => option.value === selectedMonth
@@ -1245,7 +1245,7 @@ const VentasPage = () => {
             />
             <Select
               options={yearOptions}
-              noOptionsMessage={() => "No se encontraron opciones"}
+              noOptionsMessage={() => "Sin opciones"}
               value={
                 yearOptions.find((option) => option.value === selectedYear) || {
                   value: selectedYear,
@@ -1385,7 +1385,7 @@ const VentasPage = () => {
                             <div className="flex justify-center items-center gap-2 h-full">
                               <Button
                                 title="Imprimir ticket"
-                                icon={<Printer size={20} />}
+                                icon={<Printer size={18} />}
                                 colorText="text-gray_b"
                                 colorTextHover="hover:text-white"
                                 colorBg="bg-transparent"
@@ -1424,7 +1424,7 @@ const VentasPage = () => {
                   <Button
                     title="Imprimir ticket"
                     text="Imprimir"
-                    icon={<Printer size={20} />}
+                    icon={<Printer size={18} />}
                     colorText="text-white"
                     colorTextHover="hover:text-white"
                     px="px-1"
@@ -1527,7 +1527,7 @@ const VentasPage = () => {
                     </label>
                     <Select
                       placeholder="Seleccionar productos"
-                      noOptionsMessage={() => "No se encontraron opciones"}
+                      noOptionsMessage={() => "Sin opciones"}
                       isMulti
                       options={productOptions}
                       value={newSale.products.map((p) => ({
@@ -1713,7 +1713,7 @@ const VentasPage = () => {
                                   }
                                   className="cursor-pointer hover:bg-red_m text-gray_b hover:text-white p-1 rounded-sm transition-all duration-300"
                                 >
-                                  <Trash size={20} />
+                                  <Trash size={18} />
                                 </button>
                               </td>
                               <div></div>
@@ -1887,7 +1887,7 @@ const VentasPage = () => {
                                 onClick={() => removePaymentMethod(index)}
                                 className="cursor-pointer text-red_m hover:text-red_b"
                               >
-                                <Trash size={16} />
+                                <Trash size={18} />
                               </button>
                             )}
                           </div>
@@ -1899,7 +1899,7 @@ const VentasPage = () => {
                             onClick={addPaymentMethod}
                             className="cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-300"
                           >
-                            <Plus size={16} className="mr-1" /> Agregar otro
+                            <Plus size={18} className="mr-1" /> Agregar otro
                             método de pago
                           </button>
                         )}
@@ -1925,7 +1925,7 @@ const VentasPage = () => {
                     </label>
                     <Select
                       options={customerOptions}
-                      noOptionsMessage={() => "No se encontraron opciones"}
+                      noOptionsMessage={() => "Sin opciones"}
                       value={selectedCustomer}
                       onChange={(selected) => {
                         setSelectedCustomer(selected);
