@@ -376,42 +376,34 @@ const VentasPage = () => {
       const today = getLocalDateString();
       let dailyCash = await db.dailyCashes.get({ date: today });
 
-      const movements: DailyCashMovement[] = [];
-      const totalSaleAmount = sale.total;
-      const totalProfit = calculateTotalProfit(
-        sale.products,
-        sale.manualAmount || 0,
-        sale.manualProfitPercentage || 0
+      const movements: DailyCashMovement[] = sale.paymentMethods.map(
+        (payment) => {
+          return {
+            id: Date.now() + Math.random(),
+            amount: payment.amount,
+            description: `Venta ${payment.method}`,
+            type: "INGRESO",
+            date: new Date().toISOString(),
+            paymentMethod: payment.method,
+            items: sale.products.map((p) => ({
+              productId: p.id,
+              productName: p.name,
+              quantity: p.quantity,
+              unit: p.unit,
+              price: p.price,
+              costPrice: p.costPrice,
+            })),
+            // Asegurar que el profit se calcule correctamente
+            profit:
+              calculateTotalProfit(
+                sale.products,
+                sale.manualAmount || 0,
+                sale.manualProfitPercentage || 0
+              ) *
+              (payment.amount / sale.total),
+          };
+        }
       );
-
-      sale.paymentMethods.forEach((payment) => {
-        const paymentRatio = payment.amount / totalSaleAmount;
-
-        const movement: DailyCashMovement = {
-          id: Date.now() + Math.random(),
-          amount: payment.amount,
-          description: sale.manualAmount
-            ? `Venta + Monto manual (${formatCurrency(sale.manualAmount || 0)})`
-            : "Venta regular",
-          type: "INGRESO",
-          date: new Date().toISOString(),
-          paymentMethod: payment.method,
-          items: sale.products.map((p) => ({
-            productId: p.id,
-            productName: p.name,
-            quantity: p.quantity,
-            unit: p.unit,
-            price: p.price,
-            costPrice: p.costPrice,
-          })),
-          manualAmount: sale.manualAmount,
-          manualProfitPercentage: sale.manualProfitPercentage,
-          profit: totalProfit * paymentRatio,
-          profitPercentage: (totalProfit / totalSaleAmount) * 100,
-        };
-
-        movements.push(movement);
-      });
 
       if (!dailyCash) {
         dailyCash = {
@@ -420,21 +412,32 @@ const VentasPage = () => {
           initialAmount: 0,
           movements: movements,
           closed: false,
-          totalIncome: movements.reduce((sum, m) => sum + m.amount, 0),
+          totalIncome: sale.total,
           totalExpense: 0,
-          totalProfit: movements.reduce((sum, m) => sum + (m.profit || 0), 0),
+          cashIncome: sale.paymentMethods
+            .filter((m) => m.method === "EFECTIVO")
+            .reduce((sum, m) => sum + m.amount, 0),
+          cashExpense: 0,
+          otherIncome: sale.paymentMethods
+            .filter((m) => m.method !== "EFECTIVO")
+            .reduce((sum, m) => sum + m.amount, 0),
         };
         await db.dailyCashes.add(dailyCash);
       } else {
         const updatedCash = {
           ...dailyCash,
           movements: [...dailyCash.movements, ...movements],
-          totalIncome:
-            (dailyCash.totalIncome || 0) +
-            movements.reduce((sum, m) => sum + m.amount, 0),
-          totalProfit:
-            (dailyCash.totalProfit || 0) +
-            movements.reduce((sum, m) => sum + (m.profit || 0), 0),
+          totalIncome: (dailyCash.totalIncome || 0) + sale.total,
+          cashIncome:
+            (dailyCash.cashIncome || 0) +
+            sale.paymentMethods
+              .filter((m) => m.method === "EFECTIVO")
+              .reduce((sum, m) => sum + m.amount, 0),
+          otherIncome:
+            (dailyCash.otherIncome || 0) +
+            sale.paymentMethods
+              .filter((m) => m.method !== "EFECTIVO")
+              .reduce((sum, m) => sum + m.amount, 0),
         };
         await db.dailyCashes.update(dailyCash.id, updatedCash);
       }

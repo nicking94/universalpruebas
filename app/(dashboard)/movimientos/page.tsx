@@ -134,7 +134,12 @@ const MovimientosPage = () => {
     try {
       const storedSuppliers = await db.suppliers.toArray();
       const filteredSuppliers = storedSuppliers.filter(
-        (s) => s.rubro === rubro || s.rubro === "Todos los rubros"
+        (s) =>
+          !rubro ||
+          rubro === "Todos los rubros" ||
+          !s.rubro ||
+          s.rubro === "Todos los rubros" ||
+          s.rubro.toLowerCase() === rubro.toLowerCase()
       );
       setSuppliers(filteredSuppliers);
     } catch (error) {
@@ -211,6 +216,7 @@ const MovimientosPage = () => {
       })
     );
   };
+  // En el componente MovimientosPage, modificar la función handleAddExpense
   const handleAddExpense = async () => {
     if (!newExpense.description || !newExpense.amount || !newExpense.category) {
       showNotification("Complete todos los campos obligatorios", "error");
@@ -234,53 +240,81 @@ const MovimientosPage = () => {
 
       await db.expenses.add(expenseToAdd);
 
-      // Registrar en caja diaria si es un movimiento de efectivo
-      if (
-        newExpense.paymentMethod === "EFECTIVO" ||
-        newExpense.combinedPaymentMethods?.some((m) => m.method === "EFECTIVO")
-      ) {
-        const today = new Date(newExpense.date).toISOString().split("T")[0];
-        let dailyCash = await db.dailyCashes.get({ date: today });
+      // Registrar en caja diaria (todos los métodos de pago)
+      const today = new Date(newExpense.date).toISOString().split("T")[0];
+      let dailyCash = await db.dailyCashes.get({ date: today });
 
-        const movement = {
-          id: Date.now() + Math.random(),
-          amount: totalPayment,
-          description: `${
-            newExpense.type === "INGRESO" ? "Ingreso" : "Egreso"
-          }: ${newExpense.description}`,
-          type: newExpense.type,
-          paymentMethod: newExpense.paymentMethod,
-          date: newExpense.date,
-          rubro: rubro,
-          supplierName: newExpense.supplier,
-          expenseCategory: newExpense.category,
-          combinedPaymentMethods: newExpense.combinedPaymentMethods,
+      const movement = {
+        id: Date.now() + Math.random(),
+        amount: totalPayment,
+        description: `${
+          newExpense.type === "INGRESO" ? "Ingreso" : "Egreso"
+        }: ${newExpense.description}`,
+        type: newExpense.type,
+        paymentMethod: newExpense.paymentMethod,
+        date: newExpense.date,
+        rubro: rubro,
+        supplierName: newExpense.supplier,
+        expenseCategory: newExpense.category,
+        combinedPaymentMethods: newExpense.combinedPaymentMethods,
+      };
+
+      if (!dailyCash) {
+        dailyCash = {
+          id: Date.now(),
+          date: today,
+          initialAmount: 0,
+          movements: [movement],
+          closed: false,
+          totalIncome: newExpense.type === "INGRESO" ? totalPayment : 0,
+          totalExpense: newExpense.type === "EGRESO" ? totalPayment : 0,
+          cashIncome:
+            newExpense.type === "INGRESO" &&
+            newExpense.paymentMethod === "EFECTIVO"
+              ? totalPayment
+              : 0,
+          cashExpense:
+            newExpense.type === "EGRESO" &&
+            newExpense.paymentMethod === "EFECTIVO"
+              ? totalPayment
+              : 0,
+          otherIncome:
+            newExpense.type === "INGRESO" &&
+            newExpense.paymentMethod !== "EFECTIVO"
+              ? totalPayment
+              : 0,
         };
-
-        if (!dailyCash) {
-          dailyCash = {
-            id: Date.now(),
-            date: today,
-            initialAmount: 0,
-            movements: [movement],
-            closed: false,
-            totalIncome: newExpense.type === "INGRESO" ? totalPayment : 0,
-            totalExpense: newExpense.type === "EGRESO" ? totalPayment : 0,
-          };
-          await db.dailyCashes.add(dailyCash);
-        } else {
-          const updatedCash = {
-            ...dailyCash,
-            movements: [...dailyCash.movements, movement],
-            totalIncome:
-              dailyCash.totalIncome ||
-              0 + (newExpense.type === "INGRESO" ? totalPayment : 0),
-            totalExpense:
-              dailyCash.totalExpense ||
-              0 + (newExpense.type === "EGRESO" ? totalPayment : 0),
-          };
-          await db.dailyCashes.update(dailyCash.id, updatedCash);
-        }
+        await db.dailyCashes.add(dailyCash);
+      } else {
+        const updatedCash = {
+          ...dailyCash,
+          movements: [...dailyCash.movements, movement],
+          totalIncome:
+            (dailyCash.totalIncome || 0) +
+            (newExpense.type === "INGRESO" ? totalPayment : 0),
+          totalExpense:
+            (dailyCash.totalExpense || 0) +
+            (newExpense.type === "EGRESO" ? totalPayment : 0),
+          cashIncome:
+            (dailyCash.cashIncome || 0) +
+            (newExpense.type === "INGRESO" &&
+            newExpense.paymentMethod === "EFECTIVO"
+              ? totalPayment
+              : 0),
+          cashExpense:
+            (dailyCash.cashExpense || 0) +
+            (newExpense.type === "EGRESO" &&
+            newExpense.paymentMethod === "EFECTIVO"
+              ? totalPayment
+              : 0),
+          otherIncome:
+            (dailyCash.otherIncome || 0) +
+            (newExpense.type === "INGRESO" &&
+            newExpense.paymentMethod !== "EFECTIVO"
+              ? totalPayment
+              : 0),
+        };
+        await db.dailyCashes.update(dailyCash.id, updatedCash);
       }
 
       showNotification(
@@ -381,7 +415,18 @@ const MovimientosPage = () => {
     try {
       await db.expenses.delete(expenseToDelete.id);
 
-      // Eliminar de caja diaria si existe
+      // Obtener el monto total y por método de pago
+      const totalAmount = expenseToDelete.amount;
+      const cashAmount =
+        expenseToDelete.paymentMethod === "EFECTIVO"
+          ? totalAmount
+          : expenseToDelete.combinedPaymentMethods?.reduce(
+              (sum, m) =>
+                m.method === "EFECTIVO" ? sum + (m.amount || 0) : sum,
+              0
+            ) || 0;
+      const otherAmount = totalAmount - cashAmount;
+
       const expenseDate = new Date(expenseToDelete.date)
         .toISOString()
         .split("T")[0];
@@ -389,20 +434,44 @@ const MovimientosPage = () => {
 
       if (dailyCash) {
         const updatedMovements = dailyCash.movements.filter(
-          (m) =>
-            !(
-              m.type === "EGRESO" &&
-              m.description === `Movimiento: ${expenseToDelete.description}` &&
-              m.amount === expenseToDelete.amount
-            )
+          (m) => m.id !== expenseToDelete.id
         );
 
         const updatedCash = {
           ...dailyCash,
           movements: updatedMovements,
-          totalExpense: (dailyCash.totalExpense || 0) - expenseToDelete.amount,
+          totalIncome: Math.max(
+            0,
+            (dailyCash.totalIncome || 0) -
+              (expenseToDelete.type === "INGRESO" ? totalAmount : 0)
+          ),
+          totalExpense: Math.max(
+            0,
+            (dailyCash.totalExpense || 0) -
+              (expenseToDelete.type === "EGRESO" ? totalAmount : 0)
+          ),
+          cashIncome: Math.max(
+            0,
+            (dailyCash.cashIncome || 0) -
+              (expenseToDelete.type === "INGRESO" && cashAmount > 0
+                ? cashAmount
+                : 0)
+          ),
+          cashExpense: Math.max(
+            0,
+            (dailyCash.cashExpense || 0) -
+              (expenseToDelete.type === "EGRESO" && cashAmount > 0
+                ? cashAmount
+                : 0)
+          ),
+          otherIncome: Math.max(
+            0,
+            (dailyCash.otherIncome || 0) -
+              (expenseToDelete.type === "INGRESO" && otherAmount > 0
+                ? otherAmount
+                : 0)
+          ),
         };
-
         await db.dailyCashes.update(dailyCash.id, updatedCash);
       }
 
@@ -542,21 +611,7 @@ const MovimientosPage = () => {
 
     return months;
   };
-  useEffect(() => {
-    const fetchSuppliers = async () => {
-      try {
-        const allSuppliers = await db.suppliers.toArray();
-        const filteredSuppliers = allSuppliers.filter(
-          (s) => s.rubro === rubro || s.rubro === "Todos los rubros"
-        );
-        setSuppliers(filteredSuppliers);
-      } catch (error) {
-        console.error("Error al cargar proveedores:", error);
-        showNotification("Error al cargar proveedores", "error");
-      }
-    };
-    fetchSuppliers();
-  }, []);
+
   useEffect(() => {
     if (shouldRedirectToCash) {
       router.push("/caja-diaria");
@@ -646,8 +701,8 @@ const MovimientosPage = () => {
             <table className="table-auto w-full text-center border-collapse shadow-sm shadow-gray_l">
               <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b text-xs">
                 <tr>
-                  <th className="p-2">Tipo</th>
-                  <th className="p-2 text-start">Descripción</th>
+                  <th className="p-2 text-start">Tipo</th>
+                  <th className="p-2 ">Descripción</th>
                   <th className="p-2">Fecha</th>
                   <th className="p-2">Categoría</th>
                   <th className="p-2">Proveedor</th>
@@ -668,7 +723,7 @@ const MovimientosPage = () => {
                       className={`text-xs 2xl:text-sm bg-white text-gray_b border border-gray_xl hover:bg-gray_xxl dark:hover:bg-blue_xl transition-all duration-300`}
                     >
                       <td
-                        className={`font-semibold ${
+                        className={`text-start  font-semibold ${
                           expense.type === "INGRESO"
                             ? "text-green_b"
                             : "text-red_b"
@@ -676,7 +731,7 @@ const MovimientosPage = () => {
                       >
                         {expense.type}
                       </td>
-                      <td className="font-semibold px-2 text-start border border-gray_xl">
+                      <td className="font-semibold px-2 border border-gray_xl">
                         {expense.description}
                       </td>
                       <td className="p-2 border border-gray_xl">
@@ -845,11 +900,17 @@ const MovimientosPage = () => {
                     value: s.id,
                     label: s.companyName,
                   }))}
+                  noOptionsMessage={() => "Sin opciones"}
                   value={selectedSupplier}
-                  onChange={(option) => setSelectedSupplier(option)}
+                  onChange={(option) => {
+                    setSelectedSupplier(option);
+                    setNewExpense((prev) => ({
+                      ...prev,
+                      supplier: option?.label || "",
+                    }));
+                  }}
                   isClearable
                   placeholder="Seleccionar proveedor"
-                  noOptionsMessage={() => "Sin opciones"}
                   className="text-gray_b"
                   classNamePrefix="react-select"
                 />
@@ -915,9 +976,12 @@ const MovimientosPage = () => {
                   type="text"
                   name="name"
                   placeholder="Ej: Alquiler, Servicios, Insumos"
-                  value={newCategory.name}
+                  value={toCapitalize(newCategory.name)}
                   onChange={(e) =>
-                    setNewCategory({ ...newCategory, name: e.target.value })
+                    setNewCategory({
+                      ...newCategory,
+                      name: toCapitalize(e.target.value),
+                    })
                   }
                 />
                 <Button

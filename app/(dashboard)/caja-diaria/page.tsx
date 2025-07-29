@@ -224,7 +224,6 @@ const CajaDiariaPage = () => {
   useEffect(() => {
     checkAndCloseOldCashes();
   }, []);
-
   const openCash = async () => {
     const today = getLocalDateString();
     const allCashes = await db.dailyCashes.toArray();
@@ -236,29 +235,33 @@ const CajaDiariaPage = () => {
       await checkAndCloseOldCashes();
       return;
     }
-    if (!initialAmount) {
+    if (!initialAmount && !currentDailyCash?.closed) {
       showNotification("Debe ingresar un monto inicial", "error");
       return;
     }
-
-    const initialAmountNumber = parseFloat(initialAmount);
-    if (isNaN(initialAmountNumber)) {
-      showNotification("El monto inicial debe ser un número válido", "error");
+    if (currentDailyCash?.closed && !initialAmount) {
+      showNotification(
+        "Debe ingresar un monto inicial para reabrir la caja",
+        "error"
+      );
       return;
     }
 
     try {
       if (currentDailyCash?.closed) {
+        const reopeningAmount = Number(initialAmount) || 0; // Reinicia el monto inicial
+
         const updatedCash = {
           ...currentDailyCash,
           closed: false,
-          initialAmount: initialAmountNumber,
+          initialAmount: reopeningAmount,
           closingAmount: undefined,
-          cashIncome: undefined,
-          cashExpense: undefined,
+          cashIncome: 0, // Reinicia los ingresos en efectivo
+          cashExpense: 0, // Reinicia los egresos en efectivo
           otherIncome: undefined,
           closingDifference: undefined,
           closingDate: undefined,
+          movements: currentDailyCash.movements, // Mantiene los movimientos anteriores
         };
 
         await db.dailyCashes.update(currentDailyCash.id, updatedCash);
@@ -269,6 +272,12 @@ const CajaDiariaPage = () => {
         setIsOpenCashModal(false);
         setInitialAmount("");
         showNotification("Caja reabierta correctamente", "success");
+        return;
+      }
+
+      const initialAmountNumber = parseFloat(initialAmount);
+      if (isNaN(initialAmountNumber)) {
+        showNotification("El monto inicial debe ser un número válido", "error");
         return;
       }
 
@@ -313,16 +322,13 @@ const CajaDiariaPage = () => {
       if (dailyCash) {
         const cashIncome = dailyCash.movements
           .filter((m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO")
-          .reduce((sum, m) => sum + m.amount, 0);
+          .reduce((sum, m) => sum + (m.amount || 0), 0);
 
         const cashExpense = dailyCash.movements
           .filter((m) => m.type === "EGRESO" && m.paymentMethod === "EFECTIVO")
-          .reduce((sum, m) => sum + m.amount, 0);
+          .reduce((sum, m) => sum + (m.amount || 0), 0);
 
-        const otherIncome = dailyCash.movements
-          .filter((m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO")
-          .reduce((sum, m) => sum + m.amount, 0);
-
+        // Asegurarse de usar el initialAmount actual (que ya fue actualizado al reabrir)
         const expectedAmount =
           dailyCash.initialAmount + cashIncome - cashExpense;
         const difference = actualCashCountNumber - expectedAmount;
@@ -333,7 +339,11 @@ const CajaDiariaPage = () => {
           closingAmount: actualCashCountNumber,
           cashIncome,
           cashExpense,
-          otherIncome,
+          otherIncome: dailyCash.movements
+            .filter(
+              (m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO"
+            )
+            .reduce((sum, m) => sum + (m.amount || 0), 0),
           closingDifference: difference,
           closingDate: new Date().toISOString(),
         };
@@ -399,13 +409,12 @@ const CajaDiariaPage = () => {
         summary[date].movements.push(movement);
 
         const amount = Number(movement.amount) || 0;
-
+        // Actualizar totales según el tipo de movimiento
         if (movement.type === "INGRESO") {
           summary[date].ingresos += amount;
           summary[date].gananciaNeta += Number(movement.profit) || 0;
         } else {
           summary[date].egresos += amount;
-          // Añade esta línea para restar la ganancia en devoluciones
           summary[date].gananciaNeta -= Math.abs(Number(movement.profit) || 0);
         }
       });
@@ -681,18 +690,34 @@ const CajaDiariaPage = () => {
                           ))}
                         </div>
                       ) : movement.combinedPaymentMethods ? (
-                        <div className="flex flex-col ">
+                        <div className="flex flex-col">
                           {movement.combinedPaymentMethods.map((method, i) => (
                             <div key={i} className="flex justify-between">
-                              {method.method}: {formatCurrency(method.amount)}
+                              <span
+                                className={
+                                  method.method === "EFECTIVO"
+                                    ? "font-semibold"
+                                    : ""
+                                }
+                              >
+                                {method.method}:
+                              </span>
+                              <span>{formatCurrency(method.amount)}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div className="flex justify-between">
-                          <span> {movement.paymentMethod}:</span>
-
-                          {formatCurrency(movement.amount)}
+                          <span
+                            className={
+                              movement.paymentMethod === "EFECTIVO"
+                                ? "font-semibold"
+                                : ""
+                            }
+                          >
+                            {movement.paymentMethod}:
+                          </span>
+                          <span>{formatCurrency(movement.amount)}</span>
                         </div>
                       )}
                     </td>
