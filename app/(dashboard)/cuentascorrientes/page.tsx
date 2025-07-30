@@ -270,7 +270,7 @@ const CuentasCorrientesPage = () => {
         dailyCash = {
           id: Date.now(),
           date: today,
-          initialAmount: 0,
+
           movements: movements,
           closed: false,
           totalIncome: movements.reduce((sum, m) => sum + m.amount, 0),
@@ -354,7 +354,7 @@ const CuentasCorrientesPage = () => {
         await db.dailyCashes.add({
           id: Date.now(),
           date: today,
-          initialAmount: 0,
+
           movements: [movement],
           closed: false,
           totalIncome: payment.amount,

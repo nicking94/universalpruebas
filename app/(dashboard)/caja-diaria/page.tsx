@@ -9,7 +9,7 @@ import {
   Option,
   PaymentMethod,
 } from "@/app/lib/types/types";
-import { Plus, X, Check, Info } from "lucide-react";
+import { Plus, X, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import { format, parseISO, isSameMonth } from "date-fns";
@@ -39,9 +39,9 @@ const CajaDiariaPage = () => {
   const [selectedDayMovements, setSelectedDayMovements] = useState<
     DailyCashMovement[]
   >([]);
-  const [isOpenCashModal, setIsOpenCashModal] = useState(false);
+
   const [isCloseCashModal, setIsCloseCashModal] = useState(false);
-  const [initialAmount, setInitialAmount] = useState("");
+
   const [actualCashCount, setActualCashCount] = useState("");
   const [filterType, setFilterType] = useState<"TODOS" | "INGRESO" | "EGRESO">(
     "TODOS"
@@ -55,7 +55,6 @@ const CajaDiariaPage = () => {
     { value: "EFECTIVO", label: "Efectivo" },
     { value: "TRANSFERENCIA", label: "Transferencia" },
     { value: "TARJETA", label: "Tarjeta" },
-    { value: "CHEQUE", label: "Cheque" },
   ];
 
   const { currentPage, itemsPerPage } = usePagination();
@@ -160,12 +159,10 @@ const CajaDiariaPage = () => {
           .filter((m) => m.type === "EGRESO" && m.paymentMethod === "EFECTIVO")
           .reduce((sum, m) => sum + m.amount, 0);
 
-        const expectedAmount = cash.initialAmount + cashIncome - cashExpense;
-
         const updatedCash = {
           ...cash,
           closed: true,
-          closingAmount: expectedAmount,
+
           cashIncome,
           cashExpense,
           otherIncome: cash.movements
@@ -235,33 +232,19 @@ const CajaDiariaPage = () => {
       await checkAndCloseOldCashes();
       return;
     }
-    if (!initialAmount && !currentDailyCash?.closed) {
-      showNotification("Debe ingresar un monto inicial", "error");
-      return;
-    }
-    if (currentDailyCash?.closed && !initialAmount) {
-      showNotification(
-        "Debe ingresar un monto inicial para reabrir la caja",
-        "error"
-      );
-      return;
-    }
 
     try {
       if (currentDailyCash?.closed) {
-        const reopeningAmount = Number(initialAmount) || 0; // Reinicia el monto inicial
-
         const updatedCash = {
           ...currentDailyCash,
           closed: false,
-          initialAmount: reopeningAmount,
           closingAmount: undefined,
-          cashIncome: 0, // Reinicia los ingresos en efectivo
-          cashExpense: 0, // Reinicia los egresos en efectivo
+          cashIncome: 0,
+          cashExpense: 0,
           otherIncome: undefined,
           closingDifference: undefined,
           closingDate: undefined,
-          movements: currentDailyCash.movements, // Mantiene los movimientos anteriores
+          movements: currentDailyCash.movements,
         };
 
         await db.dailyCashes.update(currentDailyCash.id, updatedCash);
@@ -269,22 +252,14 @@ const CajaDiariaPage = () => {
           prev.map((dc) => (dc.id === currentDailyCash.id ? updatedCash : dc))
         );
         setCurrentDailyCash(updatedCash);
-        setIsOpenCashModal(false);
-        setInitialAmount("");
         showNotification("Caja reabierta correctamente", "success");
-        return;
-      }
-
-      const initialAmountNumber = parseFloat(initialAmount);
-      if (isNaN(initialAmountNumber)) {
-        showNotification("El monto inicial debe ser un número válido", "error");
         return;
       }
 
       const dailyCash: DailyCash = {
         id: Date.now(),
         date: today,
-        initialAmount: initialAmountNumber,
+
         movements: [],
         closed: false,
         totalIncome: 0,
@@ -294,8 +269,6 @@ const CajaDiariaPage = () => {
       await db.dailyCashes.add(dailyCash);
       setDailyCashes((prev) => [...prev, dailyCash]);
       setCurrentDailyCash(dailyCash);
-      setIsOpenCashModal(false);
-      setInitialAmount("");
       showNotification("Caja abierta correctamente", "success");
     } catch (error) {
       console.error("Error al abrir/reabrir caja:", error);
@@ -304,17 +277,6 @@ const CajaDiariaPage = () => {
   };
 
   const closeCash = async () => {
-    if (!actualCashCount) {
-      showNotification("Debe ingresar el monto real contado", "error");
-      return;
-    }
-
-    const actualCashCountNumber = parseFloat(actualCashCount);
-    if (isNaN(actualCashCountNumber)) {
-      showNotification("El monto contado debe ser un número válido", "error");
-      return;
-    }
-
     try {
       const today = getLocalDateString();
       const dailyCash = await db.dailyCashes.get({ date: today });
@@ -328,15 +290,10 @@ const CajaDiariaPage = () => {
           .filter((m) => m.type === "EGRESO" && m.paymentMethod === "EFECTIVO")
           .reduce((sum, m) => sum + (m.amount || 0), 0);
 
-        // Asegurarse de usar el initialAmount actual (que ya fue actualizado al reabrir)
-        const expectedAmount =
-          dailyCash.initialAmount + cashIncome - cashExpense;
-        const difference = actualCashCountNumber - expectedAmount;
-
         const updatedCash = {
           ...dailyCash,
           closed: true,
-          closingAmount: actualCashCountNumber,
+
           cashIncome,
           cashExpense,
           otherIncome: dailyCash.movements
@@ -344,7 +301,7 @@ const CajaDiariaPage = () => {
               (m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO"
             )
             .reduce((sum, m) => sum + (m.amount || 0), 0),
-          closingDifference: difference,
+
           closingDate: new Date().toISOString(),
         };
 
@@ -374,7 +331,7 @@ const CajaDiariaPage = () => {
         gananciaNeta: number;
         movements: DailyCashMovement[];
         closed: boolean;
-        initialAmount?: number;
+
         closingAmount?: number;
         closingDifference?: number;
       }
@@ -393,7 +350,7 @@ const CajaDiariaPage = () => {
           gananciaNeta: 0,
           movements: [],
           closed: dailyCash.closed || false,
-          initialAmount: dailyCash.initialAmount,
+
           closingAmount: dailyCash.closingAmount,
           closingDifference: dailyCash.closingDifference,
         };
@@ -549,7 +506,7 @@ const CajaDiariaPage = () => {
                 { value: "INGRESO", label: "Ingreso" },
                 { value: "EGRESO", label: "Egreso" },
               ]}
-              noOptionsMessage={() => "Sin opciones"}
+              noOptionsMessage={() => "No se encontraron opciones"}
               value={
                 filterType === "TODOS"
                   ? { value: "TODOS", label: "Todos" }
@@ -571,7 +528,7 @@ const CajaDiariaPage = () => {
             </label>
             <Select
               options={[{ value: "TODOS", label: "Todos" }, ...paymentOptions]}
-              noOptionsMessage={() => "Sin opciones"}
+              noOptionsMessage={() => "No se encontraron opciones"}
               value={
                 filterPaymentMethod === "TODOS"
                   ? { value: "TODOS", label: "Todos" }
@@ -680,7 +637,9 @@ const CajaDiariaPage = () => {
                           {movement.subMovements?.map((sub, i) => (
                             <div key={i} className="flex flex-col">
                               <div className="flex flex-row justify-between">
-                                <span>{sub.isDeposit ? "Seña" : "Venta"}:</span>
+                                <span className="uppercase">
+                                  {sub.isDeposit ? "SEÑA" : "VENTA"}
+                                </span>
                                 <span>
                                   {sub.paymentMethod}:{" "}
                                   {formatCurrency(sub.amount)}
@@ -690,38 +649,28 @@ const CajaDiariaPage = () => {
                           ))}
                         </div>
                       ) : movement.combinedPaymentMethods ? (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col ">
                           {movement.combinedPaymentMethods.map((method, i) => (
                             <div key={i} className="flex justify-between">
-                              <span
-                                className={
-                                  method.method === "EFECTIVO"
-                                    ? "font-semibold"
-                                    : ""
-                                }
-                              >
-                                {method.method}:
-                              </span>
-                              <span>{formatCurrency(method.amount)}</span>
+                              {method.method}: {formatCurrency(method.amount)}
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div className="flex justify-between">
-                          <span
-                            className={
-                              movement.paymentMethod === "EFECTIVO"
-                                ? "font-semibold"
-                                : ""
-                            }
-                          >
-                            {movement.paymentMethod}:
-                          </span>
-                          <span>{formatCurrency(movement.amount)}</span>
+                          <span> {movement.paymentMethod}</span>
+
+                          {formatCurrency(movement.amount)}
                         </div>
                       )}
                     </td>
-                    <td className="p-2 text-center font-medium text-green_b">
+                    <td
+                      className={`p-2 text-center font-medium ${
+                        movement.type === "INGRESO"
+                          ? "text-green_b"
+                          : "text-red_b"
+                      }`}
+                    >
                       {formatCurrency(movement.amount)}
                     </td>
                   </tr>
@@ -747,7 +696,6 @@ const CajaDiariaPage = () => {
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       if (!dailyCash) {
-        setIsOpenCashModal(true);
       } else {
         setCurrentDailyCash(dailyCash);
       }
@@ -765,87 +713,25 @@ const CajaDiariaPage = () => {
             </h1>
             {currentDailyCash ? (
               <div
-                className={`p-3 rounded-lg mb-4 ${
-                  currentDailyCash.closed ? "bg-red_xl" : "bg-green_xl"
+                className={` p-3 rounded-sm mb-4 ${
+                  currentDailyCash.closed
+                    ? "bg-gradient-to-bl from-red_m to-red_b"
+                    : "bg-gradient-to-bl from-green_m to-green_b"
                 }`}
               >
                 <div className="items-center">
-                  <div className="flex justify-between items-center gap-2 pb-4">
-                    <div className="flex items-center gap-2">
-                      <h3
-                        className={`text-gray_b text-sm 2xl:text-lg font-bold  ${
-                          currentDailyCash.closed
-                            ? "text-red_b"
-                            : "text-green_b"
-                        }`}
-                      >
+                  <div className="flex justify-center items-center gap-2">
+                    <div className="flex items-center gap-2 text-white">
+                      <h3 className={`text-sm 2xl:text-lg font-bold`}>
                         {currentDailyCash.closed
                           ? "Caja Cerrada"
                           : "Caja Abierta"}
                       </h3>
-                      <p className="text-gray_m font-medium">
+                      <p className="text-lg font-medium">
                         {format(parseISO(currentDailyCash.date), "dd/MM/yyyy")}
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 text-gray_m font-semibold mb-4">
-                    <p>
-                      Monto inicial:{" "}
-                      {formatCurrency(currentDailyCash.initialAmount)}
-                    </p>
-                    {currentDailyCash.closed ? (
-                      <>
-                        <p className="font-semibold">
-                          Monto esperado (solo efectivo):{" "}
-                          {formatCurrency(
-                            currentDailyCash.initialAmount +
-                              (currentDailyCash.cashIncome || 0) -
-                              (currentDailyCash.cashExpense || 0)
-                          )}
-                        </p>
-                        <p>
-                          Ingresos en efectivo:{" "}
-                          {formatCurrency(currentDailyCash.cashIncome || 0)}
-                        </p>
-                        <p>
-                          Efectivo contado:{" "}
-                          {formatCurrency(currentDailyCash.closingAmount || 0)}
-                        </p>
-                        <p>
-                          Egresos:{" "}
-                          {formatCurrency(currentDailyCash.cashExpense || 0)}
-                        </p>
-                      </>
-                    ) : null}
-                  </div>
-                  {currentDailyCash.closed ? (
-                    <p
-                      className={`font-bold text-sm 2xl:text-lg text-center text-white p-2 ${
-                        (currentDailyCash.closingDifference || 0) >= 0
-                          ? "bg-green_m"
-                          : "bg-red_m "
-                      } w-full ${
-                        (currentDailyCash.closingDifference || 0) >= 0
-                          ? "text-green_b"
-                          : "text-red_b"
-                      }`}
-                    >
-                      Diferencia:{" "}
-                      {Math.abs(currentDailyCash.closingDifference || 0) >
-                        0 && (
-                        <>
-                          {(currentDailyCash.closingDifference || 0) > 0
-                            ? "+"
-                            : "-"}
-                          {formatCurrency(
-                            Math.abs(currentDailyCash.closingDifference || 0)
-                          )}
-                        </>
-                      )}
-                      {Math.abs(currentDailyCash.closingDifference || 0) ===
-                        0 && formatCurrency(0)}
-                    </p>
-                  ) : null}
                 </div>
               </div>
             ) : (
@@ -885,7 +771,7 @@ const CajaDiariaPage = () => {
                           text="Reabrir Caja"
                           colorText="text-white"
                           colorTextHover="text-white"
-                          onClick={() => setIsOpenCashModal(true)}
+                          onClick={openCash}
                         />
                       ) : (
                         <Button
@@ -895,7 +781,7 @@ const CajaDiariaPage = () => {
                           colorTextHover="text-white"
                           colorBg="bg-red_m"
                           colorBgHover="hover:bg-red_m"
-                          onClick={() => setIsCloseCashModal(true)}
+                          onClick={closeCash}
                         />
                       )}
                     </div>
@@ -904,7 +790,7 @@ const CajaDiariaPage = () => {
                       text="Abrir Caja"
                       colorText="text-white"
                       colorTextHover="text-white"
-                      onClick={() => setIsOpenCashModal(true)}
+                      onClick={openCash}
                     />
                   )}
                 </div>
@@ -1008,52 +894,6 @@ const CajaDiariaPage = () => {
           )}
         </div>
 
-        <Modal
-          isOpen={isOpenCashModal}
-          onClose={() => {
-            setIsOpenCashModal(false);
-            setInitialAmount("");
-          }}
-          title={
-            currentDailyCash?.closed ? "Reapertura de caja" : "Apertura de caja"
-          }
-          onConfirm={openCash}
-          buttons={
-            <div className="flex justify-end space-x-4">
-              <Button
-                text={currentDailyCash?.closed ? "Reabrir Caja" : "Abrir Caja"}
-                icon={<Check />}
-                colorText="text-white"
-                colorTextHover="text-white"
-                onClick={openCash}
-              />
-              <Button
-                text="Abrir más tarde"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
-                onClick={() => {
-                  setIsOpenCashModal(false);
-                  setInitialAmount("");
-                }}
-              />
-            </div>
-          }
-        >
-          <div className="flex flex-col gap-2">
-            <InputCash
-              label={
-                currentDailyCash?.closed
-                  ? "Ingrese el monto inicial para reabrir la caja:"
-                  : "Para comenzar, ingrese el monto inicial en caja."
-              }
-              value={Number(initialAmount) || 0}
-              onChange={(value) => setInitialAmount(value.toString())}
-              placeholder="Ingrese el monto inicial"
-            />
-          </div>
-        </Modal>
         <DetailModal />
         <Modal
           isOpen={isCloseCashModal}

@@ -534,10 +534,12 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
           ref={modalRef}
           className="absolute top-11 left-0 w-full min-w-[40rem] 2xl:min-w-[57rem] h-full z-50 flex items-start justify-center -mt-1.5"
         >
-          <div className="w-full bg-white dark:bg-gray_b p-4 rounded-lg shadow-lg min-h-[15vh] flex flex-col shadow-gray_xl dark:shadow-gray_m">
+          <div className="w-full bg-white dark:bg-gray_m p-4 rounded-lg shadow-lg min-h-[15vh] flex flex-col shadow-gray_xl dark:shadow-gray_m">
             <div className="flex-grow w-full p-2">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray_l mb-2">Filtrar Por:</p>
+                <p className="text-sm text-gray_l dark:text-gray_xl mb-2">
+                  Filtrar Por:
+                </p>
                 <p
                   onClick={clearAllFilters}
                   className="flex items-center gap-2 cursor-pointer text-blue_b dark:text-blue_l hover:text-blue_m dark:hover:text-blue_xl text-sm font-medium"

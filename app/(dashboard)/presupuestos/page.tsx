@@ -427,7 +427,7 @@ const PresupuestosPage = () => {
           movements.push({
             id: Date.now() + Math.random(),
             amount: methodAmount,
-            description: `Venta desde presupuesto de ${budgetToConvert.customerName}`,
+            description: `Venta - presupuesto de ${budgetToConvert.customerName}`,
             type: "INGRESO",
             date: new Date().toISOString(),
             paymentMethod: method.method,
@@ -1151,8 +1151,8 @@ const PresupuestosPage = () => {
                               disabled={!budget.customerId}
                               title={
                                 !budget.customerId
-                                  ? "No hay cliente asociado"
-                                  : "Ver notas del cliente"
+                                  ? "No hay presupuesto asociado"
+                                  : "Ver notas del presupuesto"
                               }
                             />
 

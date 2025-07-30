@@ -66,6 +66,11 @@ const MovimientosPage = () => {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isCategoryDeleteModalOpen, setIsCategoryDeleteModalOpen] =
+    useState(false);
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<ExpenseCategory | null>(null);
+
   const [selectedSupplier, setSelectedSupplier] = useState<{
     value: number;
     label: string;
@@ -106,7 +111,6 @@ const MovimientosPage = () => {
     { value: "EFECTIVO", label: "Efectivo" },
     { value: "TRANSFERENCIA", label: "Transferencia" },
     { value: "TARJETA", label: "Tarjeta" },
-    { value: "CHEQUE", label: "Cheque" },
   ];
 
   const monthOptions = [...Array(12)].map((_, i) => ({
@@ -150,14 +154,13 @@ const MovimientosPage = () => {
 
   const loadCategories = useCallback(async () => {
     const storedCategories = await db.expenseCategories.toArray();
-    setCategories(
-      storedCategories.filter(
-        (cat) =>
-          (cat.rubro === rubro || cat.rubro === "Todos los rubros") &&
-          (newExpense.type === "TODOS" || cat.type === newExpense.type)
-      )
+    const filtered = storedCategories.filter(
+      (cat) =>
+        (cat.rubro === rubro || cat.rubro === "Todos los rubros") &&
+        (newExpense.type === "TODOS" || cat.type === newExpense.type)
     );
-  }, [rubro, newExpense.type]);
+    setCategories(filtered);
+  }, [rubro]);
 
   const loadExpenses = useCallback(async () => {
     const storedExpenses = await db.expenses.toArray();
@@ -247,9 +250,7 @@ const MovimientosPage = () => {
       const movement = {
         id: Date.now() + Math.random(),
         amount: totalPayment,
-        description: `${
-          newExpense.type === "INGRESO" ? "Ingreso" : "Egreso"
-        }: ${newExpense.description}`,
+        description: ` ${newExpense.description}`,
         type: newExpense.type,
         paymentMethod: newExpense.paymentMethod,
         date: newExpense.date,
@@ -263,7 +264,7 @@ const MovimientosPage = () => {
         dailyCash = {
           id: Date.now(),
           date: today,
-          initialAmount: 0,
+
           movements: [movement],
           closed: false,
           totalIncome: newExpense.type === "INGRESO" ? totalPayment : 0,
@@ -358,17 +359,11 @@ const MovimientosPage = () => {
       };
 
       await db.expenseCategories.add(categoryToAdd);
-      showNotification("Categoría agregada correctamente", "success");
 
-      // Actualizar la lista de categorías
-      const updatedCategories = await db.expenseCategories.toArray();
-      setCategories(
-        updatedCategories.filter(
-          (cat) =>
-            (cat.rubro === rubro || cat.rubro === "Todos los rubros") &&
-            (newExpense.type === "TODOS" || cat.type === newExpense.type)
-        )
-      );
+      // Actualizar el estado local inmediatamente
+      setCategories((prev) => [...prev, categoryToAdd]);
+
+      showNotification("Categoría agregada correctamente", "success");
 
       // Seleccionar automáticamente la categoría recién creada
       setNewExpense((prev) => ({
@@ -400,9 +395,10 @@ const MovimientosPage = () => {
 
       if (category.id !== undefined) {
         await db.expenseCategories.delete(category.id);
+        // Actualizar estado local
+        setCategories((prev) => prev.filter((c) => c.id !== category.id));
       }
       showNotification("Categoría eliminada correctamente", "success");
-      loadCategories();
     } catch (error) {
       console.error("Error al eliminar categoría:", error);
       showNotification("Error al eliminar categoría", "error");
@@ -833,14 +829,51 @@ const MovimientosPage = () => {
             />
           )}
         </div>
-
+        <Modal
+          isOpen={isCategoryDeleteModalOpen}
+          onClose={() => setIsCategoryDeleteModalOpen(false)}
+          title="Eliminar Categoría"
+          bgColor="bg-white dark:bg-gray_b"
+          zIndex={"z-60"}
+          buttons={
+            <>
+              <Button
+                text="Confirmar"
+                colorText="text-white dark:text-white"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-red_m border-b-1 dark:bg-blue_b"
+                colorBgHover="hover:bg-red_b hover:dark:bg-blue_m"
+                onClick={() => {
+                  if (categoryToDelete) {
+                    handleDeleteCategory(categoryToDelete);
+                  }
+                }}
+              />
+              <Button
+                text="Cancelar"
+                colorText="text-gray_b dark:text-white"
+                colorTextHover="hover:dark:text-white"
+                colorBg="bg-transparent dark:bg-gray_m"
+                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                onClick={() => setIsCategoryDeleteModalOpen(false)}
+              />
+            </>
+          }
+        >
+          <div>
+            <p>
+              ¿Está seguro que desea eliminar la categoría{" "}
+              <span className="font-bold">{categoryToDelete?.name}</span>?
+            </p>
+          </div>
+        </Modal>
         <Modal
           isOpen={isOpenModal}
           onClose={() => {
             setIsOpenModal(false);
             resetExpenseForm();
           }}
-          title={newExpense.date ? "Editar Movimiento" : "Nuevo Movimiento"}
+          title={newExpense.amount ? "Editar Movimiento" : "Nuevo Movimiento"}
           buttons={
             <div className="flex justify-end space-x-4">
               <Button
@@ -871,7 +904,7 @@ const MovimientosPage = () => {
             <div className="flex items-center gap-4">
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Tipo de Movimiento*
+                  Tipo*
                 </label>
                 <Select
                   options={[
@@ -889,6 +922,7 @@ const MovimientosPage = () => {
                     });
                     loadCategories();
                   }}
+                  className="text-gray_b"
                 />
               </div>
               <div className="w-full">
@@ -956,7 +990,8 @@ const MovimientosPage = () => {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleDeleteCategory(category);
+                            setCategoryToDelete(category);
+                            setIsCategoryDeleteModalOpen(true);
                           }}
                           className="text-red_b hover:text-red_m ml-2"
                           title="Eliminar categoría"
@@ -970,32 +1005,35 @@ const MovimientosPage = () => {
                   classNamePrefix="react-select"
                 />
               </div>
-              <div className="w-full flex items-center gap-2 ">
-                <Input
-                  label="Crear categoría"
-                  type="text"
-                  name="name"
-                  placeholder="Ej: Alquiler, Servicios, Insumos"
-                  value={toCapitalize(newCategory.name)}
-                  onChange={(e) =>
-                    setNewCategory({
-                      ...newCategory,
-                      name: toCapitalize(e.target.value),
-                    })
-                  }
-                />
-                <Button
-                  text="Agregar"
-                  icon={<Plus size={18} />}
-                  colorText="text-white"
-                  colorTextHover="text-white"
-                  colorBg="bg-blue_b"
-                  colorBgHover="hover:bg-blue_m"
-                  px="px-2"
-                  py="py-1 mt-5"
-                  onClick={handleAddCategory}
-                />
-              </div>
+              {newExpense.category === "" && (
+                <div className="w-full flex items-center gap-2 ">
+                  <Input
+                    label="Crear categoría"
+                    type="text"
+                    name="name"
+                    placeholder="Ej: Alquiler, Servicios, Insumos"
+                    value={toCapitalize(newCategory.name)}
+                    onChange={(e) =>
+                      setNewCategory({
+                        ...newCategory,
+                        name: toCapitalize(e.target.value),
+                      })
+                    }
+                  />
+                  <Button
+                    text="Agregar"
+                    icon={<Plus size={18} />}
+                    colorText="text-white"
+                    colorTextHover="text-white"
+                    colorBg="bg-blue_b"
+                    colorBgHover="hover:bg-blue_m"
+                    px="px-2"
+                    py="py-1 mt-5"
+                    onClick={handleAddCategory}
+                    disabled={!newCategory.name.trim()}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4">
@@ -1105,11 +1143,7 @@ const MovimientosPage = () => {
             </div>
           }
         >
-          <p>
-            ¿Está seguro que desea eliminar el movimiento?
-            {expenseToDelete?.description} por{" "}
-            {formatCurrency(expenseToDelete?.amount || 0)}?
-          </p>
+          <p>¿Está seguro que desea eliminar el movimiento?</p>
         </Modal>
 
         {/* Modal de estadísticas */}
@@ -1145,7 +1179,7 @@ const MovimientosPage = () => {
                           .filter((item) => item.totalIncome > 0)
                           .map((item) => item.totalIncome),
                         backgroundColor: [
-                          "#FF6384",
+                          "#AA6384",
                           "#36A2EB",
                           "#FFCE56",
                           "#4BC0C0",
@@ -1191,7 +1225,7 @@ const MovimientosPage = () => {
                           .filter((item) => item.totalExpense > 0)
                           .map((item) => item.totalExpense),
                         backgroundColor: [
-                          "#FF6384",
+                          "#AA6384",
                           "#36A2EB",
                           "#FFCE56",
                           "#4BC0C0",

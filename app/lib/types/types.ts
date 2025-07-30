@@ -86,6 +86,7 @@ export type ModalProps = {
   bgColor?: string;
   buttons?: React.ReactNode;
   minheight?: string;
+  zIndex?: string;
 };
 
 export type InputProps = {
@@ -340,7 +341,7 @@ export type DailyCashMovement = {
 export type DailyCash = {
   id: number;
   date: string;
-  initialAmount: number;
+
   movements: DailyCashMovement[];
   closed: boolean;
   closingAmount?: number;

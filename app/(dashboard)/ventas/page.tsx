@@ -381,7 +381,7 @@ const VentasPage = () => {
           return {
             id: Date.now() + Math.random(),
             amount: payment.amount,
-            description: `Venta ${payment.method}`,
+            description: `VENTA ${payment.method}`,
             type: "INGRESO",
             date: new Date().toISOString(),
             paymentMethod: payment.method,
@@ -409,7 +409,7 @@ const VentasPage = () => {
         dailyCash = {
           id: Date.now(),
           date: today,
-          initialAmount: 0,
+
           movements: movements,
           closed: false,
           totalIncome: sale.total,
