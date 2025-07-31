@@ -40,6 +40,8 @@ import { useRubro } from "@/app/context/RubroContext";
 import { calculatePrice, calculateProfit } from "@/app/lib/utils/calculations";
 import Select from "react-select";
 import { SingleValue } from "react-select";
+
+const WEEK_STARTS_ON = 1;
 ChartJS.register(
   BarElement,
   CategoryScale,
@@ -71,7 +73,7 @@ const Metrics = () => {
     new Date().getFullYear()
   );
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-
+  const [userChangedMonth, setUserChangedMonth] = useState(false);
   const unidadLegible: Record<Product["unit"] | "General", string> = {
     General: "General",
     A: "amperio",
@@ -95,7 +97,10 @@ const Metrics = () => {
     V: "voltio",
     W: "vatio",
   };
-
+  const isCurrentMonth = (month: number, year: number): boolean => {
+    const today = new Date();
+    return month === today.getMonth() + 1 && year === today.getFullYear();
+  };
   const filterByRubro = (
     movement: DailyCashMovement,
     currentRubro: Rubro
@@ -137,17 +142,26 @@ const Metrics = () => {
 
   const getConsistentSummary = useMemo(
     () => (period: "week" | "month" | "year") => {
+      const today = new Date();
+      const selectedDate = new Date(selectedYear, selectedMonth - 1);
+      const shouldShowWeekly =
+        period === "month" && isCurrentMonth(selectedMonth, selectedYear);
+
       const filteredCashes = dailyCashes.filter((cash) => {
         const date = parseISO(cash.date);
-        if (period === "month") {
-          return isSameMonth(date, new Date(selectedYear, selectedMonth - 1));
-        } else if (period === "week") {
-          const today = new Date();
-          const weekStart = startOfWeek(today);
-          const weekEnd = endOfWeek(today);
+        if (shouldShowWeekly) {
+          // Mostrar semana actual cuando el mes seleccionado es el actual
+          const weekStart = startOfWeek(today, {
+            weekStartsOn: WEEK_STARTS_ON,
+          });
+          const weekEnd = endOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
           return date >= weekStart && date <= weekEnd;
+        } else if (period === "month") {
+          return isSameMonth(date, selectedDate);
+        } else if (period === "year") {
+          return isSameYear(date, new Date(selectedYear, 0));
         }
-        return isSameYear(date, new Date(selectedYear, 0));
+        return false;
       });
 
       return filteredCashes.reduce(
@@ -155,14 +169,12 @@ const Metrics = () => {
           const filteredMovements = cash.movements.filter((m) =>
             filterByRubro(m, rubro)
           );
-          // 1. Todos los ingresos que coincidan con el rubro
           const ingresos = filteredMovements
             .filter((m) => m.type === "INGRESO")
             .reduce((sum, m) => sum + m.amount, 0);
           const egresos = filteredMovements
             .filter((m) => m.type === "EGRESO")
             .reduce((sum, m) => sum + m.amount, 0);
-          // Calcular ganancia solo para movimientos de venta
           const ganancia = filteredMovements
             .filter((m) => m.type === "INGRESO" && m.profit !== undefined)
             .reduce((sum, m) => sum + (m.profit || 0), 0);
@@ -180,11 +192,15 @@ const Metrics = () => {
 
   const getChartData = useMemo(
     () => (period: "week" | "month" | "year") => {
+      const today = new Date();
+      const shouldShowWeekly =
+        period === "month" && isCurrentMonth(selectedMonth, selectedYear);
       if (period === "month") {
         const daysInMonth = eachDayOfInterval({
           start: startOfMonth(new Date(selectedYear, selectedMonth - 1)),
           end: endOfMonth(new Date(selectedYear, selectedMonth - 1)),
         });
+
         return daysInMonth.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const dailyCash = dailyCashes.find((dc) => dc.date === dateStr);
@@ -195,6 +211,7 @@ const Metrics = () => {
               egresos: 0,
               ganancia: 0,
             };
+
           const filteredMovements = dailyCash.movements.filter((m) =>
             filterByRubro(m, rubro)
           );
@@ -210,6 +227,7 @@ const Metrics = () => {
               const productsProfit = m.profit || 0;
               return sum + productsProfit;
             }, 0);
+
           return {
             date: format(day, "dd"),
             ingresos,
@@ -218,9 +236,24 @@ const Metrics = () => {
           };
         });
       } else if (period === "week") {
-        const today = new Date();
-        const weekStart = startOfWeek(today);
-        const weekEnd = endOfWeek(today);
+        let weekStart, weekEnd;
+
+        if (shouldShowWeekly) {
+          // Semana actual cuando el mes seleccionado es el actual
+          weekStart = startOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
+          weekEnd = endOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
+        } else {
+          // Semana seleccionada manualmente
+          const selectedDate = new Date(selectedYear, selectedMonth - 1);
+          const lastDayOfMonth = endOfMonth(selectedDate);
+          weekStart = startOfWeek(lastDayOfMonth, {
+            weekStartsOn: WEEK_STARTS_ON,
+          });
+          weekEnd = endOfWeek(lastDayOfMonth, {
+            weekStartsOn: WEEK_STARTS_ON,
+          });
+        }
+
         const daysInWeek = eachDayOfInterval({
           start: weekStart,
           end: weekEnd,
@@ -259,15 +292,17 @@ const Metrics = () => {
           };
         });
       } else {
+        const currentYear = new Date().getFullYear();
         const monthlyData: MonthlyData[] = Array.from(
           { length: 12 },
           (_, i) => {
-            const monthStart = new Date(selectedYear, i, 1);
-            const monthEnd = new Date(selectedYear, i + 1, 0);
+            const monthStart = new Date(currentYear, i, 1);
+            const monthEnd = new Date(currentYear, i + 1, 0);
             const monthCashes = dailyCashes.filter((cash) => {
               const date = parseISO(cash.date);
               return date >= monthStart && date <= monthEnd;
             });
+
             const summary = monthCashes.reduce(
               (acc, cash) => {
                 const filteredMovements = cash.movements.filter((m) =>
@@ -281,10 +316,8 @@ const Metrics = () => {
                   .reduce((sum, m) => sum + m.amount, 0);
                 const ganancia = filteredMovements
                   .filter((m) => m.type === "INGRESO")
-                  .reduce((sum, m) => {
-                    const productsProfit = m.profit || 0;
-                    return sum + productsProfit;
-                  }, 0);
+                  .reduce((sum, m) => sum + (m.profit || 0), 0);
+
                 return {
                   ingresos: acc.ingresos + ingresos,
                   egresos: acc.egresos + egresos,
@@ -293,14 +326,14 @@ const Metrics = () => {
               },
               { ingresos: 0, egresos: 0, ganancia: 0 }
             );
+
             return {
-              month: format(new Date(selectedYear, i, 1), "MMM", {
-                locale: es,
-              }),
+              month: format(new Date(currentYear, i, 1), "MMM", { locale: es }),
               ...summary,
             };
           }
         );
+
         return monthlyData;
       }
     },
@@ -314,10 +347,14 @@ const Metrics = () => {
         selectedUnit: Product["unit"] | "General"
       ) => {
         let filteredCashes = dailyCashes;
+
         if (period === "month") {
+          // Siempre filtrar por mes completo
+          const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+          const monthEnd = new Date(selectedYear, selectedMonth, 0);
           filteredCashes = dailyCashes.filter((cash) => {
             const date = parseISO(cash.date);
-            return isSameMonth(date, new Date(selectedYear, selectedMonth - 1));
+            return date >= monthStart && date <= monthEnd;
           });
         } else if (period === "year") {
           filteredCashes = dailyCashes.filter((cash) => {
@@ -325,16 +362,31 @@ const Metrics = () => {
             return isSameYear(date, new Date(selectedYear, 0));
           });
         } else if (period === "week") {
-          const today = new Date();
-          const weekStart = startOfWeek(today);
-          const weekEnd = endOfWeek(today);
+          let weekStart, weekEnd;
+          const selectedDate = new Date(selectedYear, selectedMonth - 1);
+
+          if (userChangedMonth) {
+            // Mostrar última semana del mes seleccionado
+            const lastDayOfMonth = endOfMonth(selectedDate);
+            weekStart = startOfWeek(lastDayOfMonth, {
+              weekStartsOn: WEEK_STARTS_ON,
+            });
+            weekEnd = endOfWeek(lastDayOfMonth, {
+              weekStartsOn: WEEK_STARTS_ON,
+            });
+          } else {
+            // Semana actual
+            const today = new Date();
+            weekStart = startOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
+            weekEnd = endOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
+          }
+
           filteredCashes = dailyCashes.filter((cash) => {
             const date = parseISO(cash.date);
             return date >= weekStart && date <= weekEnd;
           });
         }
 
-        // Cambiamos a un Map que agrupe por nombre de producto en lugar de por ID
         const productMap = new Map<
           string,
           {
@@ -423,18 +475,49 @@ const Metrics = () => {
           )} ${product.unit}`,
         }));
       },
-    [dailyCashes, products, rubro, selectedYear, selectedMonth]
+    [
+      dailyCashes,
+      products,
+      rubro,
+      selectedYear,
+      selectedMonth,
+      userChangedMonth,
+    ]
   );
-
   useEffect(() => {
     const today = new Date();
-    const currentMonth = today.getMonth() + 1;
-    const currentYear = today.getFullYear();
-    if (selectedMonth !== currentMonth || selectedYear !== currentYear) {
-      setSelectedMonth(currentMonth);
-      setSelectedYear(currentYear);
+    if (selectedYear !== today.getFullYear()) {
+      db.dailyCashes.toArray().then(setDailyCashes);
     }
-  }, [new Date().getMonth()]);
+  }, [selectedYear]);
+  useEffect(() => {
+    const checkMonthChange = () => {
+      const today = new Date();
+      const currentMonth = today.getMonth() + 1;
+      const currentYear = today.getFullYear();
+
+      if (selectedMonth !== currentMonth || selectedYear !== currentYear) {
+        // Si el mes cambió naturalmente (no por el usuario)
+        if (!userChangedMonth) {
+          setSelectedMonth(currentMonth);
+          setSelectedYear(currentYear);
+          // Forzar recarga de datos
+          db.dailyCashes.toArray().then((cashes) => {
+            setDailyCashes(
+              cashes.sort(
+                (a, b) =>
+                  new Date(a.date).getTime() - new Date(b.date).getTime()
+              )
+            );
+          });
+        }
+      }
+    };
+
+    checkMonthChange();
+    const intervalId = setInterval(checkMonthChange, 60000);
+    return () => clearInterval(intervalId);
+  }, [selectedMonth, selectedYear, userChangedMonth]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -442,8 +525,16 @@ const Metrics = () => {
         db.dailyCashes.toArray(),
         db.products.toArray(),
       ]);
-      setDailyCashes(storedDailyCashes);
+
+      // Ordenar los datos por fecha para asegurar consistencia
+      const sortedCashes = storedDailyCashes.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      setDailyCashes(sortedCashes);
       setProducts(storedProducts);
+
+      // Actualizar años disponibles
       const years = new Set<number>();
       storedDailyCashes.forEach((cash) => {
         const date = parseISO(cash.date);
@@ -451,7 +542,14 @@ const Metrics = () => {
       });
       setAvailableYears(Array.from(years).sort((a, b) => b - a));
     };
+
+    // Cargar datos iniciales
     fetchData();
+
+    // Establecer un intervalo para actualizar datos periódicamente
+    const intervalId = setInterval(fetchData, 300000); // 5 minutos
+
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -628,7 +726,10 @@ const Metrics = () => {
                 }}
                 onChange={(
                   option: SingleValue<{ value: number; label: string }>
-                ) => setSelectedMonth(option?.value ?? selectedMonth)}
+                ) => {
+                  setUserChangedMonth(true);
+                  setSelectedMonth(option?.value ?? selectedMonth);
+                }}
                 options={Array.from({ length: 12 }, (_, i) => ({
                   value: i + 1,
                   label: format(new Date(selectedYear, i, 1), "MMMM", {
@@ -691,6 +792,7 @@ const Metrics = () => {
               </span>
               Resumen Semanal
             </h2>
+
             <div className="space-y-3">
               <div className="flex justify-between items-center p-3 bg-green_xl dark:bg-green_b rounded-lg">
                 <span className="text-sm font-medium ">Ingresos</span>
@@ -787,8 +889,14 @@ const Metrics = () => {
                   />
                 </svg>
               </span>
-              Resumen Mensual
+              Resumen Mensual -{" "}
+              {format(
+                new Date(selectedYear, selectedMonth - 1, 1),
+                "MMMM yyyy",
+                { locale: es }
+              )}
             </h2>
+
             <div className="space-y-3">
               <div className="flex justify-between items-center p-3 bg-green_xl dark:bg-green_b rounded-lg">
                 <span className="text-sm font-medium ">Ingresos</span>
@@ -973,12 +1081,13 @@ const Metrics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white dark:bg-gray_b rounded-xl shadow-md shadow-gray_m p-5 border border-gray_xl dark:border-gray_b">
             <h2 className="text-lg font-semibold mb-4">
-              Ingresos | Egresos -{" "}
-              {format(
-                new Date(selectedYear, selectedMonth - 1, 1),
-                "MMMM yyyy",
-                { locale: es }
-              )}
+              {isCurrentMonth(selectedMonth, selectedYear)
+                ? "Ingresos | Egresos - Semana Actual"
+                : `Ingresos | Egresos - ${format(
+                    new Date(selectedYear, selectedMonth - 1, 1),
+                    "MMMM yyyy",
+                    { locale: es }
+                  )}`}
             </h2>
             <Bar
               data={weeklyBarChartData}
