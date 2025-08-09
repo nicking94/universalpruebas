@@ -10,7 +10,6 @@ import {
 } from "@/app/lib/types/types";
 import {
   parseISO,
-  isSameMonth,
   isSameYear,
   eachDayOfInterval,
   startOfMonth,
@@ -144,57 +143,110 @@ const Metrics = () => {
     () => (period: "week" | "month" | "year") => {
       const today = new Date();
       const selectedDate = new Date(selectedYear, selectedMonth - 1);
-      const shouldShowWeekly =
-        period === "month" && isCurrentMonth(selectedMonth, selectedYear);
 
-      const filteredCashes = dailyCashes.filter((cash) => {
-        const date = parseISO(cash.date);
-        if (shouldShowWeekly) {
-          // Mostrar semana actual cuando el mes seleccionado es el actual
-          const weekStart = startOfWeek(today, {
-            weekStartsOn: WEEK_STARTS_ON,
-          });
-          const weekEnd = endOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
+      // Semana siempre debe calcularse desde el lunes hasta el domingo de la semana actual
+      if (period === "week") {
+        const weekStart = startOfWeek(today, { weekStartsOn: WEEK_STARTS_ON }); // WEEK_STARTS_ON = 1 (Lunes)
+        const weekEnd = endOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
+
+        const filteredCashes = dailyCashes.filter((cash) => {
+          const date = parseISO(cash.date);
           return date >= weekStart && date <= weekEnd;
-        } else if (period === "month") {
-          return isSameMonth(date, selectedDate);
-        } else if (period === "year") {
-          return isSameYear(date, new Date(selectedYear, 0));
-        }
-        return false;
-      });
+        });
 
-      return filteredCashes.reduce(
-        (acc, cash) => {
-          const filteredMovements = cash.movements.filter((m) =>
-            filterByRubro(m, rubro)
-          );
-          const ingresos = filteredMovements
-            .filter((m) => m.type === "INGRESO")
-            .reduce((sum, m) => sum + m.amount, 0);
-          const egresos = filteredMovements
-            .filter((m) => m.type === "EGRESO")
-            .reduce((sum, m) => sum + m.amount, 0);
-          const ganancia = filteredMovements
-            .filter((m) => m.type === "INGRESO" && m.profit !== undefined)
-            .reduce((sum, m) => sum + (m.profit || 0), 0);
-          return {
-            ingresos: acc.ingresos + ingresos,
-            egresos: acc.egresos + egresos,
-            ganancia: acc.ganancia + ganancia,
-          };
-        },
-        { ingresos: 0, egresos: 0, ganancia: 0 }
-      );
+        return filteredCashes.reduce(
+          (acc, cash) => {
+            const filteredMovements = cash.movements.filter((m) =>
+              filterByRubro(m, rubro)
+            );
+            const ingresos = filteredMovements
+              .filter((m) => m.type === "INGRESO")
+              .reduce((sum, m) => sum + m.amount, 0);
+            const egresos = filteredMovements
+              .filter((m) => m.type === "EGRESO")
+              .reduce((sum, m) => sum + m.amount, 0);
+            const ganancia = filteredMovements
+              .filter((m) => m.type === "INGRESO")
+              .reduce((sum, m) => sum + (m.profit || 0), 0);
+            return {
+              ingresos: acc.ingresos + ingresos,
+              egresos: acc.egresos + egresos,
+              ganancia: acc.ganancia + ganancia,
+            };
+          },
+          { ingresos: 0, egresos: 0, ganancia: 0 }
+        );
+      } else if (period === "month") {
+        // Lógica para el mes
+        const monthStart = startOfMonth(selectedDate);
+        const monthEnd = endOfMonth(selectedDate);
+
+        const filteredCashes = dailyCashes.filter((cash) => {
+          const date = parseISO(cash.date);
+          return date >= monthStart && date <= monthEnd;
+        });
+
+        return filteredCashes.reduce(
+          (acc, cash) => {
+            const filteredMovements = cash.movements.filter((m) =>
+              filterByRubro(m, rubro)
+            );
+            const ingresos = filteredMovements
+              .filter((m) => m.type === "INGRESO")
+              .reduce((sum, m) => sum + m.amount, 0);
+            const egresos = filteredMovements
+              .filter((m) => m.type === "EGRESO")
+              .reduce((sum, m) => sum + m.amount, 0);
+            const ganancia = filteredMovements
+              .filter((m) => m.type === "INGRESO")
+              .reduce((sum, m) => sum + (m.profit || 0), 0);
+            return {
+              ingresos: acc.ingresos + ingresos,
+              egresos: acc.egresos + egresos,
+              ganancia: acc.ganancia + ganancia,
+            };
+          },
+          { ingresos: 0, egresos: 0, ganancia: 0 }
+        );
+      } else {
+        // Lógica para el año
+        const yearStart = new Date(selectedYear, 0, 1);
+        const yearEnd = new Date(selectedYear, 11, 31);
+
+        const filteredCashes = dailyCashes.filter((cash) => {
+          const date = parseISO(cash.date);
+          return date >= yearStart && date <= yearEnd;
+        });
+
+        return filteredCashes.reduce(
+          (acc, cash) => {
+            const filteredMovements = cash.movements.filter((m) =>
+              filterByRubro(m, rubro)
+            );
+            const ingresos = filteredMovements
+              .filter((m) => m.type === "INGRESO")
+              .reduce((sum, m) => sum + m.amount, 0);
+            const egresos = filteredMovements
+              .filter((m) => m.type === "EGRESO")
+              .reduce((sum, m) => sum + m.amount, 0);
+            const ganancia = filteredMovements
+              .filter((m) => m.type === "INGRESO")
+              .reduce((sum, m) => sum + (m.profit || 0), 0);
+            return {
+              ingresos: acc.ingresos + ingresos,
+              egresos: acc.egresos + egresos,
+              ganancia: acc.ganancia + ganancia,
+            };
+          },
+          { ingresos: 0, egresos: 0, ganancia: 0 }
+        );
+      }
     },
     [dailyCashes, selectedYear, selectedMonth, rubro, products]
   );
 
   const getChartData = useMemo(
     () => (period: "week" | "month" | "year") => {
-      const today = new Date();
-      const shouldShowWeekly =
-        period === "month" && isCurrentMonth(selectedMonth, selectedYear);
       if (period === "month") {
         const daysInMonth = eachDayOfInterval({
           start: startOfMonth(new Date(selectedYear, selectedMonth - 1)),
@@ -236,23 +288,11 @@ const Metrics = () => {
           };
         });
       } else if (period === "week") {
-        let weekStart, weekEnd;
-
-        if (shouldShowWeekly) {
-          // Semana actual cuando el mes seleccionado es el actual
-          weekStart = startOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
-          weekEnd = endOfWeek(today, { weekStartsOn: WEEK_STARTS_ON });
-        } else {
-          // Semana seleccionada manualmente
-          const selectedDate = new Date(selectedYear, selectedMonth - 1);
-          const lastDayOfMonth = endOfMonth(selectedDate);
-          weekStart = startOfWeek(lastDayOfMonth, {
-            weekStartsOn: WEEK_STARTS_ON,
-          });
-          weekEnd = endOfWeek(lastDayOfMonth, {
-            weekStartsOn: WEEK_STARTS_ON,
-          });
-        }
+        // Siempre usar la semana actual para el gráfico semanal
+        const weekStart = startOfWeek(new Date(), {
+          weekStartsOn: WEEK_STARTS_ON,
+        });
+        const weekEnd = endOfWeek(new Date(), { weekStartsOn: WEEK_STARTS_ON });
 
         const daysInWeek = eachDayOfInterval({
           start: weekStart,
@@ -806,7 +846,7 @@ const Metrics = () => {
                   {formatCurrency(weeklySummary.egresos)}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
                 <span className="text-sm font-medium">Ganancia</span>
                 <span className="font-bold">
                   {formatCurrency(weeklySummary.ganancia)}
@@ -1120,6 +1160,15 @@ const Metrics = () => {
                 },
               }}
             />
+            <h2 className="text-lg font-semibold mt-4 mb-4">
+              {isCurrentMonth(selectedMonth, selectedYear)
+                ? "Ingresos | Egresos - Mes Actual"
+                : `Ingresos | Egresos - ${format(
+                    new Date(selectedYear, selectedMonth - 1, 1),
+                    "MMMM yyyy",
+                    { locale: es }
+                  )}`}
+            </h2>
             <Bar
               data={monthlyBarChartData}
               options={{
