@@ -211,6 +211,8 @@ export type Product = {
     rubro: Rubro;
   }[];
   season?: string;
+  setMinStock?: boolean;
+  minStock?: number;
 };
 export type ProductDisplayInfo = {
   name: string;
@@ -238,6 +240,7 @@ export type ProductCardProps = {
 export type SearchBarProps = {
   onSearch: (query: string) => void;
 };
+// En tus tipos/types.ts
 
 export type Sale = {
   id: number;
