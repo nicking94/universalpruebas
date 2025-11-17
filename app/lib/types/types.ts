@@ -43,6 +43,7 @@ export type User = {
   username?: string;
   password?: string;
   logo?: string;
+  isActive?: boolean;
 };
 
 export type AuthData = {
@@ -624,6 +625,7 @@ export type UserPreferences = {
   acceptedTerms: boolean;
   acceptedTermsDate?: string;
   itemsPerPage?: number;
+  appVersion?: string;
 };
 export type DailyData = {
   date: string;
@@ -702,3 +704,37 @@ export interface Expense {
   type: "INGRESO" | "EGRESO" | "TODOS";
   combinedPaymentMethods?: PaymentSplit[];
 }
+
+export type PromotionType =
+  | "PERCENTAGE_DISCOUNT"
+  | "FIXED_DISCOUNT"
+  | "MINIMUM_AMOUNT";
+export type PromotionStatus = "active" | "inactive";
+
+export type PromotionCondition = {
+  type: "min_amount" | "min_quantity";
+  value: number;
+};
+
+export type PromotionAction = {
+  type: "discount_percentage" | "discount_fixed";
+  value: number;
+};
+
+export type Promotion = {
+  id?: number;
+  name: string;
+  description: string;
+  type: PromotionType;
+  status: PromotionStatus;
+  conditions: PromotionCondition[];
+  actions: PromotionAction[];
+  startDate: string;
+  endDate: string;
+  usageLimit: number;
+  currentUsage: number;
+  priority: number;
+  rubro: string;
+  createdAt: string;
+  updatedAt: string;
+};
