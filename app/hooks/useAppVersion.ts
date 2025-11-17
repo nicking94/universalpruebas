@@ -14,7 +14,7 @@ export const useAppVersion = () => {
   const checkForUpdates = useCallback(async () => {
     try {
       console.log("🔍 Verificando actualizaciones...");
-      console.log("📦 Versión actual en constants:", APP_VERSION);
+      console.log("📦 Versión actual:", APP_VERSION);
 
       const preferences = await db.userPreferences.get(1);
       const storedVersion = preferences?.appVersion;
@@ -22,6 +22,13 @@ export const useAppVersion = () => {
       console.log("💾 Versión almacenada en DB:", storedVersion);
 
       setCurrentStoredVersion(storedVersion);
+
+      // Si no hay versión almacenada, es la primera vez - guardar y no mostrar modal
+      if (!storedVersion) {
+        console.log("📝 Primera ejecución, guardando versión inicial");
+        await updateStoredVersion();
+        return false;
+      }
 
       if (storedVersion !== APP_VERSION) {
         console.log("🆕 Nueva versión detectada! Mostrando modal...");
@@ -48,9 +55,11 @@ export const useAppVersion = () => {
           appVersion: APP_VERSION,
         });
       } else {
+        // Agregar valores por defecto para consistencia
         await db.userPreferences.add({
           appVersion: APP_VERSION,
           acceptedTerms: false,
+          itemsPerPage: 10,
         });
       }
 
@@ -103,24 +112,17 @@ export const useAppVersion = () => {
   // Verificar actualizaciones al montar
   useEffect(() => {
     const initializeVersion = async () => {
-      // Primero verificar si ya tenemos una versión almacenada
-      const preferences = await db.userPreferences.get(1);
-      if (!preferences?.appVersion) {
-        // Si no hay versión almacenada, guardar la actual
-        await updateStoredVersion();
-      } else {
-        // Si hay versión almacenada, verificar si hay actualizaciones
-        checkForUpdates();
-      }
+      // Verificación simple - el hook checkForUpdates ya maneja la lógica completa
+      await checkForUpdates();
     };
 
     initializeVersion();
 
-    // También verificar periódicamente (cada 2 minutos)
-    const interval = setInterval(checkForUpdates, 2 * 60 * 1000);
+    // Verificar periódicamente (cada 5 minutos en lugar de 2)
+    const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [checkForUpdates, updateStoredVersion]);
+  }, [checkForUpdates]);
 
   return {
     showUpdateModal,

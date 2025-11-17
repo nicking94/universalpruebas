@@ -3,11 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "../database/db";
-import {
-  APP_VERSION,
-  TRIAL_CREDENTIALS,
-  USERS,
-} from "../lib/constants/constants";
+import { TRIAL_CREDENTIALS, USERS } from "../lib/constants/constants";
 import { useAuth } from "../context/AuthContext";
 
 const SessionChecker = () => {
@@ -26,12 +22,6 @@ const SessionChecker = () => {
         return;
       }
 
-      const preferences = await db.userPreferences.get(1);
-      if (preferences?.appVersion !== APP_VERSION) {
-        console.log("🔄 Nueva versión detectada en SessionChecker");
-
-        return;
-      }
       const now = new Date();
 
       const userConfig = USERS.find((u) => u.id === auth.userId);
