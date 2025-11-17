@@ -41,7 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
         <div className="flex items-center space-x-6 ">
           <div className="flex flex-col items-center justify-center p-1">
-            <p className="uppercase text-center w-full min-w-23 font-bold text-xs text-blue_b dark:text-white ">
+            <p className=" text-center w-full min-w-23 font-bold text-xs text-blue_b dark:text-white ">
               Rubro actual
             </p>
             <Select

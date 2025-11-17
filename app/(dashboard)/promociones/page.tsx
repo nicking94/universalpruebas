@@ -16,7 +16,6 @@ import Pagination from "@/app/components/Pagination";
 import Select from "react-select";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
-import { format } from "date-fns";
 
 const PromocionesPage = () => {
   const { rubro } = useRubro();
@@ -41,15 +40,7 @@ const PromocionesPage = () => {
     description: "",
     type: "PERCENTAGE_DISCOUNT",
     status: "active",
-    conditions: [{ type: "min_amount", value: 0 }],
-    actions: [{ type: "discount_percentage", value: 10 }],
-    startDate: new Date().toISOString().split("T")[0],
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0],
-    usageLimit: 0,
-    currentUsage: 0,
-    priority: 1,
+    discount: 10,
     rubro: rubro,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -58,22 +49,11 @@ const PromocionesPage = () => {
   const promotionTypeOptions = [
     { value: "PERCENTAGE_DISCOUNT", label: "Descuento Porcentual" },
     { value: "FIXED_DISCOUNT", label: "Descuento Fijo" },
-    { value: "MINIMUM_AMOUNT", label: "Monto Mínimo" },
   ];
 
   const statusOptions = [
     { value: "active", label: "Activa" },
     { value: "inactive", label: "Inactiva" },
-  ];
-
-  const conditionTypeOptions = [
-    { value: "min_amount", label: "Monto Mínimo" },
-    { value: "min_quantity", label: "Cantidad Mínima" },
-  ];
-
-  const actionTypeOptions = [
-    { value: "discount_percentage", label: "Descuento %" },
-    { value: "discount_fixed", label: "Descuento Fijo" },
   ];
 
   const showNotification = (
@@ -114,15 +94,7 @@ const PromocionesPage = () => {
       description: "",
       type: "PERCENTAGE_DISCOUNT",
       status: "active",
-      conditions: [{ type: "min_amount", value: 0 }],
-      actions: [{ type: "discount_percentage", value: 10 }],
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
-      usageLimit: 0,
-      currentUsage: 0,
-      priority: 1,
+      discount: 10,
       rubro: rubro,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -131,7 +103,6 @@ const PromocionesPage = () => {
   };
 
   const handleEditPromotion = (promotion: Promotion) => {
-    // Verificar que la promoción tenga ID antes de editarla
     if (!promotion.id) {
       showNotification("No se puede editar una promoción sin ID", "error");
       return;
@@ -152,6 +123,11 @@ const PromocionesPage = () => {
         return;
       }
 
+      if (!newPromotion.discount || newPromotion.discount <= 0) {
+        showNotification("El descuento debe ser mayor a 0", "error");
+        return;
+      }
+
       if (editingPromotion && editingPromotion.id) {
         await db.promotions.update(editingPromotion.id, newPromotion);
         showNotification("Promoción actualizada correctamente", "success");
@@ -169,7 +145,6 @@ const PromocionesPage = () => {
   };
 
   const handleDeletePromotion = (promotion: Promotion) => {
-    // Verificar que la promoción tenga ID antes de eliminarla
     if (!promotion.id) {
       showNotification("No se puede eliminar una promoción sin ID", "error");
       return;
@@ -236,9 +211,7 @@ const PromocionesPage = () => {
                   <th className="p-2 text-start">Nombre</th>
                   <th className="p-2">Tipo</th>
                   <th className="p-2">Estado</th>
-                  <th className="p-2">Vigencia</th>
-                  <th className="p-2">Usos</th>
-                  <th className="p-2">Prioridad</th>
+                  <th className="p-2">Descuento</th>
                   {rubro !== "Todos los rubros" && (
                     <th className="w-40 max-w-[5rem] 2xl:max-w-[10rem] p-2">
                       Acciones
@@ -279,17 +252,9 @@ const PromocionesPage = () => {
                         </span>
                       </td>
                       <td className="p-2 border border-gray_xl">
-                        {format(new Date(promotion.startDate), "dd/MM/yy")} -{" "}
-                        {format(new Date(promotion.endDate), "dd/MM/yy")}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {promotion.currentUsage}
-                        {promotion.usageLimit
-                          ? ` / ${promotion.usageLimit}`
-                          : " / ∞"}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {promotion.priority}
+                        {promotion.type === "FIXED_DISCOUNT" && "$"}
+                        {promotion.discount}
+                        {promotion.type === "PERCENTAGE_DISCOUNT" && "%"}
                       </td>
                       {rubro !== "Todos los rubros" && (
                         <td className="p-2 border border-gray_xl">
@@ -325,7 +290,7 @@ const PromocionesPage = () => {
                   ))
                 ) : (
                   <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                    <td colSpan={7} className="py-4 text-center">
+                    <td colSpan={5} className="py-4 text-center">
                       <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
                         <Tag size={64} className="mb-4 text-gray_m" />
                         <p className="text-gray_m">
@@ -438,169 +403,31 @@ const PromocionesPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
-                    Fecha Inicio*
-                  </label>
-                  <Input
-                    type="date"
-                    value={newPromotion.startDate}
-                    onChange={(e) =>
-                      setNewPromotion((prev) => ({
-                        ...prev,
-                        startDate: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
-                    Fecha Fin*
-                  </label>
-                  <Input
-                    type="date"
-                    value={newPromotion.endDate}
-                    onChange={(e) =>
-                      setNewPromotion((prev) => ({
-                        ...prev,
-                        endDate: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray_m dark:text-white text-sm font-semibold mb-1">
+                  Descuento a Aplicar*
+                </label>
                 <Input
-                  label="Límite de usos (0 = ilimitado)"
                   type="number"
-                  value={newPromotion.usageLimit?.toString() || "0"}
+                  value={newPromotion.discount?.toString() || "0"}
                   onChange={(e) =>
                     setNewPromotion((prev) => ({
                       ...prev,
-                      usageLimit: parseInt(e.target.value) || 0,
+                      discount: parseFloat(e.target.value) || 0,
                     }))
                   }
-                />
-
-                <Input
-                  label="Prioridad (mayor número = mayor prioridad)"
-                  type="number"
-                  value={newPromotion.priority.toString()}
-                  onChange={(e) =>
-                    setNewPromotion((prev) => ({
-                      ...prev,
-                      priority: parseInt(e.target.value) || 1,
-                    }))
+                  placeholder={
+                    newPromotion.type === "PERCENTAGE_DISCOUNT"
+                      ? "Porcentaje %"
+                      : "Monto fijo $"
                   }
+                  step="0.01"
                 />
-              </div>
-
-              {/* Condición Simplificada */}
-              <div>
-                <label className="block text-gray_m dark:text-white text-sm font-semibold mb-2">
-                  Condición para Aplicar
-                </label>
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <Select
-                      options={conditionTypeOptions}
-                      value={conditionTypeOptions.find(
-                        (c) => c.value === newPromotion.conditions[0]?.type
-                      )}
-                      onChange={(selected) =>
-                        setNewPromotion((prev) => ({
-                          ...prev,
-                          conditions: [
-                            {
-                              type: selected?.value as
-                                | "min_amount"
-                                | "min_quantity",
-                              value: prev.conditions[0]?.value || 0,
-                            },
-                          ],
-                        }))
-                      }
-                      className="text-gray_m"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Input
-                      type="number"
-                      value={
-                        newPromotion.conditions[0]?.value?.toString() || "0"
-                      }
-                      onChange={(e) =>
-                        setNewPromotion((prev) => ({
-                          ...prev,
-                          conditions: [
-                            {
-                              type: prev.conditions[0]?.type || "min_amount",
-                              value: parseFloat(e.target.value) || 0,
-                            },
-                          ],
-                        }))
-                      }
-                      placeholder="Valor mínimo"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Acción Simplificada */}
-              <div>
-                <label className="block text-gray_m dark:text-white text-sm font-semibold mb-2">
-                  Descuento a Aplicar
-                </label>
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <Select
-                      options={actionTypeOptions}
-                      value={actionTypeOptions.find(
-                        (a) => a.value === newPromotion.actions[0]?.type
-                      )}
-                      onChange={(selected) =>
-                        setNewPromotion((prev) => ({
-                          ...prev,
-                          actions: [
-                            {
-                              type: selected?.value as
-                                | "discount_percentage"
-                                | "discount_fixed",
-                              value: prev.actions[0]?.value || 0,
-                            },
-                          ],
-                        }))
-                      }
-                      className="text-gray_m"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Input
-                      type="number"
-                      value={newPromotion.actions[0]?.value?.toString() || "0"}
-                      onChange={(e) =>
-                        setNewPromotion((prev) => ({
-                          ...prev,
-                          actions: [
-                            {
-                              type:
-                                prev.actions[0]?.type || "discount_percentage",
-                              value: parseFloat(e.target.value) || 0,
-                            },
-                          ],
-                        }))
-                      }
-                      placeholder={
-                        newPromotion.actions[0]?.type === "discount_percentage"
-                          ? "Porcentaje %"
-                          : "Monto fijo"
-                      }
-                    />
-                  </div>
-                </div>
+                <p className="text-xs text-gray_m mt-1">
+                  {newPromotion.type === "PERCENTAGE_DISCOUNT"
+                    ? "Ingrese el porcentaje de descuento"
+                    : "Ingrese el monto fijo de descuento"}
+                </p>
               </div>
             </div>
           </div>

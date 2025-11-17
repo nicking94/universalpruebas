@@ -23,10 +23,11 @@ export default function AppLayout({
   const router = useRouter();
   const [theme, setTheme] = useState<string>("light");
 
-  // Usar el hook de versión
+  // Usar el hook de versión - INCLUIR minLoadTimePassed
   const {
     showUpdateModal,
     isUpdating,
+    minLoadTimePassed, // ← Añadir esta línea
     forceUpdate,
     logoutAndUpdate,
     currentVersion,
@@ -82,6 +83,7 @@ export default function AppLayout({
               onUpdate={forceUpdate}
               onLogout={logoutAndUpdate}
               isUpdating={isUpdating}
+              minLoadTimePassed={minLoadTimePassed}
               currentVersion={currentVersion}
               storedVersion={storedVersion}
             />

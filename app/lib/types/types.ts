@@ -90,18 +90,15 @@ export type NavbarProps = {
   handleTheme: () => void;
   handleCloseSession: () => void;
 };
-export type SidebarProps = {
-  items?: Array<{
-    label: string;
-    href: string;
-    icon?: React.ReactNode;
-    target?: string;
-  }>;
-};
+export interface SidebarProps {
+  items?: MenuItemProps[];
+}
 export type MenuItemProps = {
   label: string;
-  href: string;
+  href?: string;
   icon?: React.ReactNode;
+  target?: string;
+  submenu?: MenuItemProps[];
 };
 export type SidebarContextProps = {
   isSidebarOpen: boolean;
@@ -705,21 +702,9 @@ export interface Expense {
   combinedPaymentMethods?: PaymentSplit[];
 }
 
-export type PromotionType =
-  | "PERCENTAGE_DISCOUNT"
-  | "FIXED_DISCOUNT"
-  | "MINIMUM_AMOUNT";
+export type PromotionType = "PERCENTAGE_DISCOUNT" | "FIXED_DISCOUNT";
+
 export type PromotionStatus = "active" | "inactive";
-
-export type PromotionCondition = {
-  type: "min_amount" | "min_quantity";
-  value: number;
-};
-
-export type PromotionAction = {
-  type: "discount_percentage" | "discount_fixed";
-  value: number;
-};
 
 export type Promotion = {
   id?: number;
@@ -727,13 +712,7 @@ export type Promotion = {
   description: string;
   type: PromotionType;
   status: PromotionStatus;
-  conditions: PromotionCondition[];
-  actions: PromotionAction[];
-  startDate: string;
-  endDate: string;
-  usageLimit: number;
-  currentUsage: number;
-  priority: number;
+  discount: number;
   rubro: string;
   createdAt: string;
   updatedAt: string;
