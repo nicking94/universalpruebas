@@ -14,15 +14,12 @@ interface UpdateModalProps {
 const UpdateModal: React.FC<UpdateModalProps> = ({
   isOpen,
   onUpdate,
-  onLogout,
   isUpdating,
-  currentVersion,
-  storedVersion,
 }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999] p-4">
+    <div className="fixed inset-0 bg-blue_b/80 bg-opacity-70 flex items-center justify-center z-[9999] p-4">
       <div className="bg-white dark:bg-gray_b rounded-xl p-8 max-w-md w-full shadow-2xl border-2 border-blue_b">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-blue_b rounded-full flex items-center justify-center mx-auto mb-4">
@@ -41,33 +38,12 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
             </svg>
           </div>
 
-          <h3 className="text-2xl font-bold text-gray_b dark:text-white mb-3">
-            🆕 Actualización Disponible
+          <h3 className="uppercase text-2xl font-semibold text-blue_b dark:text-white mb-3">
+            Actualización Disponible
           </h3>
 
-          <div className="bg-blue_xl dark:bg-gray_m rounded-lg p-4 mb-4">
-            <p className="text-sm text-gray_b dark:text-white mb-2">
-              <span className="font-semibold">Versión actual:</span>{" "}
-              {storedVersion || "Desconocida"}
-            </p>
-            <p className="text-sm text-gray_b dark:text-white">
-              <span className="font-semibold">Nueva versión:</span>{" "}
-              {currentVersion}
-            </p>
-          </div>
-
           <p className="text-gray_m dark:text-gray_l mb-2 text-lg">
-            Se ha detectado una nueva versión de la aplicación.
-          </p>
-
-          <p className="text-sm text-gray_m dark:text-gray_l mb-2">
-            Para continuar usando todas las funciones correctamente, es
-            necesario actualizar.
-          </p>
-
-          <p className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded mt-3">
-            <strong>💡 Recomendación:</strong> Guarde cualquier trabajo en
-            progreso antes de actualizar.
+            Hay una nueva versión de la aplicación.
           </p>
         </div>
 
@@ -79,18 +55,6 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
             colorText="text-white"
             colorBg="bg-green-600 hover:bg-green-700"
             colorBgHover="hover:bg-green-700"
-            width="w-full"
-            height="h-12"
-            py="py-3"
-          />
-
-          <Button
-            onClick={onLogout}
-            disabled={isUpdating}
-            text="🚪 Cerrar Sesión y Actualizar"
-            colorText="text-white"
-            colorBg="bg-blue_b hover:bg-blue_m"
-            colorBgHover="hover:bg-blue_m"
             width="w-full"
             height="h-12"
             py="py-3"
