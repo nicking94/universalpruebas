@@ -85,11 +85,18 @@ export const systemActualizations: Actualization[] = [
   //     "- Ahora podés exportar en PDF las cuentas corrientes de cada cliente, Además podrás generar reportes individuales con el detalle completo de ventas, pagos y saldos pendientes\n- 📊 Agregada la opción de STOCK MINIMO por producto. Cuando el stock esté por debajo del nivel mínimo, verás una alerta visual en la tabla de productos para reponer a tiempo",
   //   date: new Date().toISOString(),
   // },
+  // {
+  //   id: 13,
+  //   title: `Versión 1.5.2 - Mejoras`,
+  //   message:
+  //     "- Ahora podés agregar un concepto a la venta y visualizarlo en el listado de ventas. Mejoras en el rendimiento",
+  //   date: new Date().toISOString(),
+  // },
   {
-    id: 13,
-    title: `Versión 1.5.2 - Mejoras`,
+    id: 14,
+    title: `Versión 1.5.3 - Actualización`,
     message:
-      "- Ahora podés agregar un concepto a la venta y visualizarlo en el listado de ventas. Mejoras en el rendimiento",
+      "- Agregado el módulo para crear promociones\n-Agregada la actualización automática cuando hay una nueva versión de la aplicación disponible\n- Mejoras visuales y en el rendimiento",
     date: new Date().toISOString(),
   },
 ];
