@@ -1,11 +1,31 @@
 import { formatCurrency } from "../lib/utils/currency";
 import { Budget, PaymentSplit, PaymentMethod } from "../lib/types/types";
-import Select from "react-select";
 import { useState } from "react";
 import Modal from "./Modal";
-import Button from "./Button";
 import InputCash from "./InputCash";
-import { Trash, Plus } from "lucide-react";
+
+// Material-UI imports
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Chip,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Alert,
+  Button,
+} from "@mui/material";
+import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
 
 interface ConvertToSaleModalProps {
   isOpen: boolean;
@@ -33,11 +53,14 @@ export const ConvertToSaleModal = ({
     { method: "EFECTIVO", amount: totalToPay },
   ]);
 
+  const [error, setError] = useState<string>("");
+
   const handlePaymentMethodChange = (
     index: number,
     field: keyof PaymentSplit,
     value: string | number
   ) => {
+    setError("");
     setPaymentMethods((prev) => {
       const updated = [...prev];
 
@@ -131,7 +154,17 @@ export const ConvertToSaleModal = ({
       (acc, method) => acc + parseFloat(method.amount.toFixed(2)),
       0
     );
-    return Math.abs(sum - parseFloat(totalToPay.toFixed(2))) < 0.01;
+    const isValid = Math.abs(sum - parseFloat(totalToPay.toFixed(2))) < 0.01;
+
+    if (!isValid) {
+      setError(
+        `La suma de los montos (${formatCurrency(
+          sum
+        )}) no coincide con el total a pagar (${formatCurrency(totalToPay)})`
+      );
+    }
+
+    return isValid;
   };
 
   const handleConfirm = () => {
@@ -141,6 +174,25 @@ export const ConvertToSaleModal = ({
     onConfirm(paymentMethods);
   };
 
+  const getPaymentMethodColor = (method: PaymentMethod) => {
+    switch (method) {
+      case "EFECTIVO":
+        return "success";
+      case "TRANSFERENCIA":
+        return "primary";
+      case "TARJETA":
+        return "secondary";
+      default:
+        return "default";
+    }
+  };
+
+  const totalAmount = paymentMethods.reduce(
+    (sum, method) => sum + method.amount,
+    0
+  );
+  const amountDifference = totalAmount - totalToPay;
+
   return (
     <Modal
       isOpen={isOpen}
@@ -149,147 +201,313 @@ export const ConvertToSaleModal = ({
       buttons={
         <>
           <Button
-            text="Confirmar Cobro"
-            colorText="text-white"
-            colorTextHover="text-white"
+            variant="contained"
             onClick={handleConfirm}
-          />
+            sx={{
+              backgroundColor: "#3b82f6",
+              "&:hover": {
+                backgroundColor: "#2563eb",
+              },
+            }}
+          >
+            Confirmar Cobro
+          </Button>
           <Button
-            text="Cancelar"
-            colorText="text-gray_b dark:text-white"
-            colorTextHover="hover:dark:text-white"
-            colorBg="bg-transparent dark:bg-gray_m"
-            colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+            variant="outlined"
             onClick={onClose}
-          />
+            sx={{
+              color: "#6b7280",
+              borderColor: "#d1d5db",
+              "&:hover": {
+                backgroundColor: "#f3f4f6",
+                borderColor: "#9ca3af",
+              },
+            }}
+          >
+            Cancelar
+          </Button>
         </>
       }
     >
-      <div className="space-y-4">
-        <div className="border border-gray_xl rounded-lg p-4">
-          <h3 className="font-medium mb-2">Productos del presupuesto</h3>
-          <div className="max-h-40 overflow-y-auto">
-            <table className="min-w-full divide-y divide-gray_xl">
-              <thead className="bg-gray_xxl">
-                <tr>
-                  <th className="px-2 py-1 text-left text-xs font-medium text-gray_l uppercase tracking-wider">
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Productos del presupuesto */}
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+          <Typography
+            variant="h6"
+            component="h3"
+            gutterBottom
+            fontWeight="medium"
+          >
+            Productos del presupuesto
+          </Typography>
+
+          <TableContainer sx={{ maxHeight: 200, mb: 2 }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: "bold", fontSize: "0.75rem" }}>
                     Producto
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray_l uppercase tracking-wider">
-                    Cantidad
-                  </th>
-                  <th className="px-2 py-1 text-center text-xs font-medium text-gray_l uppercase tracking-wider">
-                    Descuento (%)
-                  </th>
-                  <th className="px-2 py-1 text-right text-xs font-medium text-gray_l uppercase tracking-wider">
-                    Subtotal
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray_xl">
-                {budget.items.map((item, index) => (
-                  <tr
-                    key={index}
-                    className="hover:bg-gray_xxl dark:hover:bg-blue_xl transition-all duration-300"
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontWeight: "bold", fontSize: "0.75rem" }}
                   >
-                    <td className="px-2 py-1 whitespace-nowrap text-sm text-gray_b">
-                      {item.productName}
-                      {item.size && ` (${item.size})`}
-                      {item.color && ` - ${item.color}`}
-                    </td>
-                    <td className="px-2 py-1 whitespace-nowrap text-sm text-gray_m text-center">
-                      {item.quantity} {item.unit}
-                    </td>
-                    <td className="px-2 py-1 whitespace-nowrap text-sm text-gray_m text-center">
-                      {item.discount || 0}%
-                    </td>
-                    <td className="px-2 py-1 whitespace-nowrap text-sm text-gray_m text-right">
-                      {formatCurrency(
-                        item.price *
-                          item.quantity *
-                          (1 - (item.discount || 0) / 100)
-                      )}
-                    </td>
-                  </tr>
+                    Cantidad
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ fontWeight: "bold", fontSize: "0.75rem" }}
+                  >
+                    Descuento
+                  </TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{ fontWeight: "bold", fontSize: "0.75rem" }}
+                  >
+                    Subtotal
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {budget.items.map((item, index) => (
+                  <TableRow
+                    key={index}
+                    hover
+                    sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                  >
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {item.productName}
+                        </Typography>
+                        <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
+                          {item.size && (
+                            <Chip
+                              label={item.size}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                          {item.color && (
+                            <Chip
+                              label={item.color}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2" color="text.secondary">
+                        {item.quantity} {item.unit}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2" color="text.secondary">
+                        {item.discount || 0}%
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" fontWeight="medium">
+                        {formatCurrency(
+                          item.price *
+                            item.quantity *
+                            (1 - (item.discount || 0) / 100)
+                        )}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-          <div className="mt-2 border-t-1 flex justify-between items-center py-2">
-            <span className="font-semibold">Seña:</span>
-            <span className="text-lg">
-              {formatCurrency(budget.deposit ? parseFloat(budget.deposit) : 0)}
-            </span>
-          </div>
+          <Box sx={{ mt: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                py: 1,
+              }}
+            >
+              <Typography variant="body1" fontWeight="medium">
+                Seña:
+              </Typography>
+              <Typography variant="h6">
+                {formatCurrency(
+                  budget.deposit ? parseFloat(budget.deposit) : 0
+                )}
+              </Typography>
+            </Box>
 
-          <div className="flex justify-between items-center">
-            <span className="font-bold">Total a pagar:</span>
-            <span className="font-bold text-lg">
-              {formatCurrency(totalToPay)}
-            </span>
-          </div>
-        </div>
+            <Divider sx={{ my: 1 }} />
 
-        <div>
-          <h3 className="font-medium mb-2">Métodos de pago</h3>
-          {paymentMethods.map((method, index) => (
-            <div key={index} className="flex items-center gap-2 mb-2">
-              <Select
-                options={paymentOptions}
-                noOptionsMessage={() => "Sin opciones"}
-                value={paymentOptions.find((o) => o.value === method.method)}
-                onChange={(selected) =>
-                  selected &&
-                  handlePaymentMethodChange(index, "method", selected.value)
-                }
-                className="min-w-40"
-                classNamePrefix="react-select"
-              />
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="h6" fontWeight="bold">
+                Total a pagar:
+              </Typography>
+              <Typography variant="h5" fontWeight="bold" color="primary">
+                {formatCurrency(totalToPay)}
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
 
-              <div className="relative w-full">
-                <InputCash
-                  value={method.amount}
-                  onChange={(value) =>
-                    handlePaymentMethodChange(index, "amount", value)
-                  }
-                  placeholder="Monto"
-                />
-                {index === paymentMethods.length - 1 &&
-                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) >
-                    totalToPay + 0.1 && (
-                    <span className="text-xs text-red_m ml-2">
-                      Exceso:{" "}
-                      {formatCurrency(
-                        paymentMethods.reduce((sum, m) => sum + m.amount, 0) -
-                          totalToPay
-                      )}
-                    </span>
-                  )}
-              </div>
+        {/* Métodos de pago */}
+        <Box>
+          <Typography
+            variant="h6"
+            component="h3"
+            gutterBottom
+            fontWeight="medium"
+          >
+            Métodos de pago
+          </Typography>
 
-              {paymentMethods.length > 1 && (
-                <button
-                  onClick={() => removePaymentMethod(index)}
-                  className="text-red_m hover:text-red_b cursor-pointer"
-                >
-                  <Trash size={18} />
-                </button>
-              )}
-            </div>
-          ))}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {paymentMethods.map((method, index) => (
+              <Box
+                key={index}
+                sx={{ display: "flex", alignItems: "center", gap: 2 }}
+              >
+                <FormControl sx={{ minWidth: 140 }} size="small">
+                  <InputLabel>Método</InputLabel>
+                  <Select
+                    value={method.method}
+                    label="Método"
+                    onChange={(e) =>
+                      handlePaymentMethodChange(index, "method", e.target.value)
+                    }
+                  >
+                    {paymentOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box sx={{ flex: 1, position: "relative" }}>
+                  <InputCash
+                    value={method.amount}
+                    onChange={(value) =>
+                      handlePaymentMethodChange(index, "amount", value)
+                    }
+                    label="Monto"
+                  />
+
+                  {index === paymentMethods.length - 1 &&
+                    amountDifference > 0.1 && (
+                      <Typography
+                        variant="caption"
+                        color="error"
+                        sx={{
+                          ml: 1,
+                          position: "absolute",
+                          bottom: -20,
+                          left: 0,
+                        }}
+                      >
+                        Exceso: {formatCurrency(amountDifference)}
+                      </Typography>
+                    )}
+                </Box>
+
+                {paymentMethods.length > 1 && (
+                  <IconButton
+                    onClick={() => removePaymentMethod(index)}
+                    color="error"
+                    size="small"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            ))}
+          </Box>
 
           {paymentMethods.length < paymentOptions.length && (
-            <button
+            <Button
               onClick={addPaymentMethod}
-              className="text-blue_m hover:text-blue_b text-sm flex items-center"
+              startIcon={<AddIcon />}
+              variant="outlined"
+              size="small"
+              sx={{ mt: 2 }}
             >
-              <Plus size={18} className="mr-1" />
               Agregar otro método de pago
-            </button>
+            </Button>
           )}
-        </div>
-      </div>
+
+          {/* Resumen de montos */}
+          <Paper variant="outlined" sx={{ p: 2, mt: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+              Resumen de pagos:
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {paymentMethods.map((method, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Chip
+                    label={
+                      paymentOptions.find((o) => o.value === method.method)
+                        ?.label
+                    }
+                    size="small"
+                    color={getPaymentMethodColor(method.method)}
+                    variant="outlined"
+                  />
+                  <Typography variant="body2" fontWeight="medium">
+                    {formatCurrency(method.amount)}
+                  </Typography>
+                </Box>
+              ))}
+              <Divider sx={{ my: 1 }} />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="body2" fontWeight="bold">
+                  Total:
+                </Typography>
+                <Typography
+                  variant="body1"
+                  fontWeight="bold"
+                  color={
+                    Math.abs(totalAmount - totalToPay) < 0.01
+                      ? "success.main"
+                      : "error.main"
+                  }
+                >
+                  {formatCurrency(totalAmount)}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+      </Box>
     </Modal>
   );
 };

@@ -14,6 +14,10 @@ import PaymentNotification from "../components/PaymentNotification";
 import UpdateModal from "../components/UpdateModal";
 import { useAppVersion } from "../hooks/useAppVersion";
 
+// Material-UI imports
+import { ThemeProvider, CssBaseline, Box } from "@mui/material";
+import { lightTheme, darkTheme } from "@/app/theme/theme";
+
 export default function AppLayout({
   children,
 }: Readonly<{
@@ -23,11 +27,11 @@ export default function AppLayout({
   const router = useRouter();
   const [theme, setTheme] = useState<string>("light");
 
-  // Usar el hook de versión - INCLUIR minLoadTimePassed
+  // Usar el hook de versión
   const {
     showUpdateModal,
     isUpdating,
-    minLoadTimePassed, // ← Añadir esta línea
+    minLoadTimePassed,
     forceUpdate,
     logoutAndUpdate,
     currentVersion,
@@ -68,44 +72,80 @@ export default function AppLayout({
     saveTheme();
   }, [theme]);
 
+  // Seleccionar el tema de Material-UI basado en el estado del tema
+  const muiTheme = theme === "dark" ? darkTheme : lightTheme;
+
   return (
-    <AuthProvider>
-      <BusinessDataProvider>
-        <PaginationProvider>
-          <div className={`bg-white dark:bg-black text-gray_b dark:text-white`}>
-            <TrialNotification />
-            <PaymentNotification />
-            <UpdatesManager />
+    <ThemeProvider theme={muiTheme}>
+      <CssBaseline />
+      <AuthProvider>
+        <BusinessDataProvider>
+          <PaginationProvider>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                minHeight: "100vh",
+                bgcolor: "background.default",
+                color: "text.primary",
+              }}
+            >
+              <TrialNotification />
+              <PaymentNotification />
+              <UpdatesManager />
 
-            {/* Modal de actualización - con alta prioridad */}
-            <UpdateModal
-              isOpen={showUpdateModal}
-              onUpdate={forceUpdate}
-              onLogout={logoutAndUpdate}
-              isUpdating={isUpdating}
-              minLoadTimePassed={minLoadTimePassed}
-              currentVersion={currentVersion}
-              storedVersion={storedVersion}
-            />
+              {/* Modal de actualización - con alta prioridad */}
+              <UpdateModal
+                isOpen={showUpdateModal}
+                onUpdate={forceUpdate}
+                onLogout={logoutAndUpdate}
+                isUpdating={isUpdating}
+                minLoadTimePassed={minLoadTimePassed}
+                currentVersion={currentVersion}
+                storedVersion={storedVersion}
+              />
 
-            <Navbar
-              theme={theme}
-              handleTheme={handleTheme}
-              handleCloseSession={handleCloseSession}
-            />
-            <div>
-              <Sidebar />
-              <main
-                className={`${
-                  isSidebarOpen ? "ml-64" : "ml-30"
-                }   h-[calc(100vh-80px)] bg-blue_xl dark:bg-gray_b transition-all duration-300 overflow-y-auto`}
+              <Navbar
+                theme={theme}
+                handleTheme={handleTheme}
+                handleCloseSession={handleCloseSession}
+              />
+
+              {/* Layout principal corregido - SIN flex */}
+              <Box
+                sx={{
+                  position: "relative",
+                  flex: 1,
+                  mt: "62px",
+                }}
               >
-                {children}
-              </main>
-            </div>
-          </div>
-        </PaginationProvider>
-      </BusinessDataProvider>
-    </AuthProvider>
+                <Sidebar />
+
+                <Box
+                  component="main"
+                  sx={{
+                    position: "absolute",
+                    top: 0,
+                    left: isSidebarOpen ? "256px" : "120px",
+                    right: 0,
+                    bottom: 0,
+                    transition: muiTheme.transitions.create(["left"], {
+                      duration: muiTheme.transitions.duration.standard,
+                    }),
+                    p: 2,
+                    bgcolor: "background.default",
+                    overflow: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {children}
+                </Box>
+              </Box>
+            </Box>
+          </PaginationProvider>
+        </BusinessDataProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

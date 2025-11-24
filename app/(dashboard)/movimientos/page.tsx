@@ -1,5 +1,4 @@
 "use client";
-import Button from "@/app/components/Button";
 import Modal from "@/app/components/Modal";
 import Notification from "@/app/components/Notification";
 import {
@@ -11,7 +10,7 @@ import {
   Supplier,
   UnifiedFilter,
 } from "@/app/lib/types/types";
-import { Plus, Trash, Edit, FileText, PieChart } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import {
@@ -25,8 +24,7 @@ import {
 import { es } from "date-fns/locale";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
-import Select from "react-select";
-import Input from "@/app/components/Input";
+import Select from "@/app/components/Select";
 import InputCash from "@/app/components/InputCash";
 import { useRubro } from "@/app/context/RubroContext";
 import { formatCurrency } from "@/app/lib/utils/currency";
@@ -48,6 +46,33 @@ import AdvancedFilterPanel from "@/app/components/AdvancedFilterPanel";
 import { toCapitalize } from "@/app/lib/utils/capitalizeText";
 import Image from "next/image";
 
+// Material-UI imports
+import {
+  Button,
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  useTheme,
+  Chip,
+  TextField,
+  Card,
+  CardContent,
+} from "@mui/material";
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Description as DescriptionIcon,
+  Analytics as AnalyticsIcon,
+} from "@mui/icons-material";
+
 ChartJS.register(
   ArcElement,
   Tooltip,
@@ -59,6 +84,7 @@ ChartJS.register(
 
 const MovimientosPage = () => {
   const router = useRouter();
+  const theme = useTheme();
 
   const { rubro } = useRubro();
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -70,13 +96,9 @@ const MovimientosPage = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isCategoryDeleteModalOpen, setIsCategoryDeleteModalOpen] =
     useState(false);
-  const [categoryToDelete, setCategoryToDelete] =
-    useState<ExpenseCategory | null>(null);
+  const [categoryToDelete] = useState<ExpenseCategory | null>(null);
 
-  const [selectedSupplier, setSelectedSupplier] = useState<{
-    value: number;
-    label: string;
-  } | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [shouldRedirectToCash, setShouldRedirectToCash] = useState(false);
   const [newExpense, setNewExpense] = useState<Omit<Expense, "id">>({
     amount: 0,
@@ -156,6 +178,7 @@ const MovimientosPage = () => {
       }
     );
   };
+
   const showNotification = (
     message: string,
     type: "success" | "error" | "info"
@@ -229,15 +252,16 @@ const MovimientosPage = () => {
       showNotification("Error al cargar gastos", "error");
     }
   }, []);
+
   const handleOpenModal = async () => {
     const { needsRedirect } = await ensureCashIsOpen();
     if (needsRedirect) {
       setShouldRedirectToCash(true);
-
       return;
     }
     setIsOpenModal(true);
   };
+
   const handleApplyFilters = useCallback((filters: UnifiedFilter[]) => {
     setFilters(
       filters.map((filter) => ({
@@ -464,6 +488,7 @@ const MovimientosPage = () => {
       showNotification("Error al eliminar movimiento", "error");
     }
   };
+
   const handleAddCategory = async () => {
     if (!newCategory.name) {
       showNotification("Ingrese un nombre para la categoría", "error");
@@ -508,6 +533,7 @@ const MovimientosPage = () => {
       showNotification("Error al agregar categoría", "error");
     }
   };
+
   const handleDeleteCategory = async (category: ExpenseCategory) => {
     try {
       const expensesWithCategory = await db.expenses
@@ -684,37 +710,45 @@ const MovimientosPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)] ">
-        <h1 className="text-lg 2xl:text-xl font-semibold mb-2">Movimientos</h1>
+      <Box
+        sx={{
+          px: 5,
+          py: 2,
+          color: "text.secondary",
+          height: "calc(100vh - 80px)",
+        }}
+      >
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 600, mb: 2 }}>
+          Movimientos
+        </Typography>
 
-        <div className="flex justify-between mb-2 gap-2">
-          <div className="flex w-full max-w-[20rem] gap-2">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 2,
+            gap: 2,
+          }}
+        >
+          <Box
+            sx={{ display: "flex", width: "100%", maxWidth: "20rem", gap: 2 }}
+          >
             <Select
+              label="Mes"
               options={monthOptions}
-              value={monthOptions.find(
-                (option) => option.value === selectedMonth
-              )}
-              onChange={(option) =>
-                setSelectedMonth(option?.value ?? new Date().getMonth() + 1)
-              }
-              placeholder="Mes"
-              className="w-full h-[2rem] 2xl:h-auto text-gray_b"
-              classNamePrefix="react-select"
+              value={selectedMonth}
+              onChange={setSelectedMonth}
             />
             <Select
+              label="Año"
               options={yearOptions}
-              value={yearOptions.find(
-                (option) => option.value === selectedYear
-              )}
-              onChange={(option) =>
-                setSelectedYear(option?.value ?? new Date().getFullYear())
-              }
-              placeholder="Año"
-              className="w-full h-[2rem] 2xl:h-auto text-gray_b"
-              classNamePrefix="react-select"
+              value={selectedYear}
+              onChange={setSelectedYear}
             />
-          </div>
-          <div className="flex justify-between gap-2">
+          </Box>
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}
+          >
             <AdvancedFilterPanel
               key={`${rubro}-filter`}
               data={expenses}
@@ -723,159 +757,293 @@ const MovimientosPage = () => {
               rubro={rubro}
               isExpense={true}
             />
-          </div>
+          </Box>
           {rubro !== "Todos los rubros" && (
-            <div className="w-full flex justify-end gap-2 mt-2">
+            <Box
+              sx={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 2,
+                mt: 2,
+              }}
+            >
               <Button
-                text="Estadísticas"
-                title="Ver estadísticas"
-                icon={<PieChart size={18} />}
-                colorText="text-white"
-                colorTextHover="text-white"
+                variant="contained"
+                startIcon={<AnalyticsIcon />}
                 onClick={() => setIsStatsModalOpen(true)}
-              />
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.dark,
+                  },
+                }}
+              >
+                Estadísticas
+              </Button>
 
               <Button
-                title="Nuevo Movimiento"
-                text="Nuevo Movimiento"
-                icon={<Plus size={18} />}
-                colorText="text-white"
-                colorTextHover="text-white"
+                variant="contained"
+                startIcon={<AddIcon />}
                 onClick={handleOpenModal}
-              />
-            </div>
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.dark,
+                  },
+                }}
+              >
+                Nuevo Movimiento
+              </Button>
+            </Box>
           )}
-        </div>
+        </Box>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
-          <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
-            <table className="table-auto w-full text-center border-collapse shadow-sm shadow-gray_l">
-              <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b text-xs">
-                <tr>
-                  <th className="p-2 text-start">Tipo</th>
-                  <th className="p-2 ">Descripción</th>
-                  <th className="p-2">Fecha</th>
-                  <th className="p-2">Categoría</th>
-                  <th className="p-2">Proveedor</th>
-                  <th className="p-2">Método de Pago</th>
-                  <th className="p-2">Monto</th>
-                  {rubro !== "Todos los rubros" && (
-                    <th className="w-40 max-w-[5rem] 2xl:max-w-[10rem] p-2">
-                      Acciones
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white text-gray_b divide-y divide-gray_xl">
-                {currentExpenses.length > 0 ? (
-                  currentExpenses.map((expense) => (
-                    <tr
-                      key={expense.id}
-                      className={`text-xs 2xl:text-sm bg-white text-gray_b border border-gray_xl hover:bg-gray_xxl dark:hover:bg-blue_xl transition-all duration-300`}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            height: "calc(100vh - 200px)",
+          }}
+        >
+          <Box sx={{ maxHeight: "calc(100vh - 250px)", overflow: "auto" }}>
+            <TableContainer component={Paper}>
+              <Table sx={{ minWidth: 650 }} size="small">
+                <TableHead>
+                  <TableRow
+                    sx={{
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                      color: "white",
+                    }}
+                  >
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Tipo
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
                     >
-                      <td
-                        className={`text-start  font-semibold ${
-                          expense.type === "INGRESO"
-                            ? "text-green_b"
-                            : "text-red_b"
-                        } p-2 border border-gray_xl`}
+                      Descripción
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Fecha
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Categoría
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Proveedor
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Método de Pago
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Monto
+                    </TableCell>
+                    {rubro !== "Todos los rubros" && (
+                      <TableCell
+                        sx={{
+                          color: "white",
+                          fontWeight: "bold",
+                          textAlign: "center",
+                          width: 160,
+                        }}
                       >
-                        {expense.type}
-                      </td>
-                      <td className="font-semibold px-2 border border-gray_xl">
-                        {expense.description}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {format(parseISO(expense.date), "dd/MM/yyyy", {
-                          locale: es,
-                        })}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {toCapitalize(expense.category)}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {expense.supplier || "-"}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {expense.paymentMethod}
-                      </td>
-                      <td className="p-2 border border-gray_xl font-semibold text-red_b">
-                        {formatCurrency(expense.amount)}
-                      </td>
-                      {rubro !== "Todos los rubros" && (
-                        <td className="p-2 border border-gray_xl">
-                          <div className="flex justify-center items-center gap-2 h-full">
-                            {expense.receipt && (
-                              <Button
-                                title="Ver comprobante"
-                                icon={<FileText size={18} />}
-                                colorText="text-gray_b"
-                                colorTextHover="hover:text-white"
-                                colorBg="bg-transparent"
-                                colorBgHover="hover:bg-blue_m"
-                                px="px-1"
-                                py="py-1"
-                                minwidth="min-w-0"
-                                onClick={() =>
-                                  setReceiptPreview(expense.receipt || null)
-                                }
-                              />
-                            )}
-                            <Button
-                              title="Editar"
-                              icon={<Edit size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              colorBgHover="hover:bg-blue_m"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => {
-                                setNewExpense({
-                                  ...expense,
-                                  date: expense.date,
-                                });
-                                if (expense.receipt)
-                                  setReceiptPreview(expense.receipt);
-                                setIsOpenModal(true);
+                        Acciones
+                      </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {currentExpenses.length > 0 ? (
+                    currentExpenses.map((expense) => (
+                      <TableRow
+                        key={expense.id}
+                        sx={{
+                          "&:hover": {
+                            backgroundColor:
+                              theme.palette.mode === "dark"
+                                ? "primary.light"
+                                : "grey.100",
+                          },
+                          transition: "all 0.3s",
+                        }}
+                      >
+                        <TableCell>
+                          <Chip
+                            label={expense.type}
+                            size="small"
+                            color={
+                              expense.type === "INGRESO" ? "success" : "error"
+                            }
+                            variant="filled"
+                          />
+                        </TableCell>
+                        <TableCell
+                          sx={{ fontWeight: "medium", textAlign: "center" }}
+                        >
+                          {expense.description}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {format(parseISO(expense.date), "dd/MM/yyyy", {
+                            locale: es,
+                          })}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {toCapitalize(expense.category)}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {expense.supplier || "-"}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {expense.paymentMethod}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            textAlign: "center",
+                            fontWeight: "bold",
+                            color: "error.main",
+                          }}
+                        >
+                          {formatCurrency(expense.amount)}
+                        </TableCell>
+                        {rubro !== "Todos los rubros" && (
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "center",
+                                gap: 1,
                               }}
-                            />
-                            <Button
-                              title="Eliminar"
-                              icon={<Trash size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              colorBgHover="hover:bg-red_m"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => {
-                                setExpenseToDelete(expense);
-                                setIsDeleteModalOpen(true);
-                              }}
-                            />
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                ) : (
-                  <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                    <td colSpan={8} className="py-4 text-center">
-                      <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                        <FileText size={64} className="mb-4 text-gray_m" />
-                        <p className="text-gray_m">
-                          No hay movimientos registrados.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                            >
+                              {expense.receipt && (
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    setReceiptPreview(expense.receipt || null)
+                                  }
+                                  title="Ver comprobante"
+                                  sx={{
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "primary.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                >
+                                  <DescriptionIcon fontSize="small" />
+                                </IconButton>
+                              )}
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setNewExpense({
+                                    ...expense,
+                                    date: expense.date,
+                                  });
+                                  if (expense.receipt)
+                                    setReceiptPreview(expense.receipt);
+                                  setIsOpenModal(true);
+                                }}
+                                title="Editar"
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "primary.main",
+                                    color: "white",
+                                  },
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setExpenseToDelete(expense);
+                                  setIsDeleteModalOpen(true);
+                                }}
+                                title="Eliminar"
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "error.main",
+                                    color: "white",
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        sx={{ py: 4, textAlign: "center" }}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            color: "text.disabled",
+                          }}
+                        >
+                          <FileText
+                            size={64}
+                            style={{
+                              marginBottom: 16,
+                              color: theme.palette.text.disabled,
+                            }}
+                          />
+                          <Typography>
+                            No hay movimientos registrados.
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
           {filteredExpenses.length > 0 && (
             <Pagination
               text="Movimientos por página"
@@ -883,45 +1051,56 @@ const MovimientosPage = () => {
               totalItems={filteredExpenses.length}
             />
           )}
-        </div>
+        </Box>
+
+        {/* Modal para eliminar categoría */}
         <Modal
           isOpen={isCategoryDeleteModalOpen}
           onClose={() => setIsCategoryDeleteModalOpen(false)}
           title="Eliminar Categoría"
-          bgColor="bg-white dark:bg-gray_b"
-          zIndex={"z-60"}
           buttons={
             <>
               <Button
-                text="Confirmar"
-                colorText="text-white dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-red_m border-b-1 dark:bg-blue_b"
-                colorBgHover="hover:bg-red_b hover:dark:bg-blue_m"
+                variant="contained"
                 onClick={() => {
                   if (categoryToDelete) {
                     handleDeleteCategory(categoryToDelete);
                   }
                 }}
-              />
+                sx={{
+                  backgroundColor: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.dark",
+                  },
+                }}
+              >
+                Confirmar
+              </Button>
               <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => setIsCategoryDeleteModalOpen(false)}
-              />
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "divider",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.secondary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
             </>
           }
         >
-          <div>
-            <p>
-              ¿Está seguro que desea eliminar la categoría{" "}
-              <span className="font-bold">{categoryToDelete?.name}</span>?
-            </p>
-          </div>
+          <Typography>
+            ¿Está seguro que desea eliminar la categoría{" "}
+            <span style={{ fontWeight: "bold" }}>{categoryToDelete?.name}</span>
+            ?
+          </Typography>
         </Modal>
+
+        {/* Modal para nuevo/editar movimiento */}
         <Modal
           isOpen={isOpenModal}
           onClose={() => {
@@ -930,168 +1109,147 @@ const MovimientosPage = () => {
           }}
           title={newExpense.amount ? "Editar Movimiento" : "Nuevo Movimiento"}
           buttons={
-            <div className="flex justify-end space-x-4">
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                text={newExpense.date ? "Actualizar" : "Guardar"}
-                colorText="text-white"
-                colorTextHover="text-white"
+                variant="contained"
                 onClick={handleAddExpense}
-                hotkey="Enter"
-                title="Guardar"
-              />
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.dark,
+                  },
+                }}
+              >
+                {newExpense.date ? "Actualizar" : "Guardar"}
+              </Button>
               <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => {
                   setIsOpenModal(false);
                   resetExpenseForm();
                 }}
-                hotkey="Escape"
-                title="Cancelar"
-              />
-            </div>
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "divider",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.secondary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+            </Box>
           }
         >
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-4">
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Tipo*
-                </label>
-                <Select
-                  options={[
-                    { value: "INGRESO", label: "Ingreso" },
-                    { value: "EGRESO", label: "Egreso" },
-                  ]}
-                  value={{
-                    value: newExpense.type,
-                    label: newExpense.type === "INGRESO" ? "Ingreso" : "Egreso",
-                  }}
-                  onChange={(option) => {
-                    setNewExpense({
-                      ...newExpense,
-                      type: option?.value as "INGRESO" | "EGRESO",
-                    });
-                    loadCategories();
-                  }}
-                  className="text-gray_b"
-                />
-              </div>
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Proveedor
-                </label>
-                <Select
-                  options={suppliers.map((s) => ({
-                    value: s.id,
-                    label: s.companyName,
-                  }))}
-                  noOptionsMessage={() => "Sin opciones"}
-                  value={selectedSupplier}
-                  onChange={(option) => {
-                    setSelectedSupplier(option);
-                    setNewExpense((prev) => ({
-                      ...prev,
-                      supplier: option?.label || "",
-                    }));
-                  }}
-                  isClearable
-                  placeholder="Seleccionar proveedor"
-                  className="text-gray_b"
-                  classNamePrefix="react-select"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Categoría*
-                </label>
-                <Select
-                  placeholder="Seleccionar categoría*"
-                  options={categories.map((c) => ({
-                    value: c.name,
-                    label: c.name,
-                    category: c,
-                  }))}
-                  noOptionsMessage={() => "Sin opciones"}
-                  value={
-                    newExpense.category
-                      ? {
-                          value: newExpense.category,
-                          label: newExpense.category,
-                          category: categories.find(
-                            (c) => c.name === newExpense.category
-                          ),
-                        }
-                      : null
-                  }
-                  onChange={(option) => {
-                    setNewExpense({
-                      ...newExpense,
-                      category: option?.value || "",
-                    });
-                    // Forzar re-render del Select
-                    setCategories([...categories]);
-                  }}
-                  formatOptionLabel={({ label, category }) => (
-                    <div className="flex justify-between items-center w-full">
-                      <span>{label}</span>
-                      {category && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setCategoryToDelete(category);
-                            setIsCategoryDeleteModalOpen(true);
-                          }}
-                          className="text-red_b hover:text-red_m ml-2"
-                          title="Eliminar categoría"
-                        >
-                          <Trash size={18} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  className="w-full text-gray_b"
-                  classNamePrefix="react-select"
-                />
-              </div>
-              {newExpense.category === "" && (
-                <div className="w-full flex items-center gap-2 ">
-                  <Input
-                    label="Crear categoría"
-                    type="text"
-                    name="name"
-                    placeholder="Ej: Alquiler, Servicios, Insumos"
-                    value={toCapitalize(newCategory.name)}
-                    onChange={(e) =>
-                      setNewCategory({
-                        ...newCategory,
-                        name: toCapitalize(e.target.value),
-                      })
-                    }
-                  />
-                  <Button
-                    text="Agregar"
-                    icon={<Plus size={18} />}
-                    colorText="text-white"
-                    colorTextHover="text-white"
-                    colorBg="bg-blue_b"
-                    colorBgHover="hover:bg-blue_m"
-                    px="px-2"
-                    py="py-1 mt-5"
-                    onClick={handleAddCategory}
-                    disabled={!newCategory.name.trim()}
-                  />
-                </div>
-              )}
-            </div>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Select
+                label="Tipo*"
+                options={[
+                  { value: "INGRESO", label: "Ingreso" },
+                  { value: "EGRESO", label: "Egreso" },
+                ]}
+                value={newExpense.type}
+                onChange={(value) => {
+                  setNewExpense({
+                    ...newExpense,
+                    type: value as "INGRESO" | "EGRESO",
+                  });
+                  loadCategories();
+                }}
+              />
+              <Select
+                label="Proveedor"
+                options={[
+                  { value: "", label: "Seleccionar proveedor" },
+                  ...suppliers.map((supplier) => ({
+                    value: supplier.companyName,
+                    label: supplier.companyName,
+                  })),
+                ]}
+                value={selectedSupplier}
+                onChange={(value) => {
+                  setSelectedSupplier(value);
+                  setNewExpense((prev) => ({
+                    ...prev,
+                    supplier: value,
+                  }));
+                }}
+              />
+            </Box>
 
-            <div className="flex items-center gap-4">
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <Select
+                  label="Categoría*"
+                  options={[
+                    { value: "", label: "Seleccionar categoría" },
+                    ...categories.map((category) => ({
+                      value: category.name,
+                      label: category.name,
+                    })),
+                  ]}
+                  value={newExpense.category}
+                  onChange={(value) => {
+                    setNewExpense({
+                      ...newExpense,
+                      category: value,
+                    });
+                  }}
+                />
+              </Box>
+
+              {/* Campo para crear nueva categoría - SIEMPRE VISIBLE */}
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  alignItems: "flex-end",
+                  p: 1.5,
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.05)"
+                      : "rgba(0,0,0,0.02)",
+                  borderRadius: 1,
+                  border: `1px dashed ${theme.palette.divider}`,
+                }}
+              >
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Crear nueva categoría"
+                  placeholder="Ingrese nombre de nueva categoría (Ej: Alquiler, Servicios, Insumos)"
+                  value={toCapitalize(newCategory.name)}
+                  onChange={(e) =>
+                    setNewCategory({
+                      ...newCategory,
+                      name: toCapitalize(e.target.value),
+                    })
+                  }
+                  helperText="La categoría se agregará y seleccionará automáticamente"
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddCategory}
+                  disabled={!newCategory.name.trim()}
+                  sx={{
+                    backgroundColor: theme.palette.success.main,
+                    "&:hover": {
+                      backgroundColor: theme.palette.success.dark,
+                    },
+                    minWidth: "120px",
+                    height: "40px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Crear Categoría
+                </Button>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 2 }}>
               <InputCash
                 label="Monto*"
                 value={newExpense.amount}
@@ -1099,28 +1257,20 @@ const MovimientosPage = () => {
                   setNewExpense({ ...newExpense, amount: value })
                 }
               />
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Forma de pago*
-                </label>
-                <Select
-                  options={paymentOptions}
-                  value={paymentOptions.find(
-                    (o) => o.value === newExpense.paymentMethod
-                  )}
-                  onChange={(option) =>
-                    setNewExpense({
-                      ...newExpense,
-                      paymentMethod:
-                        (option?.value as PaymentMethod) || "EFECTIVO",
-                    })
-                  }
-                  className="text-gray_b"
-                  classNamePrefix="react-select"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
+              <Select
+                label="Forma de pago*"
+                options={paymentOptions}
+                value={newExpense.paymentMethod}
+                onChange={(value) =>
+                  setNewExpense({
+                    ...newExpense,
+                    paymentMethod: value as PaymentMethod,
+                  })
+                }
+              />
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 2 }}>
               <CustomDatePicker
                 value={newExpense.date}
                 onChange={(newDate) => {
@@ -1130,75 +1280,87 @@ const MovimientosPage = () => {
                   });
                 }}
               />
-
-              <Input
+              <TextField
+                fullWidth
+                size="small"
                 label="Descripción*"
-                type="text"
-                name="description"
                 placeholder="Concepto"
                 value={newExpense.description}
                 onChange={(e) =>
                   setNewExpense({ ...newExpense, description: e.target.value })
                 }
               />
-            </div>
-          </div>
+            </Box>
 
-          {newExpense.paymentMethod === "TARJETA" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Cuotas"
-                type="number"
-                name="installments"
-                placeholder="Número de cuotas"
-                value={newExpense.installments?.toString() || "1"}
-                onChange={(e) =>
-                  setNewExpense({
-                    ...newExpense,
-                    installments: parseInt(e.target.value) || 1,
-                  })
-                }
-              />
-              <div className="flex items-end">
-                <p className="text-sm text-gray_m">
-                  {(newExpense.installments ?? 1) > 1
-                    ? `${formatCurrency(
-                        newExpense.amount / (newExpense.installments ?? 1)
-                      )} por cuota`
-                    : "Pago en una sola cuota"}
-                </p>
-              </div>
-            </div>
-          )}
+            {newExpense.paymentMethod === "TARJETA" && (
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Cuotas"
+                  type="number"
+                  placeholder="Número de cuotas"
+                  value={newExpense.installments?.toString() || "1"}
+                  onChange={(e) =>
+                    setNewExpense({
+                      ...newExpense,
+                      installments: parseInt(e.target.value) || 1,
+                    })
+                  }
+                />
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Typography variant="body2">
+                    {(newExpense.installments ?? 1) > 1
+                      ? `${formatCurrency(
+                          newExpense.amount / (newExpense.installments ?? 1)
+                        )} por cuota`
+                      : "Pago en una sola cuota"}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
         </Modal>
 
-        {/* Modal de confirmación para eliminar */}
+        {/* Modal de confirmación para eliminar movimiento */}
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
           title="Confirmar Eliminación"
           buttons={
-            <div className="flex justify-end space-x-4">
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                text="Eliminar"
-                colorText="text-white"
-                colorTextHover="text-white"
-                colorBg="bg-red_m"
-                colorBgHover="hover:bg-red_b"
+                variant="contained"
                 onClick={handleDeleteExpense}
-              />
+                sx={{
+                  backgroundColor: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.dark",
+                  },
+                }}
+              >
+                Eliminar
+              </Button>
               <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => setIsDeleteModalOpen(false)}
-              />
-            </div>
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "divider",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.secondary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+            </Box>
           }
         >
-          <p>¿Está seguro que desea eliminar el movimiento?</p>
+          <Typography>
+            ¿Está seguro que desea eliminar el movimiento?
+          </Typography>
         </Modal>
 
         {/* Modal de estadísticas */}
@@ -1208,200 +1370,226 @@ const MovimientosPage = () => {
           title="Estadísticas de Movimientos"
           buttons={
             <Button
-              text="Cerrar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:dark:text-white"
-              colorBg="bg-transparent dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+              variant="outlined"
               onClick={() => setIsStatsModalOpen(false)}
-            />
+              sx={{
+                color: "text.secondary",
+                borderColor: "divider",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                  borderColor: "text.secondary",
+                },
+              }}
+            >
+              Cerrar
+            </Button>
           }
         >
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-semibold mb-2">
-                Distribución de Ingresos por Categoría
-              </h3>
-              <div className="h-54">
-                <Pie
-                  data={{
-                    labels: getCategoryStats()
-                      .filter((item) => item.totalIncome > 0)
-                      .map((item) => item.category),
-                    datasets: [
-                      {
-                        data: getCategoryStats()
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              <Card sx={{ flex: "1 1 300px" }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Distribución de Ingresos por Categoría
+                  </Typography>
+                  <Box sx={{ height: 300 }}>
+                    <Pie
+                      data={{
+                        labels: getCategoryStats()
                           .filter((item) => item.totalIncome > 0)
-                          .map((item) => item.totalIncome),
-                        backgroundColor: [
-                          "#AA6384",
-                          "#36A2EB",
-                          "#FFCE56",
-                          "#4BC0C0",
-                          "#9966FF",
-                          "#FF9F40",
-                          "#8AC24A",
-                          "#607D8B",
+                          .map((item) => item.category),
+                        datasets: [
+                          {
+                            data: getCategoryStats()
+                              .filter((item) => item.totalIncome > 0)
+                              .map((item) => item.totalIncome),
+                            backgroundColor: [
+                              "#AA6384",
+                              "#36A2EB",
+                              "#FFCE56",
+                              "#4BC0C0",
+                              "#9966FF",
+                              "#FF9F40",
+                              "#8AC24A",
+                              "#607D8B",
+                            ],
+                          },
                         ],
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: {
-                      tooltip: {
-                        callbacks: {
-                          label: function (context) {
-                            return `${context.label}: ${formatCurrency(
-                              context.raw as number
-                            )} (${context.formattedValue}%)`;
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          tooltip: {
+                            callbacks: {
+                              label: function (context) {
+                                return `${context.label}: ${formatCurrency(
+                                  context.raw as number
+                                )} (${context.formattedValue}%)`;
+                              },
+                            },
                           },
                         },
-                      },
-                    },
-                  }}
-                />
-              </div>
-            </div>
+                      }}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
 
-            <div>
-              <h3 className="font-semibold mb-2">
-                Distribución de Egresos por Categoría
-              </h3>
-              <div className="h-54">
-                <Pie
-                  data={{
-                    labels: getCategoryStats()
-                      .filter((item) => item.totalExpense > 0)
-                      .map((item) => item.category),
-                    datasets: [
-                      {
-                        data: getCategoryStats()
+              <Card sx={{ flex: "1 1 300px" }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Distribución de Egresos por Categoría
+                  </Typography>
+                  <Box sx={{ height: 300 }}>
+                    <Pie
+                      data={{
+                        labels: getCategoryStats()
                           .filter((item) => item.totalExpense > 0)
-                          .map((item) => item.totalExpense),
-                        backgroundColor: [
-                          "#AA6384",
-                          "#36A2EB",
-                          "#FFCE56",
-                          "#4BC0C0",
-                          "#9966FF",
-                          "#FF9F40",
-                          "#8AC24A",
-                          "#607D8B",
+                          .map((item) => item.category),
+                        datasets: [
+                          {
+                            data: getCategoryStats()
+                              .filter((item) => item.totalExpense > 0)
+                              .map((item) => item.totalExpense),
+                            backgroundColor: [
+                              "#AA6384",
+                              "#36A2EB",
+                              "#FFCE56",
+                              "#4BC0C0",
+                              "#9966FF",
+                              "#FF9F40",
+                              "#8AC24A",
+                              "#607D8B",
+                            ],
+                          },
                         ],
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: {
-                      tooltip: {
-                        callbacks: {
-                          label: function (context) {
-                            return `${context.label}: ${formatCurrency(
-                              context.raw as number
-                            )} (${context.formattedValue}%)`;
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          tooltip: {
+                            callbacks: {
+                              label: function (context) {
+                                return `${context.label}: ${formatCurrency(
+                                  context.raw as number
+                                )} (${context.formattedValue}%)`;
+                              },
+                            },
                           },
                         },
-                      },
-                    },
-                  }}
-                />
-              </div>
-            </div>
+                      }}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
 
-            <div>
-              <h3 className="font-semibold mb-2">
-                Comparativa Mensual de Ingresos - {selectedYear}
-              </h3>
-              <div className="h-54">
-                <Bar
-                  data={{
-                    labels: getMonthlyComparison().map((item) => item.month),
-                    datasets: [
-                      {
-                        label: "Ingresos",
-                        data: getMonthlyComparison().map(
-                          (item) => item.totalIncome
+            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              <Card sx={{ flex: "1 1 300px" }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Comparativa Mensual de Ingresos - {selectedYear}
+                  </Typography>
+                  <Box sx={{ height: 300 }}>
+                    <Bar
+                      data={{
+                        labels: getMonthlyComparison().map(
+                          (item) => item.month
                         ),
-                        backgroundColor: "#4BC0C0",
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: {
-                      tooltip: {
-                        callbacks: {
-                          label: function (context) {
-                            return `Ingresos: ${formatCurrency(
-                              context.raw as number
-                            )}`;
+                        datasets: [
+                          {
+                            label: "Ingresos",
+                            data: getMonthlyComparison().map(
+                              (item) => item.totalIncome
+                            ),
+                            backgroundColor: "#4BC0C0",
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          tooltip: {
+                            callbacks: {
+                              label: function (context) {
+                                return `Ingresos: ${formatCurrency(
+                                  context.raw as number
+                                )}`;
+                              },
+                            },
                           },
                         },
-                      },
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          callback: function (value) {
-                            return formatCurrency(value as number);
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            ticks: {
+                              callback: function (value) {
+                                return formatCurrency(value as number);
+                              },
+                            },
                           },
                         },
-                      },
-                    },
-                  }}
-                />
-              </div>
-            </div>
+                      }}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
 
-            <div>
-              <h3 className="font-semibold mb-2">
-                Comparativa Mensual de Egresos - {selectedYear}
-              </h3>
-              <div className="h-54">
-                <Bar
-                  data={{
-                    labels: getMonthlyComparison().map((item) => item.month),
-                    datasets: [
-                      {
-                        label: "Egresos",
-                        data: getMonthlyComparison().map(
-                          (item) => item.totalExpense
+              <Card sx={{ flex: "1 1 300px" }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Comparativa Mensual de Egresos - {selectedYear}
+                  </Typography>
+                  <Box sx={{ height: 300 }}>
+                    <Bar
+                      data={{
+                        labels: getMonthlyComparison().map(
+                          (item) => item.month
                         ),
-                        backgroundColor: "#FF6384",
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: {
-                      tooltip: {
-                        callbacks: {
-                          label: function (context) {
-                            return `Egresos: ${formatCurrency(
-                              context.raw as number
-                            )}`;
+                        datasets: [
+                          {
+                            label: "Egresos",
+                            data: getMonthlyComparison().map(
+                              (item) => item.totalExpense
+                            ),
+                            backgroundColor: "#FF6384",
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          tooltip: {
+                            callbacks: {
+                              label: function (context) {
+                                return `Egresos: ${formatCurrency(
+                                  context.raw as number
+                                )}`;
+                              },
+                            },
                           },
                         },
-                      },
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          callback: function (value) {
-                            return formatCurrency(value as number);
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            ticks: {
+                              callback: function (value) {
+                                return formatCurrency(value as number);
+                              },
+                            },
                           },
                         },
-                      },
-                    },
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+                      }}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          </Box>
         </Modal>
 
         {/* Modal para ver comprobante */}
@@ -1412,16 +1600,22 @@ const MovimientosPage = () => {
             title="Comprobante del Movimiento"
             buttons={
               <Button
-                text="Cerrar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => setReceiptPreview(null)}
-              />
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "divider",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.secondary",
+                  },
+                }}
+              >
+                Cerrar
+              </Button>
             }
           >
-            <div className="flex justify-center">
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
               {receiptPreview.startsWith("data:image") ? (
                 <Image
                   src={receiptPreview}
@@ -1429,24 +1623,40 @@ const MovimientosPage = () => {
                   className="max-h-[70vh] max-w-full object-contain"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center p-8">
-                  <FileText
-                    size={64}
-                    className="text-blue_b dark:text-blue_l mb-4"
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    p: 8,
+                  }}
+                >
+                  <DescriptionIcon
+                    sx={{ fontSize: 64, color: "primary.main", mb: 2 }}
                   />
-                  <p className="text-lg font-medium text-gray_b dark:text-white">
+                  <Typography
+                    variant="h6"
+                    sx={{ color: "text.primary", mb: 2 }}
+                  >
                     Comprobante en formato PDF
-                  </p>
-                  <a
+                  </Typography>
+                  <Button
+                    variant="contained"
                     href={receiptPreview}
                     download="comprobante.pdf"
-                    className="mt-4 px-4 py-2 bg-blue_b text-white rounded hover:bg-blue_m transition-colors"
+                    sx={{
+                      backgroundColor: "primary.main",
+                      "&:hover": {
+                        backgroundColor: "primary.dark",
+                      },
+                    }}
                   >
                     Descargar PDF
-                  </a>
-                </div>
+                  </Button>
+                </Box>
               )}
-            </div>
+            </Box>
           </Modal>
         )}
 
@@ -1456,7 +1666,7 @@ const MovimientosPage = () => {
           message={notificationMessage}
           type={type}
         />
-      </div>
+      </Box>
     </ProtectedRoute>
   );
 };

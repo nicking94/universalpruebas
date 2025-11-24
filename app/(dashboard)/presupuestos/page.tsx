@@ -14,19 +14,10 @@ import {
 } from "@/app/lib/types/types";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Modal from "@/app/components/Modal";
-import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
 import Pagination from "@/app/components/Pagination";
-import {
-  Edit,
-  Plus,
-  Trash,
-  FileText,
-  Download,
-  StickyNote,
-  ShoppingCart,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import SearchBar from "@/app/components/SearchBar";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
@@ -41,6 +32,31 @@ import { ConvertToSaleModal } from "@/app/components/ConvertToSaleModal";
 import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 import { ensureCashIsOpen } from "@/app/lib/utils/cash";
 import { useRouter } from "next/navigation";
+
+// Material-UI imports
+import {
+  Button,
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton,
+  useTheme,
+} from "@mui/material";
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Download as DownloadIcon,
+  Note as NoteIcon,
+  ShoppingCart as ShoppingCartIcon,
+} from "@mui/icons-material";
 
 const PresupuestosPage = () => {
   const { rubro } = useRubro();
@@ -93,6 +109,7 @@ const PresupuestosPage = () => {
     name: string;
   } | null>(null);
   const router = useRouter();
+  const theme = useTheme();
 
   const CONVERSION_FACTORS = {
     A: { base: "A", factor: 1 },
@@ -273,12 +290,12 @@ const PresupuestosPage = () => {
     const remaining = total - (isNaN(depositValue) ? 0 : depositValue);
     return { total, remaining };
   };
+
   const handleNewBudgetClick = async () => {
     const { needsRedirect } = await ensureCashIsOpen();
 
     if (needsRedirect) {
       router.push(`/caja-diaria`);
-
       return;
     }
 
@@ -330,6 +347,7 @@ const PresupuestosPage = () => {
       };
     }
   };
+
   const updateStockAfterSale = (
     productId: number,
     soldQuantity: number,
@@ -344,6 +362,7 @@ const PresupuestosPage = () => {
 
     return convertFromBaseUnit(newStockInBase, product.unit);
   };
+
   const handleConvertToSale = async (paymentMethods: PaymentSplit[]) => {
     if (!budgetToConvert) return;
 
@@ -525,6 +544,7 @@ const PresupuestosPage = () => {
       showNotification("Error al convertir presupuesto a venta", "error");
     }
   };
+
   const handleProductSelect = (newValue: MultiValue<ProductOption>) => {
     const selectedProducts = Array.from(newValue).map((option) => {
       const product = products.find((p) => p.id === option.value);
@@ -605,6 +625,7 @@ const PresupuestosPage = () => {
       };
     });
   };
+
   const handleUnitChange = (
     productId: number,
     selectedOption: SingleValue<UnitOption>,
@@ -962,18 +983,20 @@ const PresupuestosPage = () => {
         ).toLocaleDateString("es-ES")}.pdf`}
       >
         {({ loading }) => (
-          <Button
-            icon={<Download size={18} />}
-            colorText="text-gray_b"
-            colorTextHover="hover:text-white"
-            colorBg="bg-transparent"
-            colorBgHover="hover:bg-blue_b"
-            px="px-1"
-            py="py-1"
-            minwidth="min-w-0"
+          <IconButton
+            size="small"
             disabled={loading}
             title="Descargar presupuesto"
-          />
+            sx={{
+              color: theme.palette.text.secondary,
+              "&:hover": {
+                backgroundColor: theme.palette.primary.main,
+                color: "white",
+              },
+            }}
+          >
+            <DownloadIcon fontSize="small" />
+          </IconButton>
         )}
       </PDFDownloadLink>
     );
@@ -1016,203 +1039,335 @@ const PresupuestosPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <h1 className="text-lg 2xl:text-xl font-semibold mb-2">Presupuestos</h1>
-        <div className="flex justify-between mb-2">
-          <div className="w-full max-w-md">
+      <Box
+        sx={{
+          px: 5,
+          py: 2,
+          color: "text.secondary",
+          height: "calc(100vh - 80px)",
+        }}
+      >
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 600, mb: 2 }}>
+          Presupuestos
+        </Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+          <Box sx={{ width: "100%", maxWidth: "400px" }}>
             <SearchBar onSearch={handleSearch} />
-          </div>
+          </Box>
           {rubro !== "Todos los rubros" && (
             <Button
-              icon={<Plus className="w-4 h-4" />}
-              text="Nuevo Presupuesto"
-              colorText="text-white"
-              colorTextHover="text-white mt-3"
+              variant="contained"
+              startIcon={<AddIcon />}
               onClick={handleNewBudgetClick}
-            />
+              sx={{
+                backgroundColor: theme.palette.primary.main,
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.dark,
+                },
+              }}
+            >
+              Nuevo Presupuesto
+            </Button>
           )}
-        </div>
-        <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
-          <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
-            <table className="w-full table-auto divide-y divide-gray_xl">
-              <thead className="bg-gradient-to-bl from-blue_m to-blue_b text-white text-xs">
-                <tr>
-                  <th className="p-2 text-start">Cliente</th>
-                  <th className="p-2 text-center">Teléfono</th>
-                  <th className="p-2 text-center">Total</th>
-                  <th className="p-2 text-center">Fecha Presupuesto</th>
-                  <th className="p-2 text-center">Fecha Expiración</th>
-                  <th className="p-2 text-center">Estado</th>
-                  {rubro !== "Todos los rubros" && (
-                    <th className="p-2 text-center w-40 max-w-40">Acciones</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white text-gray_b divide-y divide-gray_xl ">
-                {currentBudgets.length > 0 ? (
-                  currentBudgets.map((budget) => (
-                    <tr
-                      key={budget.id}
-                      className="hover:bg-gray_xxl dark:hover:bg-blue_xl transition-all duration-300 text-xs 2xl:text-sm"
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            height: "calc(100vh - 200px)",
+          }}
+        >
+          <Box sx={{ maxHeight: "calc(100vh - 250px)", overflow: "auto" }}>
+            <TableContainer component={Paper}>
+              <Table sx={{ minWidth: 650 }} size="small">
+                <TableHead>
+                  <TableRow
+                    sx={{
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                      color: "white",
+                    }}
+                  >
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Cliente
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
                     >
-                      <td className="font-semibold p-2 border border-gray_xl text-start">
-                        {budget.customerName}
-                      </td>
-                      <td className="p-2 border border-gray_xl text-center ">
-                        {budget.customerPhone || "-"}
-                      </td>
-
-                      <td className="p-2 border border-gray_xl text-center">
-                        {budget.status === "cobrado" ? (
-                          <div className="flex flex-col items-center">
-                            <span className="line-through text-gray_l">
-                              $
-                              {(
-                                budget.total -
+                      Teléfono
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Total
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Fecha Presupuesto
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Fecha Expiración
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "white",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Estado
+                    </TableCell>
+                    {rubro !== "Todos los rubros" && (
+                      <TableCell
+                        sx={{
+                          color: "white",
+                          fontWeight: "bold",
+                          textAlign: "center",
+                          width: 160,
+                        }}
+                      >
+                        Acciones
+                      </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {currentBudgets.length > 0 ? (
+                    currentBudgets.map((budget) => (
+                      <TableRow
+                        key={budget.id}
+                        sx={{
+                          "&:hover": {
+                            backgroundColor:
+                              theme.palette.mode === "dark"
+                                ? "primary.light"
+                                : "grey.100",
+                          },
+                          transition: "all 0.3s",
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: "medium" }}>
+                          {budget.customerName}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {budget.customerPhone || "-"}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {budget.status === "cobrado" ? (
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  textDecoration: "line-through",
+                                  color: "text.disabled",
+                                }}
+                              >
+                                {formatCurrency(
+                                  budget.total -
+                                    (budget.deposit
+                                      ? parseFloat(budget.deposit)
+                                      : 0)
+                                )}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "primary.main" }}
+                              >
+                                (Cobrado)
+                              </Typography>
+                            </Box>
+                          ) : (
+                            formatCurrency(
+                              budget.total -
                                 (budget.deposit
                                   ? parseFloat(budget.deposit)
                                   : 0)
-                              ).toFixed(2)}
-                            </span>
-                            <span className="text-xs text-blue_b font-normal">
-                              (Cobrado)
-                            </span>
-                          </div>
-                        ) : (
-                          `$${(
-                            budget.total -
-                            (budget.deposit ? parseFloat(budget.deposit) : 0)
-                          ).toFixed(2)}`
-                        )}
-                      </td>
-                      <td className="p-2 border border-gray_xl text-center">
-                        {new Date(budget.createdAt).toLocaleDateString("es-AR")}
-                      </td>
-                      <td className="p-2 border border-gray_xl text-center">
-                        {budget.expirationDate
-                          ? new Date(budget.expirationDate).toLocaleDateString(
-                              "es-AR"
                             )
-                          : "-"}
-                      </td>
-
-                      <td className="p-2 border border-gray_xl text-center">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            budget.status === "aprobado"
-                              ? "bg-green_xl text-green_b"
-                              : budget.status === "rechazado"
-                              ? "bg-red_xl text-red_b"
-                              : budget.status === "cobrado"
-                              ? "bg-blue_xl text-blue_b"
-                              : "bg-yellow_xl text-yellow_b"
-                          }`}
-                        >
-                          {budget.status}
-                        </span>
-                      </td>
-                      {rubro !== "Todos los rubros" && (
-                        <td className="p-2 border border-gray_xl">
-                          <div className="flex justify-center items-center gap-2 h-full">
-                            <Button
-                              icon={<ShoppingCart size={18} />}
-                              colorText={
-                                budget.status === "cobrado"
-                                  ? "text-gray_m"
-                                  : "text-gray_b"
-                              }
-                              colorTextHover={
-                                budget.status === "cobrado"
-                                  ? ""
-                                  : "hover:text-white"
-                              }
-                              colorBg="bg-transparent"
-                              colorBgHover={
-                                budget.status === "cobrado"
-                                  ? ""
-                                  : "hover:bg-green_m"
-                              }
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => {
-                                if (budget.status !== "cobrado") {
-                                  setBudgetToConvert(budget);
-                                  setIsConvertModalOpen(true);
-                                }
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {new Date(budget.createdAt).toLocaleDateString(
+                            "es-AR"
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          {budget.expirationDate
+                            ? new Date(
+                                budget.expirationDate
+                              ).toLocaleDateString("es-AR")
+                            : "-"}
+                        </TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                          <Chip
+                            label={budget.status}
+                            size="small"
+                            color={
+                              budget.status === "aprobado"
+                                ? "success"
+                                : budget.status === "rechazado"
+                                ? "error"
+                                : budget.status === "cobrado"
+                                ? "primary"
+                                : "warning"
+                            }
+                            variant="filled"
+                          />
+                        </TableCell>
+                        {rubro !== "Todos los rubros" && (
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "center",
+                                gap: 1,
                               }}
-                              disabled={budget.status === "cobrado"}
-                              title={
-                                budget.status === "cobrado"
-                                  ? "Presupuesto ya cobrado"
-                                  : "Cobrar como venta"
-                              }
-                            />
-                            {handleDownloadPDF(budget)}
-                            <Button
-                              icon={<StickyNote size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              colorBgHover="hover:bg-blue_b"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => handleShowNotes(budget)}
-                              disabled={!budget.customerId}
-                              title={
-                                !budget.customerId
-                                  ? "No hay presupuesto asociado"
-                                  : "Ver notas del presupuesto"
-                              }
-                            />
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  if (budget.status !== "cobrado") {
+                                    setBudgetToConvert(budget);
+                                    setIsConvertModalOpen(true);
+                                  }
+                                }}
+                                disabled={budget.status === "cobrado"}
+                                title={
+                                  budget.status === "cobrado"
+                                    ? "Presupuesto ya cobrado"
+                                    : "Cobrar como venta"
+                                }
+                                sx={{
+                                  color:
+                                    budget.status === "cobrado"
+                                      ? "text.disabled"
+                                      : "text.secondary",
+                                  "&:hover":
+                                    budget.status !== "cobrado"
+                                      ? {
+                                          backgroundColor: "success.main",
+                                          color: "white",
+                                        }
+                                      : {},
+                                }}
+                              >
+                                <ShoppingCartIcon fontSize="small" />
+                              </IconButton>
 
-                            <Button
-                              icon={<Edit size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              colorBgHover="hover:bg-blue_b"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => handleEditClick(budget)}
-                              title="Editar presupuesto"
-                            />
-                            <Button
-                              icon={<Trash size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              colorBgHover="hover:bg-red_m"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => handleDeleteClick(budget)}
-                              title="Eliminar presupuesto"
-                            />
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                ) : (
-                  <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                    <td colSpan={7} className="py-4 text-center">
-                      <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                        <FileText size={64} className="mb-4 text-gray_m" />
-                        <p className="text-gray_m">
-                          {searchQuery
-                            ? "No se encontraron presupuestos"
-                            : "No hay presupuestos registrados"}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                              {handleDownloadPDF(budget)}
+
+                              <IconButton
+                                size="small"
+                                onClick={() => handleShowNotes(budget)}
+                                disabled={!budget.customerId}
+                                title={
+                                  !budget.customerId
+                                    ? "No hay presupuesto asociado"
+                                    : "Ver notas del presupuesto"
+                                }
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "primary.main",
+                                    color: "white",
+                                  },
+                                }}
+                              >
+                                <NoteIcon fontSize="small" />
+                              </IconButton>
+
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEditClick(budget)}
+                                title="Editar presupuesto"
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "primary.main",
+                                    color: "white",
+                                  },
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteClick(budget)}
+                                title="Eliminar presupuesto"
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "error.main",
+                                    color: "white",
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        sx={{ py: 4, textAlign: "center" }}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            color: "text.disabled",
+                          }}
+                        >
+                          <FileText
+                            size={64}
+                            style={{
+                              marginBottom: 16,
+                              color: theme.palette.text.disabled,
+                            }}
+                          />
+                          <Typography>
+                            {searchQuery
+                              ? "No se encontraron presupuestos"
+                              : "No hay presupuestos registrados"}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
 
           {filteredBudgets.length > 0 && (
             <Pagination
@@ -1221,7 +1376,7 @@ const PresupuestosPage = () => {
               totalItems={filteredBudgets.length}
             />
           )}
-        </div>
+        </Box>
 
         {isConvertModalOpen && budgetToConvert && (
           <ConvertToSaleModal
@@ -1231,6 +1386,7 @@ const PresupuestosPage = () => {
             onConfirm={handleConvertToSale}
           />
         )}
+
         <Modal
           isOpen={isModalOpen}
           onClose={() => {
@@ -1254,18 +1410,19 @@ const PresupuestosPage = () => {
           buttons={
             <>
               <Button
-                text={editingBudget ? "Actualizar" : "Crear"}
-                colorText="text-white"
-                colorTextHover="text-white"
+                variant="contained"
                 onClick={editingBudget ? handleUpdateBudget : handleAddBudget}
-                hotkey="enter"
-              />
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.dark,
+                  },
+                }}
+              >
+                {editingBudget ? "Actualizar" : "Crear"}
+              </Button>
               <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingBudget(null);
@@ -1283,11 +1440,21 @@ const PresupuestosPage = () => {
                   });
                   setSelectedCustomer(null);
                 }}
-                hotkey="esc"
-              />
+                sx={{
+                  color: theme.palette.text.secondary,
+                  borderColor: theme.palette.divider,
+                  "&:hover": {
+                    backgroundColor: theme.palette.action.hover,
+                    borderColor: theme.palette.text.secondary,
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
             </>
           }
         >
+          {/* El contenido del modal se mantiene igual */}
           <div className="space-y-2">
             <div className="flex items-center space-x-4">
               <div className="w-full">
@@ -1312,7 +1479,7 @@ const PresupuestosPage = () => {
               <Input
                 label="Nombre del cliente"
                 value={newBudget.customerName}
-                onChange={(e) =>
+                onRawChange={(e) =>
                   setNewBudget({ ...newBudget, customerName: e.target.value })
                 }
                 placeholder="Ingrese el nombre del cliente"
@@ -1322,7 +1489,7 @@ const PresupuestosPage = () => {
               <Input
                 label="Teléfono (opcional)"
                 value={newBudget.customerPhone || ""}
-                onChange={(e) =>
+                onRawChange={(e) =>
                   setNewBudget({
                     ...newBudget,
                     customerPhone: e.target.value,
@@ -1336,9 +1503,9 @@ const PresupuestosPage = () => {
             <div className="flex items-center space-x-4">
               <CustomDatePicker
                 label="Fecha de expiración"
-                value={newBudget.expirationDate}
+                value={newBudget.expirationDate || ""}
                 onChange={(date) =>
-                  setNewBudget({ ...newBudget, expirationDate: date })
+                  setNewBudget({ ...newBudget, expirationDate: date || "" })
                 }
               />
               <div className="w-full">
@@ -1515,7 +1682,7 @@ const PresupuestosPage = () => {
                                   value={
                                     item.quantity === 0 ? "" : item.quantity
                                   }
-                                  onChange={(e) => {
+                                  onRawChange={(e) => {
                                     const value = e.target.value;
                                     if (value === "") {
                                       handleQuantityChange(
@@ -1555,7 +1722,7 @@ const PresupuestosPage = () => {
                                   value={
                                     item.discount === 0 ? "" : item.discount
                                   }
-                                  onChange={(e) => {
+                                  onRawChange={(e) => {
                                     const value = e.target.value;
                                     if (
                                       value === "" ||
@@ -1603,14 +1770,20 @@ const PresupuestosPage = () => {
                                 )}
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap ">
-                                <button
+                                <IconButton
                                   onClick={() =>
                                     handleRemoveProduct(item.productId)
                                   }
-                                  className="text-red_m hover:text-red_b cursor-pointer w-full flex items-center justify-center"
+                                  size="small"
+                                  sx={{
+                                    color: "error.main",
+                                    "&:hover": {
+                                      color: "error.dark",
+                                    },
+                                  }}
                                 >
-                                  <Trash size={18} />
-                                </button>
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
                               </td>
                             </tr>
                           );
@@ -1625,7 +1798,7 @@ const PresupuestosPage = () => {
                         label="Seña en efectivo (opcional)"
                         type="number"
                         value={newBudget.deposit}
-                        onChange={(e) => {
+                        onRawChange={(e) => {
                           const value = e.target.value;
                           if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
                             const depositValue =
@@ -1676,6 +1849,7 @@ const PresupuestosPage = () => {
             </div>
           </div>
         </Modal>
+
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
@@ -1683,29 +1857,40 @@ const PresupuestosPage = () => {
           buttons={
             <>
               <Button
-                text="Eliminar"
-                colorText="text-white"
-                colorTextHover="text-white"
+                variant="contained"
                 onClick={handleConfirmDelete}
-                hotkey="enter"
-              />
+                sx={{
+                  backgroundColor: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.dark",
+                  },
+                }}
+              >
+                Eliminar
+              </Button>
               <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => setIsDeleteModalOpen(false)}
-                hotkey="esc"
-              />
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "divider",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.secondary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
             </>
           }
         >
-          <p>
+          <Typography>
             ¿Está seguro que desea eliminar el presupuesto de{" "}
             {budgetToDelete?.customerName}?
-          </p>
+          </Typography>
         </Modal>
+
         {selectedCustomerForNotes && (
           <CustomerNotes
             customerId={selectedCustomerForNotes.id}
@@ -1714,12 +1899,13 @@ const PresupuestosPage = () => {
             onClose={() => setNotesModalOpen(false)}
           />
         )}
+
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
         />
-      </div>
+      </Box>
     </ProtectedRoute>
   );
 };

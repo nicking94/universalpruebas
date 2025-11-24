@@ -1,3 +1,5 @@
+import { SxProps } from "@mui/material";
+
 export type Theme = {
   id: number;
   value: string;
@@ -67,6 +69,11 @@ export type SortDirection = "asc" | "desc";
 export type ButtonProps = {
   onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
   children?: React.ReactNode;
+  variant?: "contained" | "outlined" | "text";
+  color?: "primary" | "success" | "error" | "warning" | "info";
+  startIcon?: React.ReactNode;
+  endIcon?: React.ReactNode;
+  sx?: SxProps<Theme>;
   px?: string;
   py?: string;
   width?: string;
@@ -317,7 +324,6 @@ export type PaymentSplit = {
   method: PaymentMethod;
   amount: number;
   isDeposit?: boolean;
-  paymentMethod?: "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "CHEQUE" | "MIXTO";
 };
 
 export type MovementType = "INGRESO" | "EGRESO";
@@ -380,6 +386,8 @@ export type DailyCashMovement = {
   budgetId?: string;
   fromBudget?: boolean;
   expenseCategory?: string;
+
+  customerName?: string;
 };
 
 export type DailyCash = {
@@ -588,7 +596,6 @@ export type MonthOption = {
 export interface SerialPortRequestOptions {
   filters: SerialPortFilter[];
 }
-
 export interface SerialPortFilter {
   usbVendorId?: number;
   usbProductId?: number;

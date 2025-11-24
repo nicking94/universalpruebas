@@ -15,13 +15,31 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import Button from "./Button";
+
 import { useRouter, usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { MenuItemProps, SidebarProps } from "../lib/types/types";
 import { useEffect, useState } from "react";
 
 import { TbCashRegister } from "react-icons/tb";
+
+// Material-UI imports
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
+  Box,
+  Button,
+  IconButton,
+  Typography,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 const menuItems: MenuItemProps[] = [
   {
@@ -60,12 +78,84 @@ const menuItems: MenuItemProps[] = [
   },
 ];
 
+// Styled components - SIN isSidebarOpen aquí
+const MenuHeader = styled(Box)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  color: theme.palette.common.white,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: theme.spacing(1, 2),
+  boxShadow: theme.shadows[1],
+}));
+
+const StyledListItemButton = styled(ListItemButton, {
+  shouldForwardProp: (prop) => prop !== "isActive" && prop !== "hasSubmenu",
+})<{ isActive?: boolean; hasSubmenu?: boolean }>(
+  ({ theme, isActive, hasSubmenu }) => ({
+    margin: theme.spacing(0.5, 1),
+    borderRadius: theme.shape.borderRadius,
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+    ...(isActive && {
+      background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+      color: theme.palette.common.white,
+      boxShadow: theme.shadows[2],
+      "&:hover": {
+        background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.dark})`,
+      },
+    }),
+    ...(hasSubmenu && {
+      "& .MuiListItemText-root": {
+        flex: 1,
+      },
+    }),
+  })
+);
+
+const SubmenuContainer = styled(Box)(({ theme }) => ({
+  marginLeft: theme.spacing(3),
+  borderLeft: `2px solid ${theme.palette.primary.main}`,
+  paddingLeft: theme.spacing(1),
+}));
+
+const ImportExportButton = styled(Button)(({ theme }) => ({
+  width: "100%",
+  backgroundColor: theme.palette.primary.dark,
+  color: theme.palette.common.white,
+  textTransform: "uppercase",
+  fontSize: "0.75rem",
+  fontWeight: "bold",
+  padding: theme.spacing(1),
+  "&:hover": {
+    backgroundColor: theme.palette.primary.main,
+  },
+  [theme.breakpoints.up("xl")]: {
+    fontSize: "0.8rem",
+  },
+}));
+
 const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
   const router = useRouter();
   const pathname = usePathname();
   const [activeItem, setActiveItem] = useState<string>("");
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Mover SidebarDrawer DENTRO del componente para acceder a isSidebarOpen
+  const SidebarDrawer = styled(Drawer)(({ theme }) => ({
+    "& .MuiDrawer-paper": {
+      backgroundColor: theme.palette.background.paper,
+      borderRight: `1px solid ${theme.palette.divider}`,
+      boxShadow: theme.shadows[4],
+      overflowY: "auto",
+      transition: "all 0.3s ease",
+      width: isSidebarOpen ? 256 : 120, // 256px abierto, 120px cerrado
+    },
+  }));
 
   const toggleSubmenu = (label: string) => {
     setOpenSubmenus((prev) => {
@@ -99,6 +189,11 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
         router.push(href);
       }
     }
+
+    // Cerrar sidebar en móvil después de hacer clic
+    if (isMobile) {
+      toggleSidebar();
+    }
   };
 
   useEffect(() => {
@@ -116,7 +211,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
     setActiveItem(findActiveItem(items));
   }, [pathname, items]);
 
-  const renderMenuItem = (item: MenuItemProps) => {
+  const renderMenuItem = (item: MenuItemProps, level = 0) => {
     const hasSubmenu = item.submenu && item.submenu.length > 0;
     const isSubmenuOpen = openSubmenus.has(item.label);
     const isActive =
@@ -124,95 +219,156 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
       item.submenu?.some((subItem) => activeItem === subItem.label);
 
     return (
-      <div key={item.label} className="w-full text-md font-semibold">
-        <button
-          onClick={() =>
-            handleItemClick(item.label, item.href, item.target, hasSubmenu)
-          }
-          className={`${
-            isActive
-              ? " shadow-md shadow-gray_xl dark:shadow-gray_m bg-gradient-to-bl from-blue_m to-blue_b text-white dark:bg-gray_b"
-              : ""
-          } ${
-            isSidebarOpen ? "justify-start" : "justify-center"
-          } cursor-pointer flex items-center px-2 py-2 w-full hover:bg-blue_xl dark:hover:bg-gray_b transition-all duration-300`}
-        >
-          {item.icon}
-          {isSidebarOpen && (
-            <>
-              <span className="ml-3 flex-1 text-left">{item.label}</span>
-              {hasSubmenu &&
-                (isSubmenuOpen ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                ))}
-            </>
-          )}
-        </button>
+      <Box key={item.label} sx={{ width: "100%" }}>
+        <ListItem disablePadding>
+          <StyledListItemButton
+            isActive={isActive}
+            hasSubmenu={hasSubmenu}
+            onClick={() =>
+              handleItemClick(item.label, item.href, item.target, hasSubmenu)
+            }
+            sx={{
+              pl: 2 + level * 2,
+              justifyContent: isSidebarOpen ? "flex-start" : "center",
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: "auto",
+                color: isActive ? "common.white" : "text.primary",
+                mr: isSidebarOpen ? 2 : 0,
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+
+            {isSidebarOpen && (
+              <>
+                <ListItemText
+                  primary={
+                    <Typography
+                      variant="body2"
+                      fontWeight="medium"
+                      sx={{ flex: 1 }}
+                    >
+                      {item.label}
+                    </Typography>
+                  }
+                />
+                {hasSubmenu && (
+                  <Box sx={{ ml: 1 }}>
+                    {isSubmenuOpen ? (
+                      <ChevronDown size={16} />
+                    ) : (
+                      <ChevronRight size={16} />
+                    )}
+                  </Box>
+                )}
+              </>
+            )}
+          </StyledListItemButton>
+        </ListItem>
 
         {hasSubmenu && isSubmenuOpen && isSidebarOpen && item.submenu && (
-          <div className="ml-6 border-l-2 border-blue_m dark:border-blue_l space-y-1 ">
-            {item.submenu.map((subItem) => (
-              <button
-                key={subItem.label}
-                onClick={() =>
-                  handleItemClick(subItem.label, subItem.href, subItem.target)
-                }
-                className={`${
-                  activeItem === subItem.label
-                    ? "bg-blue_xl dark:bg-gray_b text-blue_b dark:text-white"
-                    : ""
-                } cursor-pointer flex items-center px-2 py-2 w-full text-sm hover:bg-blue_xl dark:hover:bg-gray_b transition-all duration-300`}
-              >
-                {subItem.icon}
-                <span className="ml-3">{subItem.label}</span>
-              </button>
-            ))}
-          </div>
+          <Collapse in={isSubmenuOpen} timeout="auto" unmountOnExit>
+            <SubmenuContainer>
+              <List disablePadding>
+                {item.submenu.map((subItem) => (
+                  <Box key={subItem.label}>
+                    {renderMenuItem(subItem, level + 1)}
+                  </Box>
+                ))}
+              </List>
+            </SubmenuContainer>
+          </Collapse>
         )}
-      </div>
+      </Box>
     );
   };
 
-  return (
-    <aside
-      className={`fixed top-0 left-0 flex flex-col justify-between bg-white dark:bg-black shadow-lg shadow-gray_b h-screen border-r border-gray_xl dark:border-gray_m text-gray_b dark:text-white transition-all duration-300 ${
-        isSidebarOpen ? "w-64" : "w-30"
-      } overflow-y-auto`}
+  const drawerContent = (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        justifyContent: "space-between",
+      }}
     >
-      <div>
-        <div className="bg-gradient-to-bl from-blue_m to-blue_b dark:bg-gray_b text-white flex items-center justify-between p-2 shadow-sm shadow-gray_l dark:shadow-gray_b">
-          <span>Menú</span>
-          <Button
-            colorText="text-white"
-            colorBg="bg-transparent "
-            colorBgHover="hover:bg-transparent "
-            colorTextHover="text-gray_b"
-            minwidth="min-w-0"
-            px="px-1"
-            py="py-1"
-            height="h-full"
-            icon={isSidebarOpen ? <XIcon /> : <MenuIcon />}
+      {/* Header y Navegación */}
+      <Box>
+        <MenuHeader>
+          <Typography variant="subtitle1" fontWeight="medium">
+            Menú
+          </Typography>
+          <IconButton
             onClick={toggleSidebar}
-          />
-        </div>
-        <nav className="space-y-1 2xl:space-y-2 pt-1">
-          {items.map(renderMenuItem)}
-        </nav>
-      </div>
-      <div className={`w-full px-4 pb-4 ${!isSidebarOpen ? "hidden" : ""}`}>
-        <button
-          onClick={() => router.push("/import-export")}
-          className="cursor-pointer w-full flex justify-center items-center gap-2 py-2 rounded-sm bg-blue_b text-white hover:bg-blue_m transition-all"
-        >
-          <Repeat size={14} />
-          <span className="uppercase text-[0.6rem] 2xl:text-[.8rem] font-semibold">
+            size="small"
+            sx={{
+              color: "common.white",
+              "&:hover": {
+                backgroundColor: "primary.main",
+              },
+            }}
+            title={isSidebarOpen ? "Cerrar menú" : "Abrir menú"}
+          >
+            {isSidebarOpen ? <XIcon size={20} /> : <MenuIcon size={20} />}
+          </IconButton>
+        </MenuHeader>
+
+        <List sx={{ pt: 0.5 }}>
+          {items.map((item) => renderMenuItem(item))}
+        </List>
+      </Box>
+
+      {/* Botón Importar/Exportar */}
+      {isSidebarOpen && (
+        <Box sx={{ p: 2 }}>
+          <ImportExportButton
+            onClick={() => router.push("/import-export")}
+            startIcon={<Repeat size={14} />}
+          >
             Importar | Exportar
-          </span>
-        </button>
-      </div>
-    </aside>
+          </ImportExportButton>
+        </Box>
+      )}
+    </Box>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <SidebarDrawer
+        variant="permanent"
+        sx={{
+          width: isSidebarOpen ? 256 : 120,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: isSidebarOpen ? 256 : 120,
+            boxSizing: "border-box",
+          },
+          display: { xs: "none", md: "block" },
+        }}
+      >
+        {drawerContent}
+      </SidebarDrawer>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={isSidebarOpen}
+        onClose={toggleSidebar}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            width: 256,
+            boxSizing: "border-box",
+          },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 };
 

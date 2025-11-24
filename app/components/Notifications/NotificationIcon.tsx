@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BellIcon } from "@heroicons/react/24/outline";
-import { BellAlertIcon } from "@heroicons/react/24/solid";
+import { IconButton, Badge, useTheme } from "@mui/material";
+import {
+  Notifications as NotificationsIcon,
+  NotificationsActive as NotificationsActiveIcon,
+} from "@mui/icons-material";
 import NotificationDropdown from "./NotificationDropdown";
 import {
   observeNotifications,
@@ -16,10 +19,10 @@ const NotificationIcon = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
     const notifSubscription = observeNotifications(setNotifications);
-
     const countSubscription = observeUnreadCount(setUnreadCount);
 
     return () => {
@@ -30,25 +33,48 @@ const NotificationIcon = () => {
 
   return (
     <div className="relative">
-      <button
+      <IconButton
         onClick={() => setIsOpen(!isOpen)}
-        className="cursor-pointer hover:scale-105 transition-all duration-300 p-1 rounded-full text-gray_m hover:text-gray_m dark:hover:text-gray_m focus:outline-none relative"
+        sx={{
+          color: theme.palette.text.secondary,
+          "&:hover": {
+            color: theme.palette.text.secondary,
+            transform: "scale(1.05)",
+            backgroundColor: "transparent",
+          },
+          transition: "all 0.3s ease",
+          padding: "4px",
+        }}
         title="Notificaciones"
       >
-        {unreadCount > 0 ? (
-          <>
-            <BellAlertIcon
-              className=" h-6 w-6 text-blue_m "
-              title="Notificaciones"
+        <Badge
+          badgeContent={unreadCount}
+          color="error"
+          sx={{
+            "& .MuiBadge-badge": {
+              fontSize: "0.75rem",
+              height: "20px",
+              minWidth: "20px",
+              borderRadius: "10px",
+            },
+          }}
+        >
+          {unreadCount > 0 ? (
+            <NotificationsActiveIcon
+              sx={{
+                fontSize: "24px",
+                color: theme.palette.primary.main,
+              }}
             />
-            <span className="absolute -top-1 -right-1 bg-red_m text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {unreadCount}
-            </span>
-          </>
-        ) : (
-          <BellIcon className="h-6 w-6" title="Notificaciones" />
-        )}
-      </button>
+          ) : (
+            <NotificationsIcon
+              sx={{
+                fontSize: "24px",
+              }}
+            />
+          )}
+        </Badge>
+      </IconButton>
 
       {isOpen && (
         <NotificationDropdown

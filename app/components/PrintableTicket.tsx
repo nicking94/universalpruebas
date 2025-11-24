@@ -32,11 +32,12 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
   ) => {
     const ticketRef = useRef<HTMLDivElement>(null);
     const [paperSize, setPaperSize] = useState<"57mm" | "80mm">("80mm");
-    const fecha = format(parseISO(sale.date), "dd/MM/yyyy HH:mm", {
-      locale: es,
-    });
 
-    // Cargar la preferencia guardada al inicializar el componente
+    // Validar que sale existe antes de acceder a sus propiedades
+    const fecha = sale?.date
+      ? format(parseISO(sale.date), "dd/MM/yyyy HH:mm", { locale: es })
+      : "Fecha no disponible";
+
     useEffect(() => {
       const savedPaperSize = localStorage.getItem("ticketPaperSize") as
         | "57mm"
@@ -84,7 +85,7 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
     };
 
     const getInvoiceItems = () => {
-      return sale.products.map((product) => {
+      return sale.products.map((product, index) => {
         const subtotalSinDescuento = product.price * product.quantity;
         const subtotalConDescuento = calculateDiscountedPrice(
           product.price,
@@ -93,6 +94,8 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
         );
 
         return {
+          id: product.id,
+          uniqueId: `${product.id}-${index}-${Date.now()}`,
           description: getDisplayProductName(product, rubro),
           quantity: product.quantity,
           price: product.price,
@@ -918,8 +921,8 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
 
               {/* Items del ticket */}
               <div style={styles.itemsContainer}>
-                {invoiceItems.map((item, index) => (
-                  <div key={index} style={styles.item}>
+                {invoiceItems.map((item) => (
+                  <div key={item.uniqueId} style={styles.item}>
                     <div style={styles.itemRow}>
                       <div style={styles.itemDescription}>
                         <span className="product-name" style={styles.itemName}>

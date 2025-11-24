@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import Button from "@/app/components/Button";
+import { Button, Box } from "@mui/material";
 import { FolderUp } from "lucide-react";
 
 export default function ImportFileButton({
@@ -14,23 +14,31 @@ export default function ImportFileButton({
   };
 
   return (
-    <>
+    <Box>
       <Button
-        icon={<FolderUp className="w-5 h-5" />}
-        text="Importar archivo"
+        variant="contained"
+        startIcon={<FolderUp className="w-5 h-5" />}
         onClick={handleButtonClick}
-        colorText="text-white"
-        colorTextHover="text-white"
-        colorBg="bg-blue_b"
-        colorBgHover="hover:bg-blue_m"
-      />
+        sx={{
+          textTransform: "none",
+          fontWeight: 600,
+          backgroundColor: "primary.main",
+          color: "white",
+          "&:hover": {
+            backgroundColor: "primary.dark",
+            color: "white",
+          },
+        }}
+      >
+        Importar archivo
+      </Button>
       <input
         type="file"
         accept=".json,.txt"
         ref={fileInputRef}
         onChange={onImport}
-        className="hidden"
+        style={{ display: "none" }}
       />
-    </>
+    </Box>
   );
 }

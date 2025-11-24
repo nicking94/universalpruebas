@@ -5,7 +5,6 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Modal from "@/app/components/Modal";
-import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
 import { Product, Supplier, SupplierContact } from "@/app/lib/types/types";
@@ -15,6 +14,20 @@ import Pagination from "@/app/components/Pagination";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
+import {
+  Button, // ✅ Material UI Button
+  IconButton, // ✅ Material UI IconButton
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+} from "@mui/material";
 
 const ProveedoresPage = () => {
   const { rubro } = useRubro();
@@ -363,163 +376,298 @@ const ProveedoresPage = () => {
 
   return (
     <ProtectedRoute>
-      <div className="px-10 2xl:px-10 py-4 text-gray_l dark:text-white h-[calc(100vh-80px)]">
-        <h1 className="text-lg 2xl:text-xl font-semibold mb-2">Proveedores</h1>
+      <Box
+        sx={{
+          px: 4,
+          py: 2,
+          height: "calc(100vh - 80px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Typography variant="h5" fontWeight="semibold" mb={2}>
+          Proveedores
+        </Typography>
 
-        <div className="flex justify-between mb-2">
-          <div className="w-full max-w-md">
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+          <Box sx={{ width: "100%", maxWidth: "400px" }}>
             <SearchBar onSearch={handleSearch} />
-          </div>
+          </Box>
           {rubro !== "Todos los rubros" && (
             <Button
-              icon={<Plus size={18} />}
-              text="Nuevo Proveedor"
-              colorText="text-white"
-              colorTextHover="text-white mt-3"
+              variant="contained"
+              startIcon={<Plus size={18} />}
               onClick={() => {
                 resetForm();
                 setIsModalOpen(true);
               }}
-            />
+              sx={{
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
+            >
+              Nuevo Proveedor
+            </Button>
           )}
-        </div>
+        </Box>
 
-        <div className="flex flex-col justify-between h-[calc(100vh-200px)]">
-          <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
-            <table className="w-full text-center border-collapse shadow-sm shadow-gray_l">
-              <thead className="text-white bg-gradient-to-bl from-blue_m to-blue_b text-xs">
-                <tr>
-                  <th className="p-2 text-left">Empresa</th>
-                  <th className="p-2">Proveedores</th>
-                  <th className="p-2">Última Visita</th>
-                  <th className="p-2">Próxima Visita</th>
-                  <th className="p-2">Productos</th>
-                  {rubro !== "Todos los rubros" && (
-                    <th className="w-40 max-w-40 p-2">Acciones</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className={`bg-white text-gray_b divide-y divide-gray_xl`}>
-                {currentItems.length > 0 ? (
-                  currentItems.map((supplier) => (
-                    <tr
-                      key={supplier.id}
-                      className="hover:bg-gray_xxl dark:hover:bg-blue_xl transition-all duration-300 text-xs 2xl:text-sm"
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            justifyContent: "space-between",
+          }}
+        >
+          <Box sx={{ flex: 1, minHeight: "auto" }}>
+            <TableContainer
+              component={Paper}
+              sx={{ maxHeight: "calc(100vh - 250px)", flex: 1 }}
+            >
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
                     >
-                      <td className="capitalize p-2 text-left  border border-gray_xl font-semibold">
-                        {supplier.companyName}
-                      </td>
-                      <td className="p-2  border border-gray_xl">
-                        <div className="flex justify-center items-center space-x-4  ">
-                          {supplier.contacts.length > 0 && (
-                            <div>
-                              <p>{supplier.contacts[0].name}</p>
-                            </div>
-                          )}
-                          {supplier.contacts.length > 1 && (
-                            <div className="group relative inline-block">
-                              <span className=" text-gray_l cursor-pointer">
-                                +{supplier.contacts.length - 1} más
-                              </span>
-                              <div className="absolute hidden group-hover:block z-10 w-64 p-2 bg-white border border-gray_l rounded shadow-lg text-sm">
-                                {supplier.contacts
-                                  .slice(1)
-                                  .map((contact, index) => (
-                                    <div key={index} className="py-1">
-                                      <p>{contact.name}</p>
-                                    </div>
-                                  ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-2 border border-gray_xl ">
-                        {supplier.lastVisit ? (
-                          format(parseISO(supplier.lastVisit), "dd/MM/yyyy", {
-                            locale: es,
-                          })
-                        ) : (
-                          <span className="text-gray_m">No registrada</span>
-                        )}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {supplier.nextVisit ? (
-                          <span>
-                            {format(
-                              parseISO(supplier.nextVisit),
-                              "dd/MM/yyyy",
-                              {
-                                locale: es,
-                              }
+                      Empresa
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Proveedores
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Última Visita
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Próxima Visita
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Productos
+                    </TableCell>
+                    {rubro !== "Todos los rubros" && (
+                      <TableCell
+                        sx={{
+                          bgcolor: "primary.main",
+                          color: "primary.contrastText",
+                        }}
+                        align="center"
+                      >
+                        Acciones
+                      </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {currentItems.length > 0 ? (
+                    currentItems.map((supplier) => (
+                      <TableRow key={supplier.id} hover>
+                        <TableCell className="capitalize font-semibold">
+                          {supplier.companyName}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              gap: 2,
+                            }}
+                          >
+                            {supplier.contacts.length > 0 && (
+                              <Typography>
+                                {supplier.contacts[0].name}
+                              </Typography>
                             )}
-                          </span>
-                        ) : (
-                          <span className="text-gray_m">No programada</span>
+                            {supplier.contacts.length > 1 && (
+                              <Box
+                                sx={{
+                                  position: "relative",
+                                  display: "inline-block",
+                                }}
+                              >
+                                <Typography
+                                  sx={{
+                                    color: "text.secondary",
+                                    cursor: "pointer",
+                                    "&:hover": { color: "text.primary" },
+                                  }}
+                                >
+                                  +{supplier.contacts.length - 1} más
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    display: "none",
+                                    zIndex: 10,
+                                    width: "256px",
+                                    p: 1,
+                                    bgcolor: "background.paper",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    borderRadius: 1,
+                                    boxShadow: 2,
+                                    left: "100%",
+                                    top: 0,
+                                    ml: 1,
+                                  }}
+                                  className="group-hover:block"
+                                >
+                                  {supplier.contacts
+                                    .slice(1)
+                                    .map((contact, index) => (
+                                      <Box key={index} sx={{ py: 0.5 }}>
+                                        <Typography variant="body2">
+                                          {contact.name}
+                                        </Typography>
+                                      </Box>
+                                    ))}
+                                </Box>
+                              </Box>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">
+                          {supplier.lastVisit ? (
+                            format(parseISO(supplier.lastVisit), "dd/MM/yyyy", {
+                              locale: es,
+                            })
+                          ) : (
+                            <Typography color="text.secondary">
+                              No registrada
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          {supplier.nextVisit ? (
+                            format(parseISO(supplier.nextVisit), "dd/MM/yyyy", {
+                              locale: es,
+                            })
+                          ) : (
+                            <Typography color="text.secondary">
+                              No programada
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          {supplierProductCounts[supplier.id] || 0} productos
+                        </TableCell>
+                        {rubro !== "Todos los rubros" && (
+                          <TableCell align="center">
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  openProductAssignmentModal(supplier)
+                                }
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "primary.main",
+                                    color: "white",
+                                  },
+                                }}
+                                title="Asignar productos"
+                              >
+                                <Package size={18} />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEdit(supplier)}
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "primary.main",
+                                    color: "white",
+                                  },
+                                }}
+                                title="Editar proveedor"
+                              >
+                                <Edit size={18} />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => openDeleteModal(supplier)}
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "error.main",
+                                    color: "white",
+                                  },
+                                }}
+                                title="Eliminar proveedor"
+                              >
+                                <Trash size={18} />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
                         )}
-                      </td>
-                      <td className="p-2 border border-gray_xl">
-                        {supplierProductCounts[supplier.id] || 0} productos
-                      </td>
-                      {rubro !== "Todos los rubros" && (
-                        <td className="p-2 space-x-4 border border-gray_xl">
-                          <div className="flex justify-center gap-2">
-                            <Button
-                              icon={<Package size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              colorBgHover="hover:bg-blue_m"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() =>
-                                openProductAssignmentModal(supplier)
-                              }
-                            />
-                            <Button
-                              icon={<Edit size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => handleEdit(supplier)}
-                            />
-                            <Button
-                              icon={<Trash size={18} />}
-                              colorText="text-gray_b"
-                              colorTextHover="hover:text-white"
-                              colorBg="bg-transparent"
-                              colorBgHover="hover:bg-red_m"
-                              px="px-1"
-                              py="py-1"
-                              minwidth="min-w-0"
-                              onClick={() => openDeleteModal(supplier)}
-                            />
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                ) : (
-                  <tr className="h-[50vh] 2xl:h-[calc(63vh-2px)]">
-                    <td colSpan={6} className="py-4 text-center">
-                      <div className="flex flex-col items-center justify-center text-gray_m dark:text-white">
-                        <Truck size={64} className="mb-4 text-gray_m" />
-                        <p className="text-gray_m">
-                          {searchQuery
-                            ? "No hay proveedores que coincidan con la búsqueda"
-                            : "No hay proveedores registrados"}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={rubro !== "Todos los rubros" ? 6 : 5}
+                        align="center"
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            color: "text.secondary",
+                            py: 4,
+                          }}
+                        >
+                          <Truck
+                            size={64}
+                            style={{ marginBottom: 16, color: "#9CA3AF" }}
+                          />
+                          <Typography>
+                            {searchQuery
+                              ? "No hay proveedores que coincidan con la búsqueda"
+                              : "No hay proveedores registrados"}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
 
           {filteredSuppliers.length > 0 && (
             <Pagination
@@ -528,7 +676,7 @@ const ProveedoresPage = () => {
               totalItems={filteredSuppliers.length}
             />
           )}
-        </div>
+        </Box>
 
         <Modal
           isOpen={isProductAssignmentModalOpen}
@@ -542,127 +690,239 @@ const ProveedoresPage = () => {
           minheight="min-h-[75vh]"
           buttons={
             <Button
-              text="Cerrar"
-              colorText="text-gray_b dark:text-white"
-              colorTextHover="hover:dark:text-white"
-              colorBg="bg-transparent dark:bg-gray_m"
-              colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+              variant="outlined"
               onClick={() => {
                 setIsProductAssignmentModalOpen(false);
                 setProductSearchQuery("");
               }}
-            />
+              sx={{
+                color: "text.secondary",
+                borderColor: "text.secondary",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                  borderColor: "text.primary",
+                },
+              }}
+            >
+              Cerrar
+            </Button>
           }
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="space-y-4">
-              <div className="flex flex-col space-y-2">
-                <h3 className="font-semibold">Buscar Productos</h3>
-                <Input
-                  placeholder="Buscar por nombre o código de barras"
-                  value={productSearchQuery}
-                  onChange={(e) => setProductSearchQuery(e.target.value)}
-                />
-              </div>
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Typography variant="h6" fontWeight="medium">
+                Buscar Productos
+              </Typography>
+              <Input
+                placeholder="Buscar por nombre o código de barras"
+                value={productSearchQuery}
+                onRawChange={(e) => setProductSearchQuery(e.target.value)}
+              />
 
-              <div className="border rounded-lg p-2 h-[59.4vh] overflow-y-auto">
+              <Box
+                sx={{
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  p: 2,
+                  height: "59.4vh",
+                  overflow: "auto",
+                }}
+              >
                 {isLoadingProducts ? (
-                  <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue_m"></div>
-                  </div>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      height: "160px",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        animation: "spin 1s linear infinite",
+                        width: "48px",
+                        height: "48px",
+                        border: "2px solid",
+                        borderColor: "primary.main transparent",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  </Box>
                 ) : filteredAvailableProducts.length > 0 ? (
-                  <div className="space-y-2 ">
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
                     {filteredAvailableProducts.map((product) => (
-                      <div
+                      <Box
                         key={product.id}
-                        className={` p-2 border rounded hover:bg-gray_xxl dark:hover:bg-gray_m transition-all duration-300 flex justify-between items-center `}
+                        sx={{
+                          p: 1,
+                          border: 1,
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          "&:hover": { backgroundColor: "action.hover" },
+                          transition: "all 0.3s",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
                       >
-                        <div className="flex-grow ">
-                          <div className="flex justify-between">
-                            <span className="font-medium">{product.name}</span>
-                            <span className="text-xs text-gray_l">
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Typography fontWeight="medium">
+                              {product.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {product.barcode || "Sin código"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Typography variant="body2">
                               Stock: {product.stock} {product.unit}
-                            </span>
-                            <span className="font-semibold">
+                            </Typography>
+                            <Typography variant="body2" fontWeight="semibold">
                               {new Intl.NumberFormat("es-AR", {
                                 style: "currency",
                                 currency: "ARS",
                               }).format(product.price)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <Button
-                            icon={<Plus size={18} />}
-                            colorText="text-white"
-                            colorTextHover="text-white"
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ ml: 1 }}>
+                          <IconButton
+                            size="small"
                             onClick={() => assignProduct(product)}
-                            px="px-1"
-                            py="py-1"
-                            minwidth="min-w-[2rem]"
-                          />
-                        </div>
-                      </div>
+                            sx={{
+                              bgcolor: "primary.main",
+                              color: "white",
+                              "&:hover": { bgcolor: "primary.dark" },
+                              minWidth: "32px",
+                              width: "32px",
+                              height: "32px",
+                            }}
+                          >
+                            <Plus size={18} />
+                          </IconButton>
+                        </Box>
+                      </Box>
                     ))}
-                  </div>
+                  </Box>
                 ) : (
-                  <div className="flex justify-center items-center h-full">
-                    <p className="text-gray_m">No hay productos disponibles</p>
-                  </div>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      height: "100%",
+                    }}
+                  >
+                    <Typography color="text.secondary">
+                      No hay productos disponibles
+                    </Typography>
+                  </Box>
                 )}
-              </div>
-            </div>
+              </Box>
+            </Box>
 
-            <div className="space-y-2">
-              <h3 className="font-semibold">Productos asignados</h3>
-              <div className="border rounded-lg p-2 h-[65vh] overflow-y-auto">
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Typography variant="h6" fontWeight="medium">
+                Productos asignados
+              </Typography>
+              <Box
+                sx={{
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  p: 2,
+                  height: "65vh",
+                  overflow: "auto",
+                }}
+              >
                 {assignedProducts.length > 0 ? (
-                  <div className="space-y-2">
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
                     {assignedProducts.map((product) => (
-                      <div
+                      <Box
                         key={product.id}
-                        className="p-2 border hover:bg-gray_xxl dark:hover:bg-blue_xl transition-all duration-300 rounded"
+                        sx={{
+                          p: 1,
+                          border: 1,
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          "&:hover": { backgroundColor: "action.hover" },
+                          transition: "all 0.3s",
+                        }}
                       >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-medium">{product.name}</div>
-                            <div className="text-sm">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Box>
+                            <Typography fontWeight="medium">
+                              {product.name}
+                            </Typography>
+                            <Typography variant="body2">
                               {product.stock} {product.unit} •{" "}
                               {new Intl.NumberFormat("es-AR", {
                                 style: "currency",
                                 currency: "ARS",
                               }).format(product.price)}
-                            </div>
-                          </div>
+                            </Typography>
+                          </Box>
 
-                          <Button
-                            minwidth="min-w-[2rem]"
-                            icon={<Trash size={18} />}
-                            colorText="text-white"
-                            colorTextHover="text-white"
-                            colorBg="bg-red_b"
-                            colorBgHover="hover:bg-red_m"
+                          <IconButton
+                            size="small"
                             onClick={() => unassignProduct(product)}
-                            px="px-1"
-                            py="py-1"
-                          />
-                        </div>
-                      </div>
+                            sx={{
+                              bgcolor: "error.main",
+                              color: "white",
+                              "&:hover": { bgcolor: "error.dark" },
+                              minWidth: "32px",
+                              width: "32px",
+                              height: "32px",
+                            }}
+                          >
+                            <Trash size={18} />
+                          </IconButton>
+                        </Box>
+                      </Box>
                     ))}
-                  </div>
+                  </Box>
                 ) : (
-                  <div className="flex justify-center items-center h-full">
-                    <p className="text-gray_m">No hay productos asignados</p>
-                  </div>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      height: "100%",
+                    }}
+                  >
+                    <Typography color="text.secondary">
+                      No hay productos asignados
+                    </Typography>
+                  </Box>
                 )}
-              </div>
-            </div>
-          </div>
+              </Box>
+            </Box>
+          </Box>
         </Modal>
 
         <Modal
@@ -673,147 +933,190 @@ const ProveedoresPage = () => {
           }}
           title={editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}
           buttons={
-            <div className="flex justify-end space-x-4 ">
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                text={editingSupplier ? "Actualizar" : "Guardar"}
-                colorText="text-white"
-                colorTextHover="text-white"
+                variant="contained"
                 onClick={handleSubmit}
-              />
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                {editingSupplier ? "Actualizar" : "Guardar"}
+              </Button>
               <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => {
                   setIsModalOpen(false);
                   resetForm();
                 }}
-              />
-            </div>
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+            </Box>
           }
         >
-          <div className="space-y-6">
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <Input
               label="Nombre de la Empresa"
               value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              onRawChange={(e) => setCompanyName(e.target.value)}
               placeholder="Ej: Distribuidora S.A."
             />
 
-            <div className="space-y-6">
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {contacts.map((contact, index) => (
-                <div
+                <Box
                   key={index}
-                  className="bg-gradient-to-bl from-blue_l to-blue_xl rounded-sm space-y-6 border border-blue_xl shadow-md shadow-gray_l p-4 mb-8"
+                  sx={{
+                    background:
+                      "linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)",
+                    borderRadius: 1,
+                    border: "1px solid",
+                    borderColor: "primary.light",
+                    boxShadow: 1,
+                    p: 3,
+                    mb: 2,
+                  }}
                 >
-                  <div className="flex justify-between items-center">
-                    <span className="bg-gradient-to-bl from-blue_m to-blue_b rounded-md px-2 py-1 text-white text-sm font-medium">
-                      Proveedor #{index + 1}
-                    </span>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 2,
+                    }}
+                  >
+                    <Chip
+                      label={`Proveedor #${index + 1}`}
+                      color="primary"
+                      variant="filled"
+                      sx={{ color: "white" }}
+                    />
                     {contacts.length > 1 && (
                       <Button
-                        type="button"
-                        icon={<Trash size={18} />}
-                        px="px-3"
-                        py="py-1"
-                        minwidth="min-w-0"
-                        colorBg="bg-red_b"
-                        colorBgHover="hover:bg-red_m"
-                        colorText="text-white"
-                        colorTextHover="hover:text-white"
+                        variant="contained"
+                        color="error"
+                        startIcon={<Trash size={18} />}
                         onClick={() => handleRemoveContact(index)}
+                        size="small"
+                        sx={{
+                          bgcolor: "error.main",
+                          "&:hover": { bgcolor: "error.dark" },
+                        }}
                       >
                         Eliminar
                       </Button>
                     )}
-                  </div>
-                  <div className="flex items-center space-x-4">
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Input
-                      colorLabel="text-gray_m"
+                      colorLabel="text.secondary"
                       label="Nombre"
                       value={contact.name}
-                      onChange={(e) =>
+                      onRawChange={(e) =>
                         handleContactChange(index, "name", e.target.value)
                       }
                       placeholder="Nombre del proveedor"
                     />
                     <Input
-                      colorLabel="text-gray_m"
+                      colorLabel="text.secondary"
                       label="Teléfono"
                       value={contact.phone}
-                      onChange={(e) =>
+                      onRawChange={(e) =>
                         handleContactChange(index, "phone", e.target.value)
                       }
                       placeholder="Teléfono del proveedor"
                     />
-                  </div>
-                </div>
+                  </Box>
+                </Box>
               ))}
-              <button
-                type="button"
+              <Button
+                startIcon={<Plus size={18} />}
                 onClick={handleAddContact}
-                className={`cursor-pointer text-sm text-blue_b dark:text-blue_l hover:text-blue_m flex items-center transition-all duration-300`}
+                sx={{
+                  color: "primary.main",
+                  "&:hover": {
+                    color: "primary.dark",
+                    backgroundColor: "transparent",
+                  },
+                  alignSelf: "flex-start",
+                }}
               >
-                <Plus size={18} className="mr-1" /> Agregar otro proveedor
-              </button>
-            </div>
+                Agregar otro proveedor
+              </Button>
+            </Box>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <CustomDatePicker
-                  label="Última Visita"
-                  placeholderText="Seleccione una fecha"
-                  value={lastVisit}
-                  onChange={setLastVisit}
-                  isClearable
-                  error={undefined}
-                />
-              </div>
-              <div>
-                <CustomDatePicker
-                  label="Próxima Visita"
-                  placeholderText="Seleccione una fecha"
-                  value={nextVisit}
-                  onChange={setNextVisit}
-                  isClearable
-                  error={undefined}
-                />
-              </div>
-            </div>
-          </div>
+            <Box
+              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
+            >
+              <CustomDatePicker
+                label="Última Visita"
+                placeholder="Seleccione una fecha"
+                value={lastVisit || ""}
+                onChange={setLastVisit}
+                isClearable
+              />
+              <CustomDatePicker
+                label="Próxima Visita"
+                placeholder="Seleccione una fecha"
+                value={nextVisit || ""}
+                onChange={setNextVisit}
+                isClearable
+              />
+            </Box>
+          </Box>
         </Modal>
+
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
           title="Eliminar Proveedor"
           buttons={
-            <div className="flex justify-end space-x-4 ">
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                text="Eliminar"
-                colorText="text-white"
-                colorTextHover="text-white"
+                variant="contained"
+                color="error"
                 onClick={handleDelete}
-              />
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
+              >
+                Eliminar
+              </Button>
               <Button
-                text="Cancelar"
-                colorText="text-gray_b dark:text-white"
-                colorTextHover="hover:dark:text-white"
-                colorBg="bg-transparent dark:bg-gray_m"
-                colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
+                variant="outlined"
                 onClick={() => setIsDeleteModalOpen(false)}
-              />
-            </div>
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+            </Box>
           }
         >
-          <p className="text-gray_m dark:text-white">
+          <Typography color="text.secondary">
             ¿Está seguro de que desea eliminar el proveedor{" "}
-            <span className="font-semibold">
+            <Typography component="span" fontWeight="semibold">
               {supplierToDelete?.companyName}
-            </span>
+            </Typography>
             ? Esta acción no se puede deshacer.
-          </p>
+          </Typography>
         </Modal>
 
         <Notification
@@ -821,7 +1124,7 @@ const ProveedoresPage = () => {
           message={notificationMessage}
           type={notificationType}
         />
-      </div>
+      </Box>
     </ProtectedRoute>
   );
 };

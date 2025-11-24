@@ -1,6 +1,5 @@
 "use client";
-import Button from "@/app/components/Button";
-import { FolderDown } from "lucide-react";
+
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import { db } from "@/app/database/db";
 import { saveAs } from "file-saver";
@@ -10,6 +9,16 @@ import { format } from "date-fns";
 import Notification from "@/app/components/Notification";
 import { Payment, Product, Sale } from "@/app/lib/types/types";
 
+// Material-UI imports
+import {
+  Button,
+  Box,
+  Typography,
+  CircularProgress,
+  useTheme,
+} from "@mui/material";
+import { Download as DownloadIcon } from "@mui/icons-material";
+
 export default function ImportExportPage() {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{
@@ -17,6 +26,7 @@ export default function ImportExportPage() {
     message: string;
     type: "success" | "error" | "info";
   }>({ isOpen: false, message: "", type: "info" });
+  const theme = useTheme();
 
   const showNotification = (
     message: string,
@@ -249,40 +259,104 @@ export default function ImportExportPage() {
 
   return (
     <ProtectedRoute>
-      <div className="px-10 py-3 2xl:p-10 text-gray_l dark:text-white h-[calc(100vh-80px)] relative">
-        <h1 className="text-lg 2xl:text-xl font-semibold mb-2">
+      <Box
+        sx={{
+          px: 5,
+          py: 3,
+          color: "text.secondary",
+          height: "calc(100vh - 80px)",
+          position: "relative",
+        }}
+      >
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{
+            fontWeight: 600,
+            mb: 2,
+            fontSize: { xs: "1.125rem", lg: "1.25rem" },
+          }}
+        >
           Importar o Exportar Datos
-        </h1>
-        <div className="h-[calc(100vh-160px)] 2xl:h-[80vh] flex items-center justify-center gap-10">
+        </Typography>
+
+        <Box
+          sx={{
+            height: "calc(100vh - 160px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 5,
+          }}
+        >
           <ImportFileButton onImport={importData} />
+
           <Button
+            variant="outlined"
+            startIcon={
+              loading ? <CircularProgress size={20} /> : <DownloadIcon />
+            }
             onClick={exportData}
-            icon={<FolderDown className="w-5 h-5" />}
-            iconPosition="left"
             disabled={loading}
-            text="Exportar Datos"
-            colorText="text-gray_b dark:text-white"
-            colorTextHover="dark:hover:text-white "
-            colorBg="bg-white dark:bg-gray_m"
-            colorBgHover="hover:bg-blue_xl hover:dark:bg-gray_l"
-          />
-        </div>
-        <p className="animate-pulse text-xs text-center font-light text-gray_l dark:text-gray_l italic">
-          Universal App
-          <span className="text-gray_m dark:text-gray_xl">
-            {" "}
+            sx={{
+              color: theme.palette.mode === "dark" ? "white" : "text.primary",
+              borderColor:
+                theme.palette.mode === "dark" ? "grey.600" : "grey.300",
+              backgroundColor:
+                theme.palette.mode === "dark" ? "grey.800" : "white",
+              "&:hover": {
+                backgroundColor:
+                  theme.palette.mode === "dark" ? "grey.700" : "grey.100",
+                borderColor:
+                  theme.palette.mode === "dark" ? "grey.500" : "grey.400",
+              },
+              minWidth: "200px",
+              height: "56px",
+              fontSize: "1rem",
+            }}
+          >
+            Exportar Datos
+          </Button>
+        </Box>
+
+        <Typography
+          variant="caption"
+          sx={{
+            display: "block",
+            textAlign: "center",
+            fontStyle: "italic",
+            color: "text.disabled",
+            animation: "pulse 2s infinite",
+            mt: 2,
+            "@keyframes pulse": {
+              "0%": { opacity: 0.6 },
+              "50%": { opacity: 1 },
+              "100%": { opacity: 0.6 },
+            },
+          }}
+        >
+          Universal App{" "}
+          <span style={{ color: theme.palette.text.secondary }}>
             le recomienda
           </span>{" "}
           realizar una copia de seguridad todos los días...
-        </p>
-        {loading && <p className="mt-2">Procesando...</p>}
+        </Typography>
+
+        {loading && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" sx={{ ml: 1 }}>
+              Procesando...
+            </Typography>
+          </Box>
+        )}
 
         <Notification
           isOpen={notification.isOpen}
           message={notification.message}
           type={notification.type}
         />
-      </div>
+      </Box>
     </ProtectedRoute>
   );
 }
