@@ -62,9 +62,22 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
   "& .MuiOutlinedInput-root": {
     fontSize: "0.875rem",
     backgroundColor: theme.palette.background.paper,
+    "& .MuiOutlinedInput-input": {
+      color: theme.palette.text.primary,
+    },
   },
   "& .MuiInputLabel-root": {
     fontSize: "0.875rem",
+    color: theme.palette.text.secondary,
+  },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: theme.palette.divider,
+  },
+  "&:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: theme.palette.primary.main,
+  },
+  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: theme.palette.primary.main,
   },
   [theme.breakpoints.down("sm")]: {
     minWidth: 140,
@@ -165,6 +178,19 @@ const Navbar: React.FC<NavbarProps> = ({
                 label="Rubro"
                 sx={{
                   fontSize: "0.875rem",
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: muiTheme.palette.background.paper,
+                      "& .MuiMenuItem-root": {
+                        color: muiTheme.palette.text.primary,
+                        "&:hover": {
+                          backgroundColor: muiTheme.palette.action.hover,
+                        },
+                      },
+                    },
+                  },
                 }}
               >
                 {rubroOptions.map((option) => (

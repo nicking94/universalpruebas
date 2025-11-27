@@ -26,7 +26,6 @@ export default function ImportFileButton({
           color: "white",
           "&:hover": {
             backgroundColor: "primary.dark",
-            color: "white",
           },
         }}
       >

@@ -7,6 +7,7 @@ import {
   FormLabel,
   FormHelperText,
   Box,
+  useTheme,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -93,6 +94,8 @@ const TextArea: React.FC<TextAreaProps> = ({
   fullWidth = true,
   variant = "outlined",
 }) => {
+  const theme = useTheme();
+
   return (
     <Box
       className={className}
@@ -139,6 +142,7 @@ const TextArea: React.FC<TextAreaProps> = ({
             },
             "& .MuiInputBase-inputMultiline": {
               minHeight: `${rows * 24}px`,
+              color: theme.palette.text.primary,
             },
           }}
         />

@@ -30,20 +30,14 @@ const StyledIconButton = styled(IconButton)(({ theme }) => ({
   width: 32,
   height: 32,
   "&:hover": {
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? theme.palette.grey[800]
-        : theme.palette.grey[100],
+    backgroundColor: theme.palette.action.hover,
   },
 }));
 
 const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   padding: theme.spacing(1, 2),
   "&:hover": {
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? theme.palette.grey[800]
-        : theme.palette.action.hover,
+    backgroundColor: theme.palette.action.hover,
   },
   "&:first-of-type": {
     borderTopLeftRadius: theme.shape.borderRadius,
@@ -198,10 +192,14 @@ const UserMenu: React.FC<UserMenuProps> = ({
         {/* Tema */}
         <StyledMenuItem onClick={handleThemeToggle}>
           <ListItemIcon sx={{ minWidth: 36 }}>
-            {currentTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            {currentTheme === "dark" ? (
+              <Sun size={18} color={theme.palette.text.primary} />
+            ) : (
+              <Moon size={18} color={theme.palette.text.primary} />
+            )}
           </ListItemIcon>
           <ListItemText>
-            <Typography variant="body2">
+            <Typography variant="body2" color="text.primary">
               {currentTheme === "dark" ? "Modo Claro" : "Modo Oscuro"}
             </Typography>
           </ListItemText>
@@ -210,20 +208,24 @@ const UserMenu: React.FC<UserMenuProps> = ({
         {/* Datos del negocio */}
         <StyledMenuItem onClick={() => setIsTicketDataModalOpen(true)}>
           <ListItemIcon sx={{ minWidth: 36 }}>
-            <Ticket size={18} />
+            <Ticket size={18} color={theme.palette.text.primary} />
           </ListItemIcon>
           <ListItemText>
-            <Typography variant="body2">Datos del negocio</Typography>
+            <Typography variant="body2" color="text.primary">
+              Datos del negocio
+            </Typography>
           </ListItemText>
         </StyledMenuItem>
 
         {/* Tutoriales */}
         <StyledMenuItem onClick={handleTutorialClick}>
           <ListItemIcon sx={{ minWidth: 36 }}>
-            <HelpCircle size={18} />
+            <HelpCircle size={18} color={theme.palette.text.primary} />
           </ListItemIcon>
           <ListItemText>
-            <Typography variant="body2">Tutoriales</Typography>
+            <Typography variant="body2" color="text.primary">
+              Tutoriales
+            </Typography>
           </ListItemText>
         </StyledMenuItem>
 
@@ -232,10 +234,12 @@ const UserMenu: React.FC<UserMenuProps> = ({
         {/* Cerrar sesión */}
         <StyledMenuItem onClick={handleLogout}>
           <ListItemIcon sx={{ minWidth: 36 }}>
-            <LogOut size={18} />
+            <LogOut size={18} color={theme.palette.text.primary} />
           </ListItemIcon>
           <ListItemText>
-            <Typography variant="body2">Cerrar sesión</Typography>
+            <Typography variant="body2" color="text.primary">
+              Cerrar sesión
+            </Typography>
           </ListItemText>
         </StyledMenuItem>
       </StyledMenu>
@@ -250,6 +254,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
           sx: {
             backgroundColor: theme.palette.background.paper,
             backgroundImage: "none",
+            color: theme.palette.text.primary,
           },
         }}
       >
@@ -259,7 +264,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
             pb: 2,
           }}
         >
-          <Typography variant="h6" component="h2">
+          <Typography variant="h6" component="h2" color="text.primary">
             Datos del negocio
           </Typography>
         </DialogTitle>
@@ -306,8 +311,8 @@ const UserMenu: React.FC<UserMenuProps> = ({
               color: theme.palette.text.secondary,
               "&:hover": {
                 borderColor: theme.palette.primary.main,
-                backgroundColor: theme.palette.primary.light,
-                color: theme.palette.primary.contrastText,
+                backgroundColor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
               },
             }}
           >
@@ -318,6 +323,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
             onClick={saveBusinessData}
             sx={{
               backgroundColor: theme.palette.primary.main,
+              color: "white",
               "&:hover": {
                 backgroundColor: theme.palette.primary.dark,
               },

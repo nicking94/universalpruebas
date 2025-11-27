@@ -71,6 +71,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
           borderRadius: 3,
           background: theme.palette.background.paper,
           border: `2px solid ${theme.palette.primary.main}`,
+          color: theme.palette.text.primary,
         },
       }}
       BackdropProps={{

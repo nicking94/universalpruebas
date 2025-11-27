@@ -38,8 +38,8 @@ import {
   Typography,
   useTheme,
   useMediaQuery,
+  styled,
 } from "@mui/material";
-import { styled } from "@mui/material/styles";
 
 const menuItems: MenuItemProps[] = [
   {
@@ -78,7 +78,7 @@ const menuItems: MenuItemProps[] = [
   },
 ];
 
-// Styled components - SIN isSidebarOpen aquí
+// Styled components
 const MenuHeader = styled(Box)(({ theme }) => ({
   background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
   color: theme.palette.common.white,
@@ -363,6 +363,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items = menuItems }) => {
           "& .MuiDrawer-paper": {
             width: 256,
             boxSizing: "border-box",
+            backgroundColor: theme.palette.background.paper,
           },
         }}
       >

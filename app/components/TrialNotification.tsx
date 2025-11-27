@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { db } from "../database/db";
 import { TRIAL_CREDENTIALS } from "../lib/constants/constants";
-import { Tags, BadgePercent, Zap, AlertTriangle } from "lucide-react";
+import { Tags, Zap, AlertTriangle } from "lucide-react";
 
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="down" />;
@@ -23,7 +23,6 @@ const TrialNotification = () => {
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const [discountDate, setDiscountDate] = useState<string>("");
   const [showNotification, setShowNotification] = useState(false);
-  const [showDiscount, setShowDiscount] = useState(false);
 
   const checkAuthState = async () => {
     try {
@@ -113,7 +112,7 @@ const TrialNotification = () => {
     if (!isAuthenticated || !userId || !isDemoUser) {
       setDaysLeft(null);
       setShowNotification(false);
-      setShowDiscount(false);
+
       return;
     }
 
@@ -125,17 +124,6 @@ const TrialNotification = () => {
   useEffect(() => {
     if (isAuthenticated && isDemoUser && daysLeft !== null) {
       setShowNotification(true);
-
-      // Mostrar descuento si hay días restantes
-      if (daysLeft > 0) {
-        const now = new Date();
-        const discountEndDate = new Date(
-          discountDate.split("/").reverse().join("-")
-        );
-        if (now <= discountEndDate) {
-          setShowDiscount(true);
-        }
-      }
     }
   }, [isAuthenticated, isDemoUser, daysLeft, discountDate]);
 
@@ -156,7 +144,7 @@ const TrialNotification = () => {
 
     if (daysLeft === 0) {
       return (
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
           <AlertTriangle size={16} />
           <Typography variant="body2">
             ¡Periodo de prueba finalizado! La sesión se cerrará automáticamente
@@ -166,40 +154,18 @@ const TrialNotification = () => {
     }
     if (daysLeft === 1) {
       return (
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
           <Zap size={16} />
           <Typography variant="body2">¡Último día de prueba!</Typography>
         </Box>
       );
     }
     return (
-      <Box display="flex" alignItems="center" gap={1}>
+      <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
         <Tags size={16} />
         <Typography variant="body2">
           Días restantes de prueba: {daysLeft}
         </Typography>
-      </Box>
-    );
-  };
-
-  const getDiscountMessage = () => {
-    if (!daysLeft || !discountDate) return "";
-
-    const now = new Date();
-    const discountEndDate = new Date(
-      discountDate.split("/").reverse().join("-")
-    );
-
-    if (now > discountEndDate) {
-      return `Descuento vencido, puedes seguir navegando la demo por ${daysLeft} días`;
-    }
-    return (
-      <Box display="flex" alignItems="center" gap={1}>
-        <BadgePercent size={18} />
-        <Typography variant="body2" fontWeight="bold" color="error.main">
-          20% OFF
-        </Typography>
-        <Typography variant="body2">hasta el {discountDate}</Typography>
       </Box>
     );
   };
@@ -218,7 +184,7 @@ const TrialNotification = () => {
         sx={{
           position: "fixed",
           zIndex: 9999,
-          top: "20px !important",
+          top: "8px !important",
           "& .MuiSnackbar-root": {
             position: "fixed",
           },
@@ -241,41 +207,6 @@ const TrialNotification = () => {
           {getNotificationMessage()}
         </Alert>
       </Snackbar>
-
-      {/* Notificación de descuento */}
-      {daysLeft > 0 && (
-        <Snackbar
-          open={showDiscount}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}
-          sx={{
-            position: "fixed",
-            zIndex: 9998,
-            top: "80px !important",
-            "& .MuiSnackbar-root": {
-              position: "fixed",
-            },
-          }}
-        >
-          <Alert
-            severity="info"
-            icon={false}
-            sx={{
-              boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
-              borderRadius: "8px",
-              minWidth: 300,
-              zIndex: 9998,
-              backgroundColor: "primary.light",
-              color: "primary.dark",
-              "& .MuiAlert-message": {
-                padding: "8px 0",
-                width: "100%",
-              },
-            }}
-          >
-            {getDiscountMessage()}
-          </Alert>
-        </Snackbar>
-      )}
     </>
   );
 };

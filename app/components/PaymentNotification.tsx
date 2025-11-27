@@ -1,4 +1,3 @@
-// components/PaymentNotification.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -117,10 +116,12 @@ export default function PaymentNotification() {
           backgroundColor: theme.palette.primary.main,
           "& .MuiAlert-icon": {
             alignItems: "center",
+            color: "white",
           },
           "& .MuiAlert-message": {
             padding: theme.spacing(0.5, 0),
             width: "100%",
+            color: "white",
           },
         }}
       >

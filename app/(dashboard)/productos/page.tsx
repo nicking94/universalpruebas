@@ -36,21 +36,17 @@ import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import { usePagination } from "@/app/context/PaginationContext";
 import BarcodeGenerator from "@/app/components/BarcodeGenerator";
 import AdvancedFilterPanel from "@/app/components/AdvancedFilterPanel";
+import Select from "@/app/components/Select";
 import {
   convertFromBaseUnit,
   convertToBaseUnit,
 } from "@/app/lib/utils/calculations";
 import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
+import Checkbox from "@/app/components/Checkbox";
 import {
-  Checkbox,
-  FormControlLabel,
-  TextField,
   Autocomplete,
   IconButton,
-  Select as MuiSelect,
-  MenuItem,
   Box,
-  Button, // ✅ Material UI Button
   Typography,
   Table,
   TableBody,
@@ -61,6 +57,7 @@ import {
   Paper,
 } from "@mui/material";
 import Input from "@/app/components/Input";
+import Button from "@/app/components/Button";
 
 // Constantes de configuración
 const PRODUCT_CONFIG = {
@@ -635,9 +632,7 @@ const ProductsPage = () => {
   }, [showNotification]);
 
   const handleIvaCheckboxChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const hasIvaIncluded = e.target.checked;
-
+    (hasIvaIncluded: boolean) => {
       setNewProduct((prev) => {
         let newCostPrice = prev.costPrice;
         let newPrice = prev.price;
@@ -1927,7 +1922,7 @@ const ProductsPage = () => {
                 Confirmar
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsSizeDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
@@ -1965,7 +1960,7 @@ const ProductsPage = () => {
           bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Button
-              variant="outlined"
+              variant="text"
               onClick={() => setIsSelectionModalOpen(false)}
               sx={{
                 color: "text.secondary",
@@ -2024,7 +2019,7 @@ const ProductsPage = () => {
           bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Button
-              variant="outlined"
+              variant="text"
               onClick={() => {
                 setShowReturnsHistory(false);
                 setIsSelectionModalOpen(true);
@@ -2108,7 +2103,7 @@ const ProductsPage = () => {
                 Confirmar Devolución
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => {
                   setIsReturnModalOpen(false);
                   resetReturnData();
@@ -2154,10 +2149,9 @@ const ProductsPage = () => {
                   setSelectedReturnProduct(selectedOption?.value || null);
                 }}
                 renderInput={(params) => (
-                  <TextField
+                  <Input
                     {...params}
                     placeholder="Buscar producto..."
-                    variant="outlined"
                     size="small"
                   />
                 )}
@@ -2186,40 +2180,36 @@ const ProductsPage = () => {
                   Cantidad a devolver
                 </label>
                 <div className="flex max-w-75">
-                  <TextField
+                  <Input
                     type="number"
                     value={returnQuantity || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === "" || !isNaN(Number(value))) {
-                        setReturnQuantity(value === "" ? 1 : Number(value));
-                      }
+                    onChange={(value) => {
+                      const numValue = value === "" ? 1 : Number(value);
+                      setReturnQuantity(numValue);
                     }}
                     size="small"
-                    sx={{ width: "160px" }}
-                    inputProps={{
-                      step:
-                        selectedReturnProduct?.unit === "Kg" ||
-                        selectedReturnProduct?.unit === "L"
-                          ? "0.001"
-                          : "1",
-                    }}
+                    customSx={{ width: "160px" }}
+                    step={
+                      selectedReturnProduct?.unit === "Kg" ||
+                      selectedReturnProduct?.unit === "L"
+                        ? "0.001"
+                        : "1"
+                    }
                   />
-                  <MuiSelect
-                    value={returnUnit || selectedReturnProduct?.unit}
-                    onChange={(e) => setReturnUnit(e.target.value)}
-                    size="small"
-                    sx={{ width: "240px", marginLeft: "8px" }}
-                    disabled
-                  >
-                    {getCompatibleUnits(
+                  <Select
+                    label=""
+                    value={returnUnit || selectedReturnProduct?.unit || ""}
+                    options={getCompatibleUnits(
                       selectedReturnProduct?.unit || "Unid."
-                    ).map((unit) => (
-                      <MenuItem key={unit.value} value={unit.value}>
-                        {unit.label}
-                      </MenuItem>
-                    ))}
-                  </MuiSelect>
+                    ).map((unit) => ({
+                      value: unit.value,
+                      label: unit.label,
+                    }))}
+                    onChange={(value) => setReturnUnit(value)}
+                    size="small"
+                    disabled
+                    sx={{ width: "240px", marginLeft: "8px" }}
+                  />
                 </div>
               </div>
             )}
@@ -2228,11 +2218,11 @@ const ProductsPage = () => {
               <label className="block text-gray_m dark:text-white text-sm font-semibold">
                 Motivo de la devolución
               </label>
-              <TextField
+              <Input
                 type="text"
                 placeholder="Ej: Producto defectuoso, cambio de talla, etc."
                 value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
+                onChange={(value) => setReturnReason(value.toString())}
                 fullWidth
                 size="small"
               />
@@ -2261,7 +2251,7 @@ const ProductsPage = () => {
                 {editingProduct ? "Actualizar" : "Guardar"}
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={handleCloseModal}
                 sx={{
                   color: "text.secondary",
@@ -2424,10 +2414,9 @@ const ProductsPage = () => {
                       }));
                     }}
                     renderInput={(params) => (
-                      <TextField
+                      <Input
                         {...params}
                         placeholder="Buscar o seleccionar categoría"
-                        variant="outlined"
                         size="small"
                       />
                     )}
@@ -2518,25 +2507,14 @@ const ProductsPage = () => {
                 {/* Configuración de IVA */}
                 <div className="space-y-2">
                   <div className="bg-gray-50 dark:bg-gray_b p-4 rounded-lg border border-gray-200">
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={newProduct.hasIvaIncluded || false}
-                          onChange={handleIvaCheckboxChange}
-                          color="primary"
-                        />
-                      }
-                      label={
-                        <div>
-                          <span className="text-sm font-medium">
-                            Incluir IVA 21%
-                          </span>
-                          <div className="text-xs text-gray_m mt-1">
-                            {newProduct.hasIvaIncluded
-                              ? "Precios incluyen IVA"
-                              : "Precios sin IVA"}
-                          </div>
-                        </div>
+                    <Checkbox
+                      label="Incluir IVA 21%"
+                      checked={newProduct.hasIvaIncluded || false}
+                      onChange={handleIvaCheckboxChange}
+                      helperText={
+                        newProduct.hasIvaIncluded
+                          ? "Precios incluyen IVA"
+                          : "Precios sin IVA"
                       }
                     />
                   </div>
@@ -2546,23 +2524,16 @@ const ProductsPage = () => {
                 <div className="space-y-2">
                   <div className="bg-gray_xxl dark:bg-gray_b p-4 rounded-lg border border-gray_xxl">
                     <div className="flex items-center justify-between">
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={newProduct.setMinStock || false}
-                            onChange={(e) => {
-                              setNewProduct({
-                                ...newProduct,
-                                setMinStock: e.target.checked,
-                                minStock: e.target.checked
-                                  ? newProduct.minStock || 1
-                                  : 0,
-                              });
-                            }}
-                            color="primary"
-                          />
-                        }
+                      <Checkbox
                         label="Establecer stock mínimo"
+                        checked={newProduct.setMinStock || false}
+                        onChange={(checked) => {
+                          setNewProduct({
+                            ...newProduct,
+                            setMinStock: checked,
+                            minStock: checked ? newProduct.minStock || 1 : 0,
+                          });
+                        }}
                       />
                     </div>
                     {newProduct.setMinStock && (
@@ -2607,10 +2578,9 @@ const ProductsPage = () => {
                       });
                     }}
                     renderInput={(params) => (
-                      <TextField
+                      <Input
                         {...params}
                         placeholder="Seleccionar unidad"
-                        variant="outlined"
                         size="small"
                       />
                     )}
@@ -2653,10 +2623,9 @@ const ProductsPage = () => {
                       });
                     }}
                     renderInput={(params) => (
-                      <TextField
+                      <Input
                         {...params}
                         placeholder="Seleccionar temporada"
-                        variant="outlined"
                         size="small"
                       />
                     )}
@@ -2772,7 +2741,7 @@ const ProductsPage = () => {
                 Confirmar
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={(e) => {
                   e?.preventDefault();
                   setIsCategoryDeleteModalOpen(false);
@@ -2828,7 +2797,7 @@ const ProductsPage = () => {
                 Sí
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsConfirmModalOpen(false)}
                 sx={{
                   color: "text.secondary",
@@ -2854,7 +2823,7 @@ const ProductsPage = () => {
           bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Button
-              variant="outlined"
+              variant="text"
               onClick={() => setIsPriceModalOpen(false)}
               sx={{
                 color: "text.secondary",

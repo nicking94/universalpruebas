@@ -24,6 +24,7 @@ import {
   InputLabel,
   Alert,
   Button,
+  useTheme,
 } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
 
@@ -46,6 +47,7 @@ export const ConvertToSaleModal = ({
   budget,
   onConfirm,
 }: ConvertToSaleModalProps) => {
+  const theme = useTheme();
   const totalToPay =
     budget.total - (budget.deposit ? parseFloat(budget.deposit) : 0);
 
@@ -204,9 +206,9 @@ export const ConvertToSaleModal = ({
             variant="contained"
             onClick={handleConfirm}
             sx={{
-              backgroundColor: "#3b82f6",
+              backgroundColor: theme.palette.primary.main,
               "&:hover": {
-                backgroundColor: "#2563eb",
+                backgroundColor: theme.palette.primary.dark,
               },
             }}
           >
@@ -216,11 +218,11 @@ export const ConvertToSaleModal = ({
             variant="outlined"
             onClick={onClose}
             sx={{
-              color: "#6b7280",
-              borderColor: "#d1d5db",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
               "&:hover": {
-                backgroundColor: "#f3f4f6",
-                borderColor: "#9ca3af",
+                backgroundColor: theme.palette.action.hover,
+                borderColor: theme.palette.action.active,
               },
             }}
           >

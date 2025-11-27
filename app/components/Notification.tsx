@@ -81,11 +81,15 @@ export default function Notification({
           width: "auto",
           "& .MuiAlert-message": {
             padding: "8px 0",
+            color: "white",
           },
           "& .MuiAlert-action": {
             alignItems: "center",
             padding: 0,
             marginRight: 0,
+            "& .MuiIconButton-root": {
+              color: "white",
+            },
           },
           // Responsive styles
           [theme.breakpoints.down("sm")]: {

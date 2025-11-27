@@ -37,18 +37,18 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
           ),
           sx: {
             borderRadius: "4px",
-            backgroundColor: "white",
+            backgroundColor: theme.palette.background.paper,
             "&:hover": {
-              backgroundColor: "white",
+              backgroundColor: theme.palette.background.paper,
               borderColor: theme.palette.primary.main,
             },
             "&.Mui-focused": {
-              backgroundColor: "white",
+              backgroundColor: theme.palette.background.paper,
               borderColor: theme.palette.primary.main,
               boxShadow: `${alpha(theme.palette.primary.main, 0.25)} 0 0 0 2px`,
             },
             "& .MuiOutlinedInput-notchedOutline": {
-              borderColor: theme.palette.grey[400],
+              borderColor: theme.palette.divider,
             },
             "&:hover .MuiOutlinedInput-notchedOutline": {
               borderColor: theme.palette.primary.main,
@@ -57,14 +57,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
               borderColor: theme.palette.primary.main,
               borderWidth: "1px",
             },
-          },
-        }}
-        sx={{
-          "& .MuiInputBase-input": {
-            color: theme.palette.text.primary,
-            "&::placeholder": {
-              color: theme.palette.text.secondary,
-              opacity: 1,
+            "& .MuiInputBase-input": {
+              color: theme.palette.text.primary,
+              "&::placeholder": {
+                color: theme.palette.text.secondary,
+                opacity: 1,
+              },
             },
           },
         }}

@@ -5,37 +5,35 @@ import {
   InputAdornment,
   FormControl,
   IconButton,
+  TextFieldProps,
+  useTheme,
 } from "@mui/material";
 
-interface InputProps {
+export interface InputProps
+  extends Omit<
+    TextFieldProps,
+    "onChange" | "variant" | "InputLabelProps" | "InputProps" | "sx"
+  > {
   label?: string;
-  colorLabel?: string;
   type?: string;
-  name?: string;
   value?: string | number;
   readOnly?: boolean;
   onChange?: (value: string | number) => void;
   onRawChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
-  accept?: string;
-  autoFocus?: boolean;
-  ref?: React.Ref<HTMLInputElement>;
-  border?: string;
-  textPosition?: string;
   icon?: React.ReactNode;
   width?: string;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   required?: boolean;
   disabled?: boolean;
   step?: string;
+  accept?: string;
   multiline?: boolean;
   rows?: number;
-  // Nuevas props para el botón integrado
   buttonIcon?: React.ReactNode;
   onButtonClick?: () => void;
   buttonTitle?: string;
   buttonDisabled?: boolean;
+  customSx?: TextFieldProps["sx"];
 }
 
 const Input: React.FC<InputProps> = ({
@@ -59,12 +57,20 @@ const Input: React.FC<InputProps> = ({
   step,
   multiline = false,
   rows = 1,
-  // Nuevas props para el botón integrado
   buttonIcon,
   onButtonClick,
   buttonTitle,
   buttonDisabled = false,
+  size = "small",
+  fullWidth = true,
+  error,
+  helperText,
+  select,
+  children,
+  customSx,
+  ...textFieldProps
 }) => {
+  const theme = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
   const handleFocus = () => {
@@ -80,7 +86,8 @@ const Input: React.FC<InputProps> = ({
     onRawChange?.(e);
 
     if (type === "number") {
-      onChange(e.target.value === "" ? 0 : Number(e.target.value));
+      const numValue = e.target.value === "" ? 0 : Number(e.target.value);
+      onChange(numValue);
     } else {
       onChange(e.target.value);
     }
@@ -89,8 +96,99 @@ const Input: React.FC<InputProps> = ({
   const shouldShrink =
     isFocused || (value !== undefined && value !== "" && value !== 0);
 
+  const inputPropsConfig: TextFieldProps["InputProps"] = {
+    readOnly,
+    startAdornment: icon ? (
+      <InputAdornment position="start">{icon}</InputAdornment>
+    ) : undefined,
+    endAdornment:
+      buttonIcon && onButtonClick ? (
+        <InputAdornment position="end">
+          <IconButton
+            onClick={onButtonClick}
+            disabled={buttonDisabled || disabled}
+            size="medium"
+            title={buttonTitle}
+            sx={{
+              marginRight: "8px",
+              padding: "4px",
+              borderRadius: "4px",
+              backgroundColor: theme.palette.primary.main,
+              color: "white",
+              "&:hover": {
+                backgroundColor: theme.palette.primary.dark,
+              },
+              "&.Mui-disabled": {
+                backgroundColor: theme.palette.action.disabled,
+                color: theme.palette.text.disabled,
+              },
+            }}
+          >
+            {buttonIcon}
+          </IconButton>
+        </InputAdornment>
+      ) : undefined,
+  };
+
+  const inputLabelProps: TextFieldProps["InputLabelProps"] = {
+    shrink: shouldShrink,
+    sx: {
+      color: theme.palette.text.secondary,
+      "&.Mui-focused": {
+        color: theme.palette.primary.main,
+      },
+    },
+  };
+
+  const inputPropsConfigInternal: TextFieldProps["inputProps"] = {
+    accept,
+    step,
+  };
+
+  const sxStyles: TextFieldProps["sx"] = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: theme.palette.background.paper,
+      color: theme.palette.text.primary,
+      "& fieldset": {
+        borderColor:
+          theme.palette.mode === "dark"
+            ? theme.palette.grey[700]
+            : theme.palette.grey[400],
+      },
+      "&:hover fieldset": {
+        borderColor: theme.palette.primary.main,
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: theme.palette.primary.main,
+      },
+      paddingRight: buttonIcon ? "0px" : undefined,
+    },
+    "& .MuiInputLabel-root": {
+      color: theme.palette.text.secondary,
+      "&.Mui-focused": {
+        color: theme.palette.primary.main,
+      },
+      "&.MuiInputLabel-shrink": {
+        transform: "translate(14px, -6px) scale(0.75)",
+      },
+    },
+    "& .MuiOutlinedInput-input": {
+      paddingLeft: icon ? "8px" : undefined,
+      color: theme.palette.text.primary,
+      "&::placeholder": {
+        color: theme.palette.text.secondary,
+        opacity: 0.7,
+      },
+    },
+    "& .MuiFormHelperText-root": {
+      color: error ? theme.palette.error.main : theme.palette.text.secondary,
+    },
+    width,
+    ...customSx,
+  };
+
   return (
-    <FormControl fullWidth sx={{ width }} variant="outlined">
+    <FormControl fullWidth={fullWidth} sx={{ width }} variant="outlined">
       <TextField
         ref={ref}
         autoFocus={autoFocus}
@@ -101,74 +199,26 @@ const Input: React.FC<InputProps> = ({
         onKeyDown={onKeyDown}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        InputProps={{
-          readOnly: readOnly,
-          startAdornment: icon ? (
-            <InputAdornment position="start">{icon}</InputAdornment>
-          ) : undefined,
-          endAdornment:
-            buttonIcon && onButtonClick ? (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={onButtonClick}
-                  disabled={buttonDisabled || disabled}
-                  size="medium"
-                  title={buttonTitle}
-                  sx={{
-                    marginRight: "8px",
-                    padding: "4px",
-                    borderRadius: "4px",
-                    backgroundColor: "primary.main",
-                    color: "white",
-                    "&:hover": {
-                      backgroundColor: "primary.dark",
-                    },
-                    "&.Mui-disabled": {
-                      backgroundColor: "grey.400",
-                      color: "grey.600",
-                    },
-                  }}
-                >
-                  {buttonIcon}
-                </IconButton>
-              </InputAdornment>
-            ) : undefined,
-        }}
         placeholder={placeholder}
-        inputProps={{
-          accept,
-          step,
-        }}
         label={label}
         required={required}
         disabled={disabled}
         variant="outlined"
-        size="small"
-        fullWidth
+        size={size}
+        fullWidth={fullWidth}
         multiline={multiline}
         rows={rows}
-        InputLabelProps={{
-          shrink: shouldShrink,
-        }}
-        sx={{
-          "& .MuiOutlinedInput-root": {
-            backgroundColor: "white",
-            "&:hover fieldset": { borderColor: "#3b82f6" },
-            "&.Mui-focused fieldset": { borderColor: "#3b82f6" },
-            // Ajustar padding cuando hay botón
-            paddingRight: buttonIcon ? "0px" : undefined,
-          },
-          "& .MuiInputLabel-root": {
-            "&.Mui-focused": { color: "#3b82f6" },
-            "&.MuiInputLabel-shrink": {
-              transform: "translate(14px, -6px) scale(0.75)",
-            },
-          },
-          "& .MuiOutlinedInput-input": {
-            paddingLeft: icon ? "8px" : undefined,
-          },
-        }}
-      />
+        error={error}
+        helperText={helperText}
+        select={select}
+        InputProps={inputPropsConfig}
+        InputLabelProps={inputLabelProps}
+        inputProps={inputPropsConfigInternal}
+        sx={sxStyles}
+        {...textFieldProps}
+      >
+        {children}
+      </TextField>
     </FormControl>
   );
 };

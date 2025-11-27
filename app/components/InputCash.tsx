@@ -1,6 +1,11 @@
 "use client";
 import React from "react";
-import { TextField, InputAdornment, FormControl } from "@mui/material";
+import {
+  TextField,
+  InputAdornment,
+  FormControl,
+  useTheme,
+} from "@mui/material";
 import { AttachMoney } from "@mui/icons-material";
 
 interface InputCashProps {
@@ -18,6 +23,8 @@ const InputCash: React.FC<InputCashProps> = ({
   placeholder = "$0,00",
   disabled = false,
 }) => {
+  const theme = useTheme();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
 
@@ -49,6 +56,30 @@ const InputCash: React.FC<InputCashProps> = ({
               <AttachMoney />
             </InputAdornment>
           ),
+          sx: {
+            backgroundColor: theme.palette.background.paper,
+            "& .MuiOutlinedInput-input": {
+              color: theme.palette.text.primary,
+            },
+            "& .MuiInputLabel-root": {
+              color: theme.palette.text.secondary,
+            },
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255, 255, 255, 0.23)"
+                  : "rgba(0, 0, 0, 0.23)",
+            },
+            "&:hover .MuiOutlinedInput-notchedOutline": {
+              borderColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255, 255, 255, 0.4)"
+                  : "rgba(0, 0, 0, 0.4)",
+            },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+              borderColor: theme.palette.primary.main,
+            },
+          },
         }}
         variant="outlined"
         size="small"

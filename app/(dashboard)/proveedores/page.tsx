@@ -15,7 +15,6 @@ import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
 import {
-  Button, // ✅ Material UI Button
   IconButton, // ✅ Material UI IconButton
   Box,
   Typography,
@@ -28,6 +27,7 @@ import {
   Paper,
   Chip,
 } from "@mui/material";
+import Button from "@/app/components/Button";
 
 const ProveedoresPage = () => {
   const { rubro } = useRubro();
@@ -690,7 +690,7 @@ const ProveedoresPage = () => {
           minheight="min-h-[75vh]"
           buttons={
             <Button
-              variant="outlined"
+              variant="text"
               onClick={() => {
                 setIsProductAssignmentModalOpen(false);
                 setProductSearchQuery("");
@@ -945,7 +945,7 @@ const ProveedoresPage = () => {
                 {editingSupplier ? "Actualizar" : "Guardar"}
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => {
                   setIsModalOpen(false);
                   resetForm();
@@ -1019,7 +1019,6 @@ const ProveedoresPage = () => {
                   </Box>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Input
-                      colorLabel="text.secondary"
                       label="Nombre"
                       value={contact.name}
                       onRawChange={(e) =>
@@ -1028,7 +1027,6 @@ const ProveedoresPage = () => {
                       placeholder="Nombre del proveedor"
                     />
                     <Input
-                      colorLabel="text.secondary"
                       label="Teléfono"
                       value={contact.phone}
                       onRawChange={(e) =>

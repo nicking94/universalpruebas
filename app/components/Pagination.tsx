@@ -159,7 +159,12 @@ const Pagination: React.FC<
           {text}
         </Typography>
         <FormControl size="small" sx={{ minWidth: 80 }}>
-          <InputLabel id="items-per-page-label">Items</InputLabel>
+          <InputLabel
+            id="items-per-page-label"
+            sx={{ color: "text.secondary" }}
+          >
+            Items
+          </InputLabel>
           <Select
             labelId="items-per-page-label"
             id="items-per-page"
@@ -168,7 +173,30 @@ const Pagination: React.FC<
             onChange={handleItemsPerPageChange}
             sx={{
               cursor: "pointer",
-              "& .MuiSelect-select": { py: 1 },
+              "& .MuiSelect-select": {
+                py: 1,
+                color: "text.primary",
+                backgroundColor: "background.paper",
+              },
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: "divider",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor: "primary.main",
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: "background.paper",
+                  "& .MuiMenuItem-root": {
+                    color: "text.primary",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                    },
+                  },
+                },
+              },
             }}
           >
             {[5, 10, 20, 30].map((number) => (
@@ -195,12 +223,22 @@ const Pagination: React.FC<
           sx={{
             "& .MuiPaginationItem-root": {
               margin: "0 2px",
-            },
-            "& .Mui-selected": {
-              background: "linear-gradient(135deg, #1976d2, #1565c0)",
-              color: "white",
+              color: "text.primary",
+              backgroundColor: "background.paper",
+              border: `1px solid ${theme.palette.divider}`,
               "&:hover": {
-                background: "linear-gradient(135deg, #1565c0, #0d47a1)",
+                backgroundColor: "action.hover",
+              },
+              "&.Mui-selected": {
+                background: "linear-gradient(135deg, #1976d2, #1565c0)",
+                color: "white",
+                "&:hover": {
+                  background: "linear-gradient(135deg, #1565c0, #0d47a1)",
+                },
+              },
+              "&.Mui-disabled": {
+                color: "text.disabled",
+                backgroundColor: "action.disabledBackground",
               },
             },
           }}
@@ -210,7 +248,12 @@ const Pagination: React.FC<
       {/* Contador total */}
       <Typography variant="body2" color="text.secondary">
         {text2}:{" "}
-        <Typography component="span" fontWeight="medium" variant="body2">
+        <Typography
+          component="span"
+          fontWeight="medium"
+          variant="body2"
+          color="text.primary"
+        >
           {totalItems}
         </Typography>
       </Typography>

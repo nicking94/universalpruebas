@@ -3,7 +3,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { es } from "date-fns/locale";
-import { TextField, IconButton, Box } from "@mui/material";
+import { TextField, IconButton, Box, useTheme } from "@mui/material";
 import { parseISO, format, isValid } from "date-fns";
 import { useMemo, useState } from "react";
 import { PickersActionBarAction } from "@mui/x-date-pickers";
@@ -43,6 +43,7 @@ const CustomDatePicker = ({
   maxDate,
   disabled = false,
 }: CustomDatePickerProps) => {
+  const theme = useTheme();
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -152,7 +153,7 @@ const CustomDatePicker = ({
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
       <Box sx={{ position: "relative", display: "inline-block" }}>
-        {/* Campo de texto con el icono integrado */}
+        {/* Campo de texto con el icono integrado - CORREGIDO para dark mode */}
         <TextField
           value={formatDisplayDate(value)}
           placeholder={placeholder}
@@ -161,10 +162,23 @@ const CustomDatePicker = ({
             readOnly: true,
             sx: {
               cursor: "pointer",
-              backgroundColor: "white",
+              backgroundColor: theme.palette.background.paper,
               "& .MuiInputBase-input": {
                 cursor: "pointer",
-                paddingRight: "40px", // Espacio para el icono
+                paddingRight: "40px",
+                color: theme.palette.text.primary,
+              },
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.23)"
+                    : "rgba(0, 0, 0, 0.23)",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                borderColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.4)"
+                    : "rgba(0, 0, 0, 0.4)",
               },
             },
             endAdornment: (
@@ -200,6 +214,11 @@ const CustomDatePicker = ({
             "& .MuiInputBase-root": {
               cursor: disabled ? "not-allowed" : "pointer",
               paddingRight: "0px",
+            },
+            "& .MuiFormHelperText-root": {
+              color: error
+                ? theme.palette.error.main
+                : theme.palette.text.secondary,
             },
           }}
         />

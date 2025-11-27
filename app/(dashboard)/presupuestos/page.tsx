@@ -35,7 +35,6 @@ import { useRouter } from "next/navigation";
 
 // Material-UI imports
 import {
-  Button,
   Box,
   Typography,
   Table,
@@ -57,6 +56,7 @@ import {
   Note as NoteIcon,
   ShoppingCart as ShoppingCartIcon,
 } from "@mui/icons-material";
+import Button from "@/app/components/Button";
 
 const PresupuestosPage = () => {
   const { rubro } = useRubro();
@@ -1422,7 +1422,7 @@ const PresupuestosPage = () => {
                 {editingBudget ? "Actualizar" : "Crear"}
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingBudget(null);
@@ -1794,7 +1794,6 @@ const PresupuestosPage = () => {
                   <div className="flex justify-between items-center bg-gray_xxl px-4 py-3 text-gray_b">
                     <div className="flex w-full max-w-[30vw] items-center space-x-4">
                       <Input
-                        colorLabel="text-gray_m"
                         label="Seña en efectivo (opcional)"
                         type="number"
                         value={newBudget.deposit}
@@ -1869,7 +1868,7 @@ const PresupuestosPage = () => {
                 Eliminar
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
