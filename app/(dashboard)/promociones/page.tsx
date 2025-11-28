@@ -1,25 +1,5 @@
 "use client";
-import Input from "@/app/components/Input";
-import Modal from "@/app/components/Modal";
-import Notification from "@/app/components/Notification";
 import {
-  Promotion,
-  PromotionType,
-  PromotionStatus,
-} from "@/app/lib/types/types";
-import { Plus, Edit, Trash, Tag, Percent, DollarSign } from "lucide-react";
-import { useEffect, useState } from "react";
-import { db } from "@/app/database/db";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-import Pagination from "@/app/components/Pagination";
-import Select from "react-select";
-import { useRubro } from "@/app/context/RubroContext";
-import { usePagination } from "@/app/context/PaginationContext";
-import {
-  Button, // ✅ Material UI Button
-  IconButton, // ✅ Material UI IconButton
-  Box,
-  Typography,
   Table,
   TableBody,
   TableCell,
@@ -27,13 +7,45 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   Card,
+  Typography,
+  Box,
+  Chip,
+  IconButton,
+  useTheme,
   CardContent,
 } from "@mui/material";
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  LocalOffer as LocalOfferIcon,
+  Percent as PercentIcon,
+  AttachMoney as AttachMoneyIcon,
+} from "@mui/icons-material";
+import { useEffect, useState } from "react";
+import { db } from "@/app/database/db";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+import Pagination from "@/app/components/Pagination";
+import { useRubro } from "@/app/context/RubroContext";
+import { usePagination } from "@/app/context/PaginationContext";
+import {
+  Promotion,
+  PromotionType,
+  PromotionStatus,
+} from "@/app/lib/types/types";
+
+// Importar tus componentes personalizados
+import Button from "@/app/components/Button";
+import Notification from "@/app/components/Notification";
+import Modal from "@/app/components/Modal";
+import Select from "@/app/components/Select";
+import Input from "@/app/components/Input";
+import CustomDatePicker from "@/app/components/CustomDatePicker";
 
 const PromocionesPage = () => {
   const { rubro } = useRubro();
+  const theme = useTheme();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(
@@ -45,7 +57,9 @@ const PromocionesPage = () => {
   );
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [type, setType] = useState<"success" | "error" | "info">("success");
+  const [notificationType, setNotificationType] = useState<
+    "success" | "error" | "info"
+  >("success");
   const { currentPage, itemsPerPage } = usePagination();
 
   const [newPromotion, setNewPromotion] = useState<
@@ -60,7 +74,6 @@ const PromocionesPage = () => {
     startDate: new Date().toISOString().split("T")[0],
     endDate: "",
     minPurchaseAmount: 0,
-
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -69,24 +82,47 @@ const PromocionesPage = () => {
     Record<string, string>
   >({});
 
+  // Función para obtener colores según el tema (consistente con VentasPage)
+  const getTableHeaderStyle = () => ({
+    bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
+    color: "primary.contrastText",
+  });
+
+  const getCardStyle = (
+    color: "success" | "error" | "primary" | "warning"
+  ) => ({
+    bgcolor: theme.palette.mode === "dark" ? `${color}.dark` : `${color}.main`,
+    color: "white",
+    "& .MuiTypography-root": {
+      color: "white !important",
+    },
+  });
+
   // Opciones mejoradas
   const promotionTypeOptions = [
     {
       value: "PERCENTAGE_DISCOUNT",
       label: "Descuento Porcentual",
-      icon: <Percent size={16} />,
     },
     {
       value: "FIXED_DISCOUNT",
       label: "Descuento Fijo",
-      icon: <DollarSign size={16} />,
     },
   ];
 
   const statusOptions = [
-    { value: "active", label: "Activa", color: "bg-green_xl text-green_b" },
-    { value: "inactive", label: "Inactiva", color: "bg-gray_xl text-gray_b" },
+    { value: "active", label: "Activa" },
+    { value: "inactive", label: "Inactiva" },
   ];
+
+  const showNotification = (
+    message: string,
+    type: "success" | "error" | "info"
+  ) => {
+    setNotificationType(type);
+    setNotificationMessage(message);
+    setIsNotificationOpen(true);
+  };
 
   // Validación mejorada
   const validatePromotion = (promotion: typeof newPromotion): boolean => {
@@ -114,18 +150,6 @@ const PromocionesPage = () => {
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  };
-
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setType(type);
-    setNotificationMessage(message);
-    setIsNotificationOpen(true);
-    setTimeout(() => {
-      setIsNotificationOpen(false);
-    }, 3000);
   };
 
   const fetchPromotions = async () => {
@@ -250,24 +274,24 @@ const PromocionesPage = () => {
 
   const getPromotionStatus = (
     promotion: Promotion
-  ): { label: string; color: string } => {
+  ): { label: string; color: "success" | "error" | "warning" | "default" } => {
     const now = new Date();
     const startDate = new Date(promotion.startDate);
     const endDate = promotion.endDate ? new Date(promotion.endDate) : null;
 
     if (promotion.status === "inactive") {
-      return { label: "Inactiva", color: "bg-gray_xl text-gray_b" };
+      return { label: "Inactiva", color: "default" };
     }
 
     if (now < startDate) {
-      return { label: "Programada", color: "bg-blue_xl text-blue_b" };
+      return { label: "Programada", color: "warning" };
     }
 
     if (endDate && now > endDate) {
-      return { label: "Expirada", color: "bg-red_xl text-red_b" };
+      return { label: "Expirada", color: "error" };
     }
 
-    return { label: "Activa", color: "bg-green_xl text-green_b" };
+    return { label: "Activa", color: "success" };
   };
 
   useEffect(() => {
@@ -289,33 +313,11 @@ const PromocionesPage = () => {
           flexDirection: "column",
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Typography variant="h5" fontWeight="semibold">
-            Promociones
-          </Typography>
-          {rubro !== "Todos los rubros" && (
-            <Button
-              variant="contained"
-              startIcon={<Plus size={18} />}
-              onClick={handleAddPromotion}
-              sx={{
-                bgcolor: "primary.main",
-                "&:hover": { bgcolor: "primary.dark" },
-              }}
-            >
-              Nueva Promoción
-            </Button>
-          )}
-        </Box>
+        <Typography variant="h5" fontWeight="semibold" mb={2}>
+          Promociones
+        </Typography>
 
-        {/* Estadísticas rápidas */}
+        {/* Estadísticas rápidas - Estilo consistente con Ventas */}
         <Box
           sx={{
             display: "grid",
@@ -324,9 +326,7 @@ const PromocionesPage = () => {
             mb: 3,
           }}
         >
-          <Card
-            sx={{ boxShadow: 1, border: "1px solid", borderColor: "divider" }}
-          >
+          <Card sx={getCardStyle("primary")}>
             <CardContent>
               <Box
                 sx={{
@@ -336,25 +336,17 @@ const PromocionesPage = () => {
                 }}
               >
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Promociones
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    fontWeight="bold"
-                    color="text.primary"
-                  >
+                  <Typography variant="body2">Total Promociones</Typography>
+                  <Typography variant="h4" fontWeight="bold">
                     {promotions.length}
                   </Typography>
                 </Box>
-                <Tag className="text-blue_m" size={24} />
+                <LocalOfferIcon fontSize="large" />
               </Box>
             </CardContent>
           </Card>
 
-          <Card
-            sx={{ boxShadow: 1, border: "1px solid", borderColor: "divider" }}
-          >
+          <Card sx={getCardStyle("success")}>
             <CardContent>
               <Box
                 sx={{
@@ -364,14 +356,8 @@ const PromocionesPage = () => {
                 }}
               >
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Activas
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    fontWeight="bold"
-                    color="success.main"
-                  >
+                  <Typography variant="body2">Activas</Typography>
+                  <Typography variant="h4" fontWeight="bold">
                     {
                       promotions.filter(
                         (p) => getPromotionStatus(p).label === "Activa"
@@ -379,14 +365,12 @@ const PromocionesPage = () => {
                     }
                   </Typography>
                 </Box>
-                <Tag className="text-green_m" size={24} />
+                <LocalOfferIcon fontSize="large" />
               </Box>
             </CardContent>
           </Card>
 
-          <Card
-            sx={{ boxShadow: 1, border: "1px solid", borderColor: "divider" }}
-          >
+          <Card sx={getCardStyle("error")}>
             <CardContent>
               <Box
                 sx={{
@@ -396,10 +380,8 @@ const PromocionesPage = () => {
                 }}
               >
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Expiradas
-                  </Typography>
-                  <Typography variant="h4" fontWeight="bold" color="error.main">
+                  <Typography variant="body2">Expiradas</Typography>
+                  <Typography variant="h4" fontWeight="bold">
                     {
                       promotions.filter(
                         (p) => getPromotionStatus(p).label === "Expirada"
@@ -407,12 +389,35 @@ const PromocionesPage = () => {
                     }
                   </Typography>
                 </Box>
-                <Tag className="text-red_m" size={24} />
+                <LocalOfferIcon fontSize="large" />
               </Box>
             </CardContent>
           </Card>
         </Box>
 
+        {/* Botón Nueva Promoción - POSICIÓN CORREGIDA */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            mb: 2,
+            visibility: rubro === "Todos los rubros" ? "hidden" : "visible",
+          }}
+        >
+          <Button
+            variant="contained"
+            onClick={handleAddPromotion}
+            sx={{
+              bgcolor: "primary.main",
+              "&:hover": { bgcolor: "primary.dark" },
+            }}
+            startIcon={<AddIcon fontSize="small" />}
+          >
+            Nueva Promoción
+          </Button>
+        </Box>
+
+        {/* Tabla de promociones */}
         <Box
           sx={{
             display: "flex",
@@ -429,58 +434,21 @@ const PromocionesPage = () => {
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                    >
-                      Nombre
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()}>Nombre</TableCell>
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Tipo
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Descuento
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Estado
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Vigencia
                     </TableCell>
                     {rubro !== "Todos los rubros" && (
-                      <TableCell
-                        sx={{
-                          bgcolor: "primary.main",
-                          color: "primary.contrastText",
-                        }}
-                        align="center"
-                      >
+                      <TableCell sx={getTableHeaderStyle()} align="center">
                         Acciones
                       </TableCell>
                     )}
@@ -493,7 +461,12 @@ const PromocionesPage = () => {
                       return (
                         <TableRow
                           key={promotion.id || `promo-${promotion.createdAt}`}
-                          hover
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            "&:hover": { backgroundColor: "action.hover" },
+                            transition: "all 0.3s",
+                          }}
                         >
                           <TableCell>
                             <Box>
@@ -523,11 +496,11 @@ const PromocionesPage = () => {
                                 gap: 1,
                               }}
                             >
-                              {
-                                promotionTypeOptions.find(
-                                  (t) => t.value === promotion.type
-                                )?.icon
-                              }
+                              {promotion.type === "PERCENTAGE_DISCOUNT" ? (
+                                <PercentIcon fontSize="small" />
+                              ) : (
+                                <AttachMoneyIcon fontSize="small" />
+                              )}
                               <Typography variant="body2">
                                 {
                                   promotionTypeOptions.find(
@@ -547,15 +520,7 @@ const PromocionesPage = () => {
                           <TableCell align="center">
                             <Chip
                               label={statusInfo.label}
-                              color={
-                                statusInfo.label === "Activa"
-                                  ? "success"
-                                  : statusInfo.label === "Expirada"
-                                  ? "error"
-                                  : statusInfo.label === "Programada"
-                                  ? "primary"
-                                  : "default"
-                              }
+                              color={statusInfo.color}
                               size="small"
                             />
                           </TableCell>
@@ -585,13 +550,14 @@ const PromocionesPage = () => {
                                 sx={{
                                   display: "flex",
                                   justifyContent: "center",
-                                  gap: 1,
+                                  gap: 0.5,
                                 }}
                               >
                                 <IconButton
                                   size="small"
                                   onClick={() => handleEditPromotion(promotion)}
                                   sx={{
+                                    borderRadius: "4px",
                                     color: "text.secondary",
                                     "&:hover": {
                                       backgroundColor: "primary.main",
@@ -600,7 +566,7 @@ const PromocionesPage = () => {
                                   }}
                                   title="Editar promoción"
                                 >
-                                  <Edit size={18} />
+                                  <EditIcon fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   size="small"
@@ -608,6 +574,7 @@ const PromocionesPage = () => {
                                     handleDeletePromotion(promotion)
                                   }
                                   sx={{
+                                    borderRadius: "4px",
                                     color: "text.secondary",
                                     "&:hover": {
                                       backgroundColor: "error.main",
@@ -616,7 +583,7 @@ const PromocionesPage = () => {
                                   }}
                                   title="Eliminar promoción"
                                 >
-                                  <Trash size={18} />
+                                  <DeleteIcon fontSize="small" />
                                 </IconButton>
                               </Box>
                             </TableCell>
@@ -639,9 +606,12 @@ const PromocionesPage = () => {
                             py: 4,
                           }}
                         >
-                          <Tag
-                            size={64}
-                            style={{ marginBottom: 16, color: "#9CA3AF" }}
+                          <LocalOfferIcon
+                            sx={{
+                              marginBottom: 2,
+                              color: "#9CA3AF",
+                              fontSize: 64,
+                            }}
                           />
                           <Typography>Todavía no hay promociones.</Typography>
                         </Box>
@@ -662,25 +632,16 @@ const PromocionesPage = () => {
           )}
         </Box>
 
-        {/* Modal de Promoción Mejorado */}
+        {/* Modal de Promoción - Estilo consistente */}
         <Modal
           isOpen={isOpenModal}
           onClose={handleCloseModal}
           title={editingPromotion ? "Editar Promoción" : "Nueva Promoción"}
+          bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                onClick={handleConfirmAddPromotion}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                {editingPromotion ? "Actualizar" : "Guardar"}
-              </Button>
-              <Button
-                variant="outlined"
+                variant="text"
                 onClick={handleCloseModal}
                 sx={{
                   color: "text.secondary",
@@ -692,6 +653,16 @@ const PromocionesPage = () => {
                 }}
               >
                 Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmAddPromotion}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                {editingPromotion ? "Actualizar" : "Guardar"}
               </Button>
             </Box>
           }
@@ -743,43 +714,23 @@ const PromocionesPage = () => {
                 sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
               >
                 <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="semibold"
-                    sx={{ mb: 0.5, display: "block" }}
-                  >
-                    Tipo de Promoción*
-                  </Typography>
                   <Select
+                    label="Tipo de Promoción*"
                     options={promotionTypeOptions}
-                    value={promotionTypeOptions.find(
-                      (t) => t.value === newPromotion.type
-                    )}
-                    onChange={(selected) =>
+                    value={newPromotion.type}
+                    onChange={(value) =>
                       setNewPromotion((prev) => ({
                         ...prev,
-                        type: selected?.value as PromotionType,
+                        type: value as PromotionType,
                         discount: 0, // Reset discount when type changes
                       }))
                     }
-                    className="text-gray_m"
-                    formatOptionLabel={(option) => (
-                      <div className="flex items-center gap-2">
-                        {option.icon}
-                        {option.label}
-                      </div>
-                    )}
+                    size="small"
                   />
                 </Box>
                 <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="semibold"
-                    sx={{ mb: 0.5, display: "block" }}
-                  >
-                    Descuento a Aplicar*
-                  </Typography>
                   <Input
+                    label="Descuento a aplicar"
                     type="number"
                     value={newPromotion.discount?.toString() || "0"}
                     onRawChange={(e) =>
@@ -812,89 +763,55 @@ const PromocionesPage = () => {
               <Box
                 sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
               >
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="semibold"
-                    sx={{ mb: 0.5, display: "block" }}
-                  >
-                    Fecha de Inicio*
-                  </Typography>
-                  <Input
-                    type="date"
-                    value={newPromotion.startDate}
-                    onRawChange={(e) =>
-                      setNewPromotion((prev) => ({
-                        ...prev,
-                        startDate: e.target.value,
-                      }))
-                    }
-                  />
-                </Box>
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="semibold"
-                    sx={{ mb: 0.5, display: "block" }}
-                  >
-                    Fecha de Fin (Opcional)
-                  </Typography>
-                  <Input
-                    type="date"
-                    value={newPromotion.endDate || ""}
-                    onRawChange={(e) =>
-                      setNewPromotion((prev) => ({
-                        ...prev,
-                        endDate: e.target.value,
-                      }))
-                    }
-                  />
-                  {validationErrors.endDate && (
-                    <Typography
-                      color="error"
-                      variant="caption"
-                      sx={{ mt: 0.5, display: "block" }}
-                    >
-                      {validationErrors.endDate}
-                    </Typography>
-                  )}
-                </Box>
+                <CustomDatePicker
+                  label="Fecha de Inicio"
+                  required
+                  value={newPromotion.startDate}
+                  onChange={(value) =>
+                    setNewPromotion((prev) => ({
+                      ...prev,
+                      startDate: value,
+                    }))
+                  }
+                  placeholder="Seleccionar fecha de inicio"
+                  isClearable={true}
+                />
+
+                <CustomDatePicker
+                  label="Fecha de Fin (Opcional)"
+                  value={newPromotion.endDate || ""}
+                  onChange={(value) =>
+                    setNewPromotion((prev) => ({
+                      ...prev,
+                      endDate: value,
+                    }))
+                  }
+                  placeholder="Seleccionar fecha de fin"
+                  isClearable={true}
+                  minDate={new Date(newPromotion.startDate)}
+                />
               </Box>
 
               <Box
                 sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
               >
                 <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="semibold"
-                    sx={{ mb: 0.5, display: "block" }}
-                  >
-                    Estado*
-                  </Typography>
                   <Select
+                    label="Estado*"
                     options={statusOptions}
-                    value={statusOptions.find(
-                      (s) => s.value === newPromotion.status
-                    )}
-                    onChange={(selected) =>
+                    value={newPromotion.status}
+                    onChange={(value) =>
                       setNewPromotion((prev) => ({
                         ...prev,
-                        status: selected?.value as PromotionStatus,
+                        status: value as PromotionStatus,
                       }))
                     }
-                    className="text-gray_m"
+                    size="small"
                   />
                 </Box>
                 <Box>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="semibold"
-                    sx={{ mb: 0.5, display: "block" }}
-                  >
-                    Monto Mínimo de Compra (Opcional)
-                  </Typography>
                   <Input
+                    label="Monto Mínimo de Compra (Opcional)"
                     type="number"
                     value={newPromotion.minPurchaseAmount?.toString() || "0"}
                     onRawChange={(e) =>
@@ -921,26 +838,16 @@ const PromocionesPage = () => {
           </Box>
         </Modal>
 
-        {/* Modal de Confirmación de Eliminación */}
+        {/* Modal de Confirmación de Eliminación - Estilo consistente */}
         <Modal
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
           title="Eliminar Promoción"
+          bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                color="error"
-                onClick={handleConfirmDelete}
-                sx={{
-                  bgcolor: "error.main",
-                  "&:hover": { bgcolor: "error.dark" },
-                }}
-              >
-                Sí, eliminar
-              </Button>
-              <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsConfirmModalOpen(false)}
                 sx={{
                   color: "text.secondary",
@@ -953,13 +860,22 @@ const PromocionesPage = () => {
               >
                 Cancelar
               </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDelete}
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
+              >
+                Sí, eliminar
+              </Button>
             </Box>
           }
         >
-          <Box sx={{ textAlign: "center" }}>
-            <Trash
-              size={48}
-              style={{ margin: "0 auto 16px", color: "#EF4444" }}
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <DeleteIcon
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
               ¿Está seguro que desea eliminar la promoción?
@@ -973,7 +889,8 @@ const PromocionesPage = () => {
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
-          type={type}
+          type={notificationType}
+          onClose={() => setIsNotificationOpen(false)}
         />
       </Box>
     </ProtectedRoute>

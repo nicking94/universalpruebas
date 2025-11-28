@@ -9,13 +9,12 @@ import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
 import { Product, Supplier, SupplierContact } from "@/app/lib/types/types";
 import SearchBar from "@/app/components/SearchBar";
-import { Plus, Trash, Edit, Truck, Package } from "lucide-react";
 import Pagination from "@/app/components/Pagination";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
 import {
-  IconButton, // ✅ Material UI IconButton
+  IconButton,
   Box,
   Typography,
   Table,
@@ -27,6 +26,13 @@ import {
   Paper,
   Chip,
 } from "@mui/material";
+import {
+  Add,
+  Delete,
+  Edit,
+  LocalShipping,
+  Inventory,
+} from "@mui/icons-material";
 import Button from "@/app/components/Button";
 
 const ProveedoresPage = () => {
@@ -396,7 +402,7 @@ const ProveedoresPage = () => {
           {rubro !== "Todos los rubros" && (
             <Button
               variant="contained"
-              startIcon={<Plus size={18} />}
+              startIcon={<Add />}
               onClick={() => {
                 resetForm();
                 setIsModalOpen(true);
@@ -601,7 +607,7 @@ const ProveedoresPage = () => {
                                 }}
                                 title="Asignar productos"
                               >
-                                <Package size={18} />
+                                <Inventory fontSize="small" />
                               </IconButton>
                               <IconButton
                                 size="small"
@@ -615,7 +621,7 @@ const ProveedoresPage = () => {
                                 }}
                                 title="Editar proveedor"
                               >
-                                <Edit size={18} />
+                                <Edit fontSize="small" />
                               </IconButton>
                               <IconButton
                                 size="small"
@@ -629,7 +635,7 @@ const ProveedoresPage = () => {
                                 }}
                                 title="Eliminar proveedor"
                               >
-                                <Trash size={18} />
+                                <Delete fontSize="small" />
                               </IconButton>
                             </Box>
                           </TableCell>
@@ -651,9 +657,8 @@ const ProveedoresPage = () => {
                             py: 4,
                           }}
                         >
-                          <Truck
-                            size={64}
-                            style={{ marginBottom: 16, color: "#9CA3AF" }}
+                          <LocalShipping
+                            sx={{ fontSize: 64, mb: 2, color: "#9CA3AF" }}
                           />
                           <Typography>
                             {searchQuery
@@ -815,7 +820,7 @@ const ProveedoresPage = () => {
                               height: "32px",
                             }}
                           >
-                            <Plus size={18} />
+                            <Add fontSize="small" />
                           </IconButton>
                         </Box>
                       </Box>
@@ -900,7 +905,7 @@ const ProveedoresPage = () => {
                               height: "32px",
                             }}
                           >
-                            <Trash size={18} />
+                            <Delete fontSize="small" />
                           </IconButton>
                         </Box>
                       </Box>
@@ -1005,7 +1010,7 @@ const ProveedoresPage = () => {
                       <Button
                         variant="contained"
                         color="error"
-                        startIcon={<Trash size={18} />}
+                        startIcon={<Delete />}
                         onClick={() => handleRemoveContact(index)}
                         size="small"
                         sx={{
@@ -1038,7 +1043,7 @@ const ProveedoresPage = () => {
                 </Box>
               ))}
               <Button
-                startIcon={<Plus size={18} />}
+                startIcon={<Add />}
                 onClick={handleAddContact}
                 sx={{
                   color: "primary.main",

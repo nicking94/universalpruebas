@@ -4,16 +4,6 @@ import { db } from "@/app/database/db";
 import { Budget, CreditSale, Customer, Sale } from "@/app/lib/types/types";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Pagination from "@/app/components/Pagination";
-import {
-  Edit,
-  Plus,
-  Trash,
-  Users,
-  ClipboardList,
-  Eye,
-  Mail,
-  IdCard,
-} from "lucide-react";
 import SearchBar from "@/app/components/SearchBar";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
@@ -30,18 +20,25 @@ import {
   Paper,
   Chip,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormControl,
-  Snackbar,
-  Alert,
-  Button, // ✅ Material UI Button
 } from "@mui/material";
 import Modal from "@/app/components/Modal";
 import Input from "@/app/components/Input";
 import Select from "@/app/components/Select";
+import Button from "@/app/components/Button";
+import Notification from "@/app/components/Notification";
+
+// Importar iconos de Material UI
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
+  Email as EmailIcon,
+  Badge as BadgeIcon,
+  Groups as GroupsIcon,
+  Assignment as AssignmentIcon,
+} from "@mui/icons-material";
 
 const ClientesPage = () => {
   const { rubro } = useRubro();
@@ -464,249 +461,41 @@ const ClientesPage = () => {
   };
 
   const BudgetsModal = () => (
-    <Dialog
-      open={isBudgetsModalOpen}
+    <Modal
+      isOpen={isBudgetsModalOpen}
       onClose={() => {
         setIsBudgetsModalOpen(false);
         setSelectedCustomer(null);
         setSelectedBudget(null);
         setCustomerBudgets([]);
       }}
-      maxWidth="lg"
-      fullWidth
-    >
-      <DialogTitle>
-        {selectedBudget
+      title={
+        selectedBudget
           ? "Detalles del Presupuesto"
-          : `Presupuestos de ${selectedCustomer?.name || ""}`}
-      </DialogTitle>
-      <DialogContent>
-        {selectedBudget ? (
-          <Box className="space-y-4">
-            <Box
-              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
-            >
-              <Box>
-                <Typography variant="subtitle2" fontWeight="bold">
-                  Fecha:
-                </Typography>
-                <Typography>
-                  {new Date(selectedBudget.date).toLocaleDateString("es-AR")}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" fontWeight="bold">
-                  Total:
-                </Typography>
-                <Typography>${selectedBudget.total.toFixed(2)}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" fontWeight="bold">
-                  Seña:
-                </Typography>
-                <Typography>${selectedBudget.deposit || "0.00"}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" fontWeight="bold">
-                  Saldo:
-                </Typography>
-                <Typography>${selectedBudget.remaining.toFixed(2)}</Typography>
-              </Box>
-              <Box sx={{ gridColumn: "span 2" }}>
-                <Typography variant="subtitle2" fontWeight="bold">
-                  Estado:
-                </Typography>
-                <Chip
-                  label={selectedBudget.status}
-                  color={
-                    selectedBudget.status === "aprobado"
-                      ? "success"
-                      : selectedBudget.status === "rechazado"
-                      ? "error"
-                      : "warning"
-                  }
-                  size="small"
-                />
-              </Box>
-              {selectedBudget.notes && (
-                <Box sx={{ gridColumn: "span 2" }}>
-                  <Typography variant="subtitle2" fontWeight="bold">
-                    Notas:
-                  </Typography>
-                  <Typography>{selectedBudget.notes}</Typography>
-                </Box>
-              )}
-            </Box>
-
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" fontWeight="medium" mb={2}>
-                Items del Presupuesto
-              </Typography>
-              {selectedBudget.items ? (
-                Array.isArray(selectedBudget.items) &&
-                selectedBudget.items.length > 0 ? (
-                  <TableContainer component={Paper} sx={{ maxHeight: "35vh" }}>
-                    <Table stickyHeader size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell
-                            sx={{ bgcolor: "primary.main", color: "white" }}
-                          >
-                            Descripción
-                          </TableCell>
-                          <TableCell
-                            sx={{ bgcolor: "primary.main", color: "white" }}
-                            align="center"
-                          >
-                            Cantidad
-                          </TableCell>
-                          <TableCell
-                            sx={{ bgcolor: "primary.main", color: "white" }}
-                            align="center"
-                          >
-                            Precio
-                          </TableCell>
-                          <TableCell
-                            sx={{ bgcolor: "primary.main", color: "white" }}
-                            align="center"
-                          >
-                            Total
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {selectedBudget.items.map((item, index) => (
-                          <TableRow key={index} hover>
-                            <TableCell>{item.productName}</TableCell>
-                            <TableCell align="center">
-                              {item.quantity + " " + item.unit}
-                            </TableCell>
-                            <TableCell align="center">
-                              ${item.price.toFixed(2)}
-                            </TableCell>
-                            <TableCell align="center">
-                              ${(item.quantity * item.price).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Typography color="text.secondary">
-                    No hay items en este presupuesto
-                  </Typography>
-                )
-              ) : (
-                <Typography color="text.secondary">
-                  No se encontraron items
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        ) : (
-          <Box sx={{ maxHeight: "70vh", overflow: "auto" }}>
-            {customerBudgets.length > 0 ? (
-              <TableContainer component={Paper}>
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell
-                        sx={{ bgcolor: "primary.main", color: "white" }}
-                      >
-                        Fecha
-                      </TableCell>
-                      <TableCell
-                        sx={{ bgcolor: "primary.main", color: "white" }}
-                        align="center"
-                      >
-                        Total
-                      </TableCell>
-                      <TableCell
-                        sx={{ bgcolor: "primary.main", color: "white" }}
-                        align="center"
-                      >
-                        Estado
-                      </TableCell>
-                      <TableCell
-                        sx={{ bgcolor: "primary.main", color: "white" }}
-                        align="center"
-                      >
-                        Acciones
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {customerBudgets.map((budget) => (
-                      <TableRow key={budget.id} hover>
-                        <TableCell>
-                          {new Date(budget.date).toLocaleDateString("es-AR")}
-                        </TableCell>
-                        <TableCell align="center">
-                          ${budget.total.toFixed(2)}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={budget.status}
-                            color={
-                              budget.status === "aprobado"
-                                ? "success"
-                                : budget.status === "rechazado"
-                                ? "error"
-                                : "warning"
-                            }
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            onClick={() => handleViewBudgetItems(budget)}
-                            size="small"
-                            sx={{
-                              borderRadius: "4px",
-                              color: "primary.main",
-                              "&:hover": {
-                                backgroundColor: "primary.main",
-                                color: "white",
-                              },
-                            }}
-                            title="Ver detalles"
-                          >
-                            <Eye size={18} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Box sx={{ textAlign: "center", py: 4 }}>
-                <ClipboardList
-                  size={64}
-                  style={{ marginBottom: 16, color: "#9CA3AF" }}
-                />
-                <Typography color="text.secondary">
-                  No hay presupuestos para este cliente
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        )}
-      </DialogContent>
-      <DialogActions>
-        {selectedBudget ? (
-          <>
-            <Button
-              variant="contained"
-              onClick={() => setSelectedBudget(null)}
-              sx={{
-                bgcolor: "primary.main",
-                "&:hover": { bgcolor: "primary.dark" },
-              }}
-            >
-              Volver
-            </Button>
+          : `Presupuestos de ${selectedCustomer?.name || ""}`
+      }
+      buttons={
+        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+          {selectedBudget ? (
+            <>
+              <Button
+                variant="contained"
+                onClick={() => setSelectedBudget(null)}
+              >
+                Volver
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setIsBudgetsModalOpen(false);
+                  setSelectedCustomer(null);
+                  setSelectedBudget(null);
+                }}
+              >
+                Cerrar
+              </Button>
+            </>
+          ) : (
             <Button
               variant="outlined"
               onClick={() => {
@@ -714,68 +503,143 @@ const ClientesPage = () => {
                 setSelectedCustomer(null);
                 setSelectedBudget(null);
               }}
-              sx={{
-                color: "text.secondary",
-                borderColor: "text.secondary",
-                "&:hover": {
-                  backgroundColor: "action.hover",
-                  borderColor: "text.primary",
-                },
-              }}
             >
               Cerrar
             </Button>
-          </>
-        ) : (
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setIsBudgetsModalOpen(false);
-              setSelectedCustomer(null);
-              setSelectedBudget(null);
-            }}
-            sx={{
-              color: "text.secondary",
-              borderColor: "text.secondary",
-              "&:hover": {
-                backgroundColor: "action.hover",
-                borderColor: "text.primary",
-              },
-            }}
-          >
-            Cerrar
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
-  );
-
-  const SalesModal = () => (
-    <Dialog
-      open={isSalesModalOpen}
-      onClose={() => {
-        setIsSalesModalOpen(false);
-        setSelectedCustomer(null);
-        setCustomerSales([]);
-      }}
-      maxWidth="lg"
-      fullWidth
+          )}
+        </Box>
+      }
     >
-      <DialogTitle>
-        Historial de Compras - {selectedCustomer?.name || ""}
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
-          {customerSales.length > 0 ? (
+      {selectedBudget ? (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold">
+                Fecha:
+              </Typography>
+              <Typography>
+                {new Date(selectedBudget.date).toLocaleDateString("es-AR")}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold">
+                Total:
+              </Typography>
+              <Typography>${selectedBudget.total.toFixed(2)}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold">
+                Seña:
+              </Typography>
+              <Typography>${selectedBudget.deposit || "0.00"}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold">
+                Saldo:
+              </Typography>
+              <Typography>${selectedBudget.remaining.toFixed(2)}</Typography>
+            </Box>
+            <Box sx={{ gridColumn: "span 2" }}>
+              <Typography variant="subtitle2" fontWeight="bold">
+                Estado:
+              </Typography>
+              <Chip
+                label={selectedBudget.status}
+                color={
+                  selectedBudget.status === "aprobado"
+                    ? "success"
+                    : selectedBudget.status === "rechazado"
+                    ? "error"
+                    : "warning"
+                }
+                size="small"
+              />
+            </Box>
+            {selectedBudget.notes && (
+              <Box sx={{ gridColumn: "span 2" }}>
+                <Typography variant="subtitle2" fontWeight="bold">
+                  Notas:
+                </Typography>
+                <Typography>{selectedBudget.notes}</Typography>
+              </Box>
+            )}
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" fontWeight="medium" mb={2}>
+              Items del Presupuesto
+            </Typography>
+            {selectedBudget.items ? (
+              Array.isArray(selectedBudget.items) &&
+              selectedBudget.items.length > 0 ? (
+                <TableContainer component={Paper} sx={{ maxHeight: "35vh" }}>
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                        >
+                          Descripción
+                        </TableCell>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                          align="center"
+                        >
+                          Cantidad
+                        </TableCell>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                          align="center"
+                        >
+                          Precio
+                        </TableCell>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                          align="center"
+                        >
+                          Total
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedBudget.items.map((item, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>{item.productName}</TableCell>
+                          <TableCell align="center">
+                            {item.quantity + " " + item.unit}
+                          </TableCell>
+                          <TableCell align="center">
+                            ${item.price.toFixed(2)}
+                          </TableCell>
+                          <TableCell align="center">
+                            ${(item.quantity * item.price).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography color="text.secondary">
+                  No hay items en este presupuesto
+                </Typography>
+              )
+            ) : (
+              <Typography color="text.secondary">
+                No se encontraron items
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      ) : (
+        <Box sx={{ maxHeight: "70vh", overflow: "auto" }}>
+          {customerBudgets.length > 0 ? (
             <TableContainer component={Paper}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
                       Fecha
-                    </TableCell>
-                    <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
-                      Productos
                     </TableCell>
                     <TableCell
                       sx={{ bgcolor: "primary.main", color: "white" }}
@@ -789,30 +653,52 @@ const ClientesPage = () => {
                     >
                       Estado
                     </TableCell>
+                    <TableCell
+                      sx={{ bgcolor: "primary.main", color: "white" }}
+                      align="center"
+                    >
+                      Acciones
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {customerSales.map((sale) => (
-                    <TableRow key={sale.id} hover>
+                  {customerBudgets.map((budget) => (
+                    <TableRow key={budget.id} hover>
                       <TableCell>
-                        {new Date(sale.date).toLocaleDateString("es-AR")}
-                      </TableCell>
-                      <TableCell>
-                        {sale.products.map((product, idx) => (
-                          <Box key={idx} sx={{ fontSize: "0.875rem" }}>
-                            {product.name} x {product.quantity}
-                          </Box>
-                        ))}
+                        {new Date(budget.date).toLocaleDateString("es-AR")}
                       </TableCell>
                       <TableCell align="center">
-                        ${sale.total.toFixed(2)}
+                        ${budget.total.toFixed(2)}
                       </TableCell>
                       <TableCell align="center">
                         <Chip
-                          label={sale.paid ? "Pagado" : "Pendiente"}
-                          color={sale.paid ? "success" : "warning"}
+                          label={budget.status}
+                          color={
+                            budget.status === "aprobado"
+                              ? "success"
+                              : budget.status === "rechazado"
+                              ? "error"
+                              : "warning"
+                          }
                           size="small"
                         />
+                      </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          onClick={() => handleViewBudgetItems(budget)}
+                          size="small"
+                          sx={{
+                            borderRadius: "4px",
+                            color: "primary.main",
+                            "&:hover": {
+                              backgroundColor: "primary.main",
+                              color: "white",
+                            },
+                          }}
+                          title="Ver detalles"
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -821,37 +707,104 @@ const ClientesPage = () => {
             </TableContainer>
           ) : (
             <Box sx={{ textAlign: "center", py: 4 }}>
-              <ClipboardList
-                size={48}
-                style={{ marginBottom: 16, color: "#9CA3AF" }}
-              />
+              <AssignmentIcon sx={{ fontSize: 64, color: "grey.400", mb: 2 }} />
               <Typography color="text.secondary">
-                No hay compras registradas para este cliente
+                No hay presupuestos para este cliente
               </Typography>
             </Box>
           )}
         </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button
-          variant="outlined"
-          onClick={() => {
-            setIsSalesModalOpen(false);
-            setSelectedCustomer(null);
-          }}
-          sx={{
-            color: "text.secondary",
-            borderColor: "text.secondary",
-            "&:hover": {
-              backgroundColor: "action.hover",
-              borderColor: "text.primary",
-            },
-          }}
-        >
-          Cerrar
-        </Button>
-      </DialogActions>
-    </Dialog>
+      )}
+    </Modal>
+  );
+
+  const SalesModal = () => (
+    <Modal
+      isOpen={isSalesModalOpen}
+      onClose={() => {
+        setIsSalesModalOpen(false);
+        setSelectedCustomer(null);
+        setCustomerSales([]);
+      }}
+      title={`Historial de Compras - ${selectedCustomer?.name || ""}`}
+      buttons={
+        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setIsSalesModalOpen(false);
+              setSelectedCustomer(null);
+            }}
+          >
+            Cerrar
+          </Button>
+        </Box>
+      }
+    >
+      <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+        {customerSales.length > 0 ? (
+          <TableContainer component={Paper}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                    Fecha
+                  </TableCell>
+                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                    Productos
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Total
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Estado
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {customerSales.map((sale) => (
+                  <TableRow key={sale.id} hover>
+                    <TableCell>
+                      {new Date(sale.date).toLocaleDateString("es-AR")}
+                    </TableCell>
+                    <TableCell>
+                      {sale.products.map((product, idx) => (
+                        <Box key={idx} sx={{ fontSize: "0.875rem" }}>
+                          {product.name} x {product.quantity}
+                        </Box>
+                      ))}
+                    </TableCell>
+                    <TableCell align="center">
+                      ${sale.total.toFixed(2)}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={sale.paid ? "Pagado" : "Pendiente"}
+                        color={sale.paid ? "success" : "warning"}
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <AssignmentIcon sx={{ fontSize: 48, color: "grey.400", mb: 2 }} />
+            <Typography color="text.secondary">
+              No hay compras registradas para este cliente
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    </Modal>
   );
 
   return (
@@ -877,12 +830,8 @@ const ClientesPage = () => {
           {rubro !== "Todos los rubros" && (
             <Button
               variant="contained"
-              startIcon={<Plus size={18} />}
+              startIcon={<AddIcon />}
               onClick={() => setIsModalOpen(true)}
-              sx={{
-                bgcolor: "primary.main",
-                "&:hover": { bgcolor: "primary.dark" },
-              }}
             >
               Nuevo Cliente
             </Button>
@@ -985,10 +934,7 @@ const ClientesPage = () => {
                                     mt: 0.5,
                                   }}
                                 >
-                                  <IdCard
-                                    size={12}
-                                    style={{ marginRight: 4 }}
-                                  />
+                                  <BadgeIcon sx={{ fontSize: 12, mr: 0.5 }} />
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -1018,7 +964,7 @@ const ClientesPage = () => {
                                     justifyContent: "center",
                                   }}
                                 >
-                                  <Mail size={12} style={{ marginRight: 4 }} />
+                                  <EmailIcon sx={{ fontSize: 12, mr: 0.5 }} />
                                   <Typography variant="caption">
                                     {customer.email}
                                   </Typography>
@@ -1087,7 +1033,7 @@ const ClientesPage = () => {
                                   }}
                                   title="Ver presupuestos"
                                 >
-                                  <ClipboardList size={18} />
+                                  <AssignmentIcon fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   onClick={() =>
@@ -1104,7 +1050,7 @@ const ClientesPage = () => {
                                   }}
                                   title="Ver historial de compras"
                                 >
-                                  <Eye size={18} />
+                                  <VisibilityIcon fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   onClick={() => handleEditClick(customer)}
@@ -1119,7 +1065,7 @@ const ClientesPage = () => {
                                   }}
                                   title="Editar cliente"
                                 >
-                                  <Edit size={18} />
+                                  <EditIcon fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   onClick={() => handleDeleteClick(customer)}
@@ -1135,7 +1081,7 @@ const ClientesPage = () => {
                                   title="Eliminar cliente"
                                   disabled={hasPendingBalance}
                                 >
-                                  <Trash size={18} />
+                                  <DeleteIcon fontSize="small" />
                                 </IconButton>
                               </Box>
                             </TableCell>
@@ -1158,7 +1104,9 @@ const ClientesPage = () => {
                             py: 4,
                           }}
                         >
-                          <Users size={64} style={{ marginBottom: 16 }} />
+                          <GroupsIcon
+                            sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
+                          />
                           <Typography>
                             {searchQuery
                               ? "No se encontraron clientes"
@@ -1200,16 +1148,12 @@ const ClientesPage = () => {
           }}
           title={editingCustomer ? "Editar Cliente" : "Nuevo Cliente"}
           buttons={
-            <>
+            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
               <Button
                 variant="contained"
                 onClick={
                   editingCustomer ? handleUpdateCustomer : handleAddCustomer
                 }
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
               >
                 {editingCustomer ? "Actualizar" : "Agregar"}
               </Button>
@@ -1228,18 +1172,10 @@ const ClientesPage = () => {
                     pendingBalance: 0,
                   });
                 }}
-                sx={{
-                  color: "text.secondary",
-                  borderColor: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.primary",
-                  },
-                }}
               >
                 Cancelar
               </Button>
-            </>
+            </Box>
           }
         >
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -1247,7 +1183,7 @@ const ClientesPage = () => {
               sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
             >
               <Input
-                label="Nombre del cliente *"
+                label="Nombre del cliente"
                 value={newCustomer.name}
                 onRawChange={(e) =>
                   setNewCustomer({ ...newCustomer, name: e.target.value })
@@ -1316,55 +1252,39 @@ const ClientesPage = () => {
           </Box>
         </Modal>
 
-        {/* Modales de Material-UI */}
-        <BudgetsModal />
-        <SalesModal />
-
-        {/* Modales de confirmación (manteniendo tus componentes existentes) */}
+        {/* Modales de confirmación */}
         <Modal
           isOpen={isDeleteBudgetModalOpen}
           onClose={() => setIsDeleteBudgetModalOpen(false)}
           title="Confirmar Eliminación de Presupuesto"
           buttons={
-            <>
+            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
               <Button
                 variant="contained"
                 color="error"
                 onClick={handleConfirmDeleteBudget}
-                sx={{
-                  bgcolor: "error.main",
-                  "&:hover": { bgcolor: "error.dark" },
-                }}
               >
                 Eliminar
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => setIsDeleteBudgetModalOpen(false)}
-                sx={{
-                  color: "text.secondary",
-                  borderColor: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.primary",
-                  },
-                }}
               >
                 Cancelar
               </Button>
-            </>
+            </Box>
           }
         >
-          <p>
+          <Typography>
             ¿Está seguro que desea eliminar el presupuesto del{" "}
             {budgetToDelete?.date &&
               new Date(budgetToDelete.date).toLocaleDateString("es-AR")}
             ?
-          </p>
+          </Typography>
           {budgetToDelete && (
-            <p className="mt-2 font-semibold">
+            <Typography sx={{ mt: 1, fontWeight: "semibold" }}>
               Total: ${budgetToDelete.total.toFixed(2)}
-            </p>
+            </Typography>
           )}
         </Modal>
 
@@ -1373,55 +1293,39 @@ const ClientesPage = () => {
           onClose={() => setIsDeleteModalOpen(false)}
           title="Confirmar Eliminación"
           buttons={
-            <>
+            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
               <Button
                 variant="contained"
                 color="error"
                 onClick={handleConfirmDelete}
-                sx={{
-                  bgcolor: "error.main",
-                  "&:hover": { bgcolor: "error.dark" },
-                }}
               >
                 Eliminar
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => setIsDeleteModalOpen(false)}
-                sx={{
-                  color: "text.secondary",
-                  borderColor: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.primary",
-                  },
-                }}
               >
                 Cancelar
               </Button>
-            </>
+            </Box>
           }
         >
-          <p>
+          <Typography>
             ¿Está seguro que desea eliminar al cliente {customerToDelete?.name}?
-          </p>
+          </Typography>
         </Modal>
 
-        {/* Snackbar de notificaciones */}
-        <Snackbar
-          open={isNotificationOpen}
-          autoHideDuration={2500}
+        {/* Modales de Material-UI */}
+        <BudgetsModal />
+        <SalesModal />
+
+        {/* Notification personalizada */}
+        <Notification
+          isOpen={isNotificationOpen}
+          message={notificationMessage}
+          type={notificationType}
           onClose={() => setIsNotificationOpen(false)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            onClose={() => setIsNotificationOpen(false)}
-            severity={notificationType}
-            variant="filled"
-          >
-            {notificationMessage}
-          </Alert>
-        </Snackbar>
+        />
       </Box>
     </ProtectedRoute>
   );

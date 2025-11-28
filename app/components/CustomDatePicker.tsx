@@ -19,6 +19,7 @@ interface CustomDatePickerProps {
   minDate?: Date;
   maxDate?: Date;
   disabled?: boolean;
+  required?: boolean;
 }
 
 type DateValidationError =
@@ -37,19 +38,24 @@ const CustomDatePicker = ({
   value,
   onChange,
   isClearable = false,
+  label,
   placeholder = "Seleccionar fecha",
   enableAccessibleFieldDOMStructure = false,
   minDate,
   maxDate,
   disabled = false,
+  required = false,
 }: CustomDatePickerProps) => {
   const theme = useTheme();
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const parsedValue = useMemo(() => {
     return value && isValid(parseISO(value)) ? parseISO(value) : null;
   }, [value]);
+
+  const hasValue = Boolean(value);
 
   const handleChange = (newValue: Date | null) => {
     if (newValue && isValid(newValue)) {
@@ -88,16 +94,16 @@ const CustomDatePicker = ({
   };
 
   const formatDisplayDate = (dateString: string) => {
-    if (!dateString) return placeholder;
+    if (!dateString) return "";
     try {
       const date = parseISO(dateString);
       if (isValid(date)) {
         return format(date, "dd/MM/yyyy");
       }
     } catch {
-      return placeholder;
+      return "";
     }
-    return placeholder;
+    return "";
   };
 
   const slotProps = useMemo(() => {
@@ -129,16 +135,21 @@ const CustomDatePicker = ({
     e.stopPropagation();
     if (!disabled) {
       setOpen(true);
+      setIsFocused(true);
     }
   };
 
   const handleTextFieldClick = () => {
     if (!disabled) {
       setOpen(true);
+      setIsFocused(true);
     }
   };
 
-  // Configuración de localización en español para MUI DatePicker
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
   const localeText = {
     clearButtonLabel: "Limpiar",
     todayButtonLabel: "Hoy",
@@ -152,21 +163,49 @@ const CustomDatePicker = ({
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-      <Box sx={{ position: "relative", display: "inline-block" }}>
-        {/* Campo de texto con el icono integrado - CORREGIDO para dark mode */}
+      <Box
+        sx={{
+          position: "relative",
+          display: "block",
+          width: "100%",
+        }}
+      >
         <TextField
+          fullWidth
+          label={label}
+          required={required}
           value={formatDisplayDate(value)}
-          placeholder={placeholder}
+          placeholder={isFocused || hasValue ? "" : placeholder}
           size="small"
+          InputLabelProps={{
+            shrink: true,
+            sx: {
+              color: theme.palette.text.primary,
+              fontWeight: "medium",
+              fontSize: "0.875rem",
+              "&.Mui-focused": {
+                color: theme.palette.primary.main,
+              },
+              "&.Mui-disabled": {
+                color: theme.palette.text.disabled,
+              },
+            },
+          }}
           InputProps={{
             readOnly: true,
             sx: {
-              cursor: "pointer",
+              cursor: disabled ? "not-allowed" : "pointer",
               backgroundColor: theme.palette.background.paper,
+              width: "100%",
               "& .MuiInputBase-input": {
-                cursor: "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
                 paddingRight: "40px",
                 color: theme.palette.text.primary,
+                width: "100%",
+                "&.Mui-disabled": {
+                  color: theme.palette.text.disabled,
+                  WebkitTextFillColor: theme.palette.text.disabled,
+                },
               },
               "& .MuiOutlinedInput-notchedOutline": {
                 borderColor:
@@ -175,25 +214,38 @@ const CustomDatePicker = ({
                     : "rgba(0, 0, 0, 0.23)",
               },
               "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255, 255, 255, 0.4)"
-                    : "rgba(0, 0, 0, 0.4)",
+                borderColor: disabled
+                  ? theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.23)"
+                    : "rgba(0, 0, 0, 0.23)"
+                  : theme.palette.mode === "dark"
+                  ? "rgba(255, 255, 255, 0.4)"
+                  : "rgba(0, 0, 0, 0.4)",
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.primary.main,
+                borderWidth: "2px",
+              },
+              "&.Mui-disabled": {
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: theme.palette.action.disabledBackground,
+                },
               },
             },
             endAdornment: (
               <IconButton
                 onClick={handleIconClick}
                 disabled={disabled}
+                onBlur={handleBlur}
                 sx={{
                   position: "absolute",
                   right: "8px",
                   top: "50%",
                   transform: "translateY(-50%)",
                   padding: "4px",
-                  color: "action.active",
+                  color: disabled ? "action.disabled" : "action.active",
                   "&:hover": {
-                    backgroundColor: "action.hover",
+                    backgroundColor: disabled ? "transparent" : "action.hover",
                   },
                   "&.Mui-disabled": {
                     color: "action.disabled",
@@ -206,24 +258,27 @@ const CustomDatePicker = ({
             ),
           }}
           onClick={handleTextFieldClick}
+          onBlur={handleBlur}
           error={!!error}
           helperText={error}
           disabled={disabled}
           sx={{
+            width: "100%",
             minWidth: "150px",
             "& .MuiInputBase-root": {
               cursor: disabled ? "not-allowed" : "pointer",
               paddingRight: "0px",
+              width: "100%",
             },
             "& .MuiFormHelperText-root": {
               color: error
                 ? theme.palette.error.main
                 : theme.palette.text.secondary,
+              marginLeft: 0,
             },
           }}
         />
 
-        {/* DatePicker oculto que se abre con el icono */}
         <DatePicker
           value={parsedValue}
           onChange={handleChange}
@@ -232,7 +287,10 @@ const CustomDatePicker = ({
           maxDate={maxDate}
           disabled={disabled}
           open={open}
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setOpen(false);
+            setIsFocused(false);
+          }}
           onOpen={() => setOpen(true)}
           enableAccessibleFieldDOMStructure={enableAccessibleFieldDOMStructure}
           format="dd/MM/yyyy"

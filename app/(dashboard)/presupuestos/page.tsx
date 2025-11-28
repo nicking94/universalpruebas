@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, SyntheticEvent } from "react";
 import { db } from "@/app/database/db";
 import {
   Budget,
@@ -17,11 +17,9 @@ import Modal from "@/app/components/Modal";
 import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
 import Pagination from "@/app/components/Pagination";
-import { FileText } from "lucide-react";
 import SearchBar from "@/app/components/SearchBar";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
-import Select, { MultiValue, SingleValue } from "react-select";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { PDFDownloadLink } from "@react-pdf/renderer";
@@ -47,16 +45,36 @@ import {
   Chip,
   IconButton,
   useTheme,
+  Card,
+  CardContent,
+  Divider,
+  Autocomplete,
+  TextField,
+  Checkbox,
 } from "@mui/material";
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Download as DownloadIcon,
-  Note as NoteIcon,
-  ShoppingCart as ShoppingCartIcon,
+  Add,
+  Delete,
+  Edit,
+  Download,
+  Note,
+  ShoppingCart,
+  Description,
+  CheckBoxOutlineBlank,
+  CheckBox,
 } from "@mui/icons-material";
 import Button from "@/app/components/Button";
+
+// Definir tipos para las opciones
+interface CustomerOption {
+  value: string;
+  label: string;
+}
+
+interface StatusOption {
+  value: "pendiente" | "aprobado" | "rechazado";
+  label: string;
+}
 
 const PresupuestosPage = () => {
   const { rubro } = useRubro();
@@ -86,13 +104,9 @@ const PresupuestosPage = () => {
   const [budgetToConvert, setBudgetToConvert] = useState<Budget | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerOptions, setCustomerOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<{
-    value: string;
-    label: string;
-  } | null>(null);
+  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>([]);
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CustomerOption | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
@@ -157,6 +171,12 @@ const PresupuestosPage = () => {
     { value: "W", label: "Watt", convertible: false },
   ];
 
+  const statusOptions: StatusOption[] = [
+    { value: "pendiente", label: "Pendiente" },
+    { value: "aprobado", label: "Aprobado" },
+    { value: "rechazado", label: "Rechazado" },
+  ];
+
   const convertToBaseUnit = (quantity: number, fromUnit: string): number => {
     const unitInfo =
       CONVERSION_FACTORS[fromUnit as keyof typeof CONVERSION_FACTORS];
@@ -194,7 +214,7 @@ const PresupuestosPage = () => {
     });
   };
 
-  const productOptions: readonly ProductOption[] = products
+  const productOptions: ProductOption[] = products
     .filter((p) => rubro === "Todos los rubros" || p.rubro === rubro)
     .map((p) => ({
       value: p.id,
@@ -203,7 +223,12 @@ const PresupuestosPage = () => {
       }`,
       product: p,
       isDisabled: p.stock <= 0,
-    })) as readonly ProductOption[];
+    })) as ProductOption[];
+
+  // Función corregida para getOptionDisabled
+  const getOptionDisabled = (option: ProductOption): boolean => {
+    return option.isDisabled || false;
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -545,7 +570,10 @@ const PresupuestosPage = () => {
     }
   };
 
-  const handleProductSelect = (newValue: MultiValue<ProductOption>) => {
+  const handleProductSelect = (
+    event: SyntheticEvent,
+    newValue: ProductOption[]
+  ) => {
     const selectedProducts = Array.from(newValue).map((option) => {
       const product = products.find((p) => p.id === option.value);
       return {
@@ -628,7 +656,7 @@ const PresupuestosPage = () => {
 
   const handleUnitChange = (
     productId: number,
-    selectedOption: SingleValue<UnitOption>,
+    selectedOption: UnitOption | null,
     currentQuantity: number
   ) => {
     if (!selectedOption) return;
@@ -995,7 +1023,7 @@ const PresupuestosPage = () => {
               },
             }}
           >
-            <DownloadIcon fontSize="small" />
+            <Download fontSize="small" />
           </IconButton>
         )}
       </PDFDownloadLink>
@@ -1016,7 +1044,8 @@ const PresupuestosPage = () => {
   };
 
   const handleCustomerSelect = (
-    selectedOption: { value: string; label: string } | null
+    event: SyntheticEvent,
+    selectedOption: CustomerOption | null
   ) => {
     setSelectedCustomer(selectedOption);
     if (selectedOption) {
@@ -1037,6 +1066,10 @@ const PresupuestosPage = () => {
     }
   };
 
+  // Iconos para el Autocomplete de productos múltiples
+  const icon = <CheckBoxOutlineBlank fontSize="small" />;
+  const checkedIcon = <CheckBox fontSize="small" />;
+
   return (
     <ProtectedRoute>
       <Box
@@ -1045,11 +1078,14 @@ const PresupuestosPage = () => {
           py: 2,
           color: "text.secondary",
           height: "calc(100vh - 80px)",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <Typography variant="h5" component="h1" sx={{ fontWeight: 600, mb: 2 }}>
           Presupuestos
         </Typography>
+
         <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
           <Box sx={{ width: "100%", maxWidth: "400px" }}>
             <SearchBar onSearch={handleSearch} />
@@ -1057,7 +1093,7 @@ const PresupuestosPage = () => {
           {rubro !== "Todos los rubros" && (
             <Button
               variant="contained"
-              startIcon={<AddIcon />}
+              startIcon={<Add />}
               onClick={handleNewBudgetClick}
               sx={{
                 backgroundColor: theme.palette.primary.main,
@@ -1070,22 +1106,28 @@ const PresupuestosPage = () => {
             </Button>
           )}
         </Box>
+
         <Box
           sx={{
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            height: "calc(100vh - 200px)",
+            flex: 1,
           }}
         >
-          <Box sx={{ maxHeight: "calc(100vh - 250px)", overflow: "auto" }}>
-            <TableContainer component={Paper}>
-              <Table sx={{ minWidth: 650 }} size="small">
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <TableContainer
+              component={Paper}
+              sx={{
+                maxHeight: "calc(100vh - 250px)",
+                flex: 1,
+              }}
+            >
+              <Table sx={{ minWidth: 650 }} size="small" stickyHeader>
                 <TableHead>
                   <TableRow
                     sx={{
                       background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                      color: "white",
                     }}
                   >
                     <TableCell sx={{ color: "white", fontWeight: "bold" }}>
@@ -1275,7 +1317,7 @@ const PresupuestosPage = () => {
                                       : {},
                                 }}
                               >
-                                <ShoppingCartIcon fontSize="small" />
+                                <ShoppingCart fontSize="small" />
                               </IconButton>
 
                               {handleDownloadPDF(budget)}
@@ -1297,7 +1339,7 @@ const PresupuestosPage = () => {
                                   },
                                 }}
                               >
-                                <NoteIcon fontSize="small" />
+                                <Note fontSize="small" />
                               </IconButton>
 
                               <IconButton
@@ -1312,7 +1354,7 @@ const PresupuestosPage = () => {
                                   },
                                 }}
                               >
-                                <EditIcon fontSize="small" />
+                                <Edit fontSize="small" />
                               </IconButton>
 
                               <IconButton
@@ -1327,7 +1369,7 @@ const PresupuestosPage = () => {
                                   },
                                 }}
                               >
-                                <DeleteIcon fontSize="small" />
+                                <Delete fontSize="small" />
                               </IconButton>
                             </Box>
                           </TableCell>
@@ -1348,10 +1390,10 @@ const PresupuestosPage = () => {
                             color: "text.disabled",
                           }}
                         >
-                          <FileText
-                            size={64}
-                            style={{
-                              marginBottom: 16,
+                          <Description
+                            sx={{
+                              fontSize: 64,
+                              mb: 2,
                               color: theme.palette.text.disabled,
                             }}
                           />
@@ -1454,110 +1496,119 @@ const PresupuestosPage = () => {
             </>
           }
         >
-          {/* El contenido del modal se mantiene igual */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-4">
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray_m dark:text-white">
-                  Cliente existente
-                </label>
-                <Select
-                  options={customerOptions}
-                  noOptionsMessage={() => "Sin opciones"}
-                  value={selectedCustomer}
-                  onChange={handleCustomerSelect}
-                  placeholder="Buscar cliente"
-                  isClearable
-                  className="text-gray_m"
-                  classNamePrefix="react-select"
-                  menuPosition="fixed"
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ width: "100%" }}>
+              <Typography variant="subtitle1" fontWeight="medium">
+                Cliente existente
+              </Typography>
+              <Autocomplete
+                options={customerOptions}
+                value={selectedCustomer}
+                onChange={handleCustomerSelect}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Buscar cliente"
+                    size="small"
+                  />
+                )}
+                isOptionEqualToValue={(option, value) =>
+                  option.value === value.value
+                }
+                noOptionsText="Sin opciones"
+              />
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Box sx={{ width: "50%" }}>
+                <Input
+                  label="Nombre del cliente"
+                  value={newBudget.customerName}
+                  onRawChange={(e) =>
+                    setNewBudget({ ...newBudget, customerName: e.target.value })
+                  }
+                  placeholder="Ingrese el nombre del cliente"
+                  required
+                  disabled={!!selectedCustomer}
                 />
-              </div>
-            </div>
+              </Box>
+              <Box sx={{ width: "50%" }}>
+                <Input
+                  label="Teléfono (opcional)"
+                  value={newBudget.customerPhone || ""}
+                  onRawChange={(e) =>
+                    setNewBudget({
+                      ...newBudget,
+                      customerPhone: e.target.value,
+                    })
+                  }
+                  placeholder="Ingrese el teléfono"
+                  disabled={!!selectedCustomer}
+                />
+              </Box>
+            </Box>
 
-            <div className="flex items-center space-x-4">
-              <Input
-                label="Nombre del cliente"
-                value={newBudget.customerName}
-                onRawChange={(e) =>
-                  setNewBudget({ ...newBudget, customerName: e.target.value })
-                }
-                placeholder="Ingrese el nombre del cliente"
-                required
-                disabled={!!selectedCustomer}
-              />
-              <Input
-                label="Teléfono (opcional)"
-                value={newBudget.customerPhone || ""}
-                onRawChange={(e) =>
-                  setNewBudget({
-                    ...newBudget,
-                    customerPhone: e.target.value,
-                  })
-                }
-                placeholder="Ingrese el teléfono"
-                disabled={!!selectedCustomer}
-              />
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <CustomDatePicker
-                label="Fecha de expiración"
-                value={newBudget.expirationDate || ""}
-                onChange={(date) =>
-                  setNewBudget({ ...newBudget, expirationDate: date || "" })
-                }
-              />
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray_b dark:text-white">
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Box sx={{ width: "50%" }}>
+                <CustomDatePicker
+                  label="Fecha de expiración"
+                  value={newBudget.expirationDate || ""}
+                  onChange={(date) =>
+                    setNewBudget({ ...newBudget, expirationDate: date || "" })
+                  }
+                />
+              </Box>
+              <Box sx={{ width: "50%" }}>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight="medium"
+                  sx={{ mb: 1 }}
+                >
                   Estado
-                </label>
-                <Select
-                  options={[
-                    { value: "pendiente", label: "Pendiente" },
-                    { value: "aprobado", label: "Aprobado" },
-                    { value: "rechazado", label: "Rechazado" },
-                  ]}
-                  noOptionsMessage={() => "Sin opciones"}
+                </Typography>
+                <Autocomplete
+                  options={statusOptions}
                   value={
                     newBudget?.status
-                      ? {
-                          value: newBudget.status,
-                          label:
-                            newBudget.status.charAt(0).toUpperCase() +
-                            newBudget.status.slice(1),
-                        }
+                      ? statusOptions.find(
+                          (option) => option.value === newBudget.status
+                        ) || null
                       : null
                   }
-                  onChange={(selectedOption) => {
-                    if (selectedOption) {
+                  onChange={(
+                    event: SyntheticEvent,
+                    newValue: StatusOption | null
+                  ) => {
+                    if (newValue) {
                       setNewBudget({
                         ...newBudget,
-                        status: selectedOption.value as
-                          | "pendiente"
-                          | "aprobado"
-                          | "rechazado",
+                        status: newValue.value,
                       });
                     }
                   }}
-                  className="text-gray_m min-w-40"
-                  classNamePrefix="react-select"
-                  menuPosition="fixed"
-                  isClearable={false}
+                  renderInput={(params) => (
+                    <TextField {...params} size="small" />
+                  )}
+                  isOptionEqualToValue={(option, value) =>
+                    option.value === value.value
+                  }
+                  noOptionsText="Sin opciones"
                 />
-              </div>
-            </div>
-            <div className="max-h-[28rem]">
-              <h3 className="font-medium mb-2">Productos</h3>
-              <div className="mb-4 max-h-[10rem] ">
-                <Select
-                  isMulti
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography
+                variant="subtitle1"
+                fontWeight="medium"
+                sx={{ mb: 1 }}
+              >
+                Productos
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Autocomplete
+                  multiple
                   options={productOptions}
-                  noOptionsMessage={() => "Sin opciones"}
-                  placeholder="Buscar productos"
-                  className="text-gray_m"
-                  classNamePrefix="react-select"
-                  onChange={handleProductSelect}
                   value={newBudget.items.map((item) => {
                     const product = products.find(
                       (p) => p.id === item.productId
@@ -1571,282 +1622,370 @@ const PresupuestosPage = () => {
                       isDisabled: false,
                     } as ProductOption;
                   })}
-                  getOptionValue={(option) => option.value.toString()}
+                  onChange={handleProductSelect}
+                  disableCloseOnSelect
                   getOptionLabel={(option) => option.label}
-                  styles={{
-                    menuPortal: (base) => ({
-                      ...base,
-                      zIndex: 9999,
-                    }),
-                    control: (provided) => ({
-                      ...provided,
-                      maxHeight: "70px",
-                      "@media (max-width: 1024px)": {
-                        maxHeight: "200px",
-                      },
-                      overflowY: "auto",
-                    }),
-                    multiValue: (provided) => ({
-                      ...provided,
-                      maxWidth: "200px",
-                    }),
-                  }}
+                  getOptionDisabled={getOptionDisabled}
+                  isOptionEqualToValue={(option, value) =>
+                    option.value === value.value
+                  }
+                  renderOption={(props, option, { selected }) => (
+                    <li {...props}>
+                      <Checkbox
+                        icon={icon}
+                        checkedIcon={checkedIcon}
+                        style={{ marginRight: 8 }}
+                        checked={selected}
+                      />
+                      {option.label}
+                    </li>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Buscar productos"
+                      size="small"
+                    />
+                  )}
+                  noOptionsText="Sin opciones"
                 />
-              </div>
+              </Box>
 
               {newBudget.items.length > 0 && (
-                <div className="border border-gray_xl rounded-lg overflow-hidden">
-                  <div className="overflow-y-auto max-h-[15vh] 2xl:max-h-[26vh]">
-                    <table className="min-w-full divide-y divide-gray_xl text-gray_b">
-                      <thead className="bg-gradient-to-r from-blue_b to-blue_m text-white">
-                        <tr>
-                          <th className="p-2 text-left text-xs font-medium  tracking-wider">
-                            Producto
-                          </th>
-                          <th className="p-2 text-center text-xs font-medium  tracking-wider">
-                            Unidad
-                          </th>
-                          <th className="p-2 text-center text-xs font-medium  tracking-wider">
-                            Cantidad
-                          </th>
-                          <th className="w-40 max-w-40 p-2 text-center text-xs font-medium  tracking-wider">
-                            Descuento (%)
-                          </th>
-                          <th className="p-2 text-center text-xs font-medium  tracking-wider">
-                            Precio Unit.
-                          </th>
-                          <th className=" p-2 text-center text-xs font-medium  tracking-wider">
-                            Subtotal
-                          </th>
-                          <th className=" p-2 text-center text-xs font-medium  tracking-wider">
-                            Acciones
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray_xl">
-                        {newBudget.items.map((item) => {
-                          const product = products.find(
-                            (p) => p.id === item.productId
-                          );
-                          return (
-                            <tr
-                              key={item.productId}
-                              className="hover:bg-gray_xxl dark:hover:bg-blue_xl transition-all duration-300"
+                <Card variant="outlined">
+                  <CardContent sx={{ p: 0 }}>
+                    <Box sx={{ maxHeight: "200px", overflow: "auto" }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow
+                            sx={{ backgroundColor: theme.palette.primary.main }}
+                          >
+                            <TableCell
+                              sx={{ color: "white", fontWeight: "bold" }}
                             >
-                              <td className="p-2 whitespace-nowrap">
-                                {item.productName}
-                                {item.size && ` (${item.size})`}
-                                {item.color && ` - ${item.color}`}
-                              </td>
-                              <td className="p-2 whitespace-nowrap w-50 max-w-50">
-                                {product?.unit === "Unid." ? (
-                                  <div className="flex items-center justify-center h-full text-gray_b">
-                                    Unidad
-                                  </div>
-                                ) : (
-                                  <Select
-                                    placeholder="Unidad"
-                                    options={
-                                      product
-                                        ? getCompatibleUnits(product.unit)
-                                        : []
-                                    }
-                                    noOptionsMessage={() =>
-                                      "No se encontraron opciones"
-                                    }
-                                    value={unitOptions.find(
-                                      (option) => option.value === item.unit
-                                    )}
-                                    onChange={(selectedOption) => {
-                                      if (selectedOption && product) {
-                                        handleUnitChange(
-                                          item.productId,
-                                          selectedOption,
-                                          item.quantity
-                                        );
+                              Producto
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "white",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                              }}
+                            >
+                              Unidad
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "white",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                              }}
+                            >
+                              Cantidad
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "white",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                              }}
+                            >
+                              Descuento (%)
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "white",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                              }}
+                            >
+                              Precio Unit.
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "white",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                              }}
+                            >
+                              Subtotal
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "white",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                              }}
+                            >
+                              Acciones
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {newBudget.items.map((item) => {
+                            const product = products.find(
+                              (p) => p.id === item.productId
+                            );
+                            return (
+                              <TableRow key={item.productId}>
+                                <TableCell>
+                                  {item.productName}
+                                  {item.size && ` (${item.size})`}
+                                  {item.color && ` - ${item.color}`}
+                                </TableCell>
+                                <TableCell>
+                                  {product?.unit === "Unid." ? (
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ textAlign: "center" }}
+                                    >
+                                      Unidad
+                                    </Typography>
+                                  ) : (
+                                    <Autocomplete
+                                      options={
+                                        product
+                                          ? getCompatibleUnits(product.unit)
+                                          : []
                                       }
-                                    }}
-                                    className="text-gray_m"
-                                    menuPosition="fixed"
-                                  />
-                                )}
-                              </td>
-                              <td className="p-2 whitespace-nowrap w-10 max-w-10">
-                                <Input
-                                  type="number"
-                                  step={
-                                    item.unit === "Kg" || item.unit === "L"
-                                      ? "0.001"
-                                      : "1"
-                                  }
-                                  value={
-                                    item.quantity === 0 ? "" : item.quantity
-                                  }
-                                  onRawChange={(e) => {
-                                    const value = e.target.value;
-                                    if (value === "") {
-                                      handleQuantityChange(
-                                        item.productId,
-                                        0,
-                                        item.unit
-                                      );
-                                    } else {
-                                      const numValue = parseFloat(value);
-                                      if (!isNaN(numValue)) {
+                                      value={unitOptions.find(
+                                        (option) => option.value === item.unit
+                                      )}
+                                      onChange={(
+                                        event: SyntheticEvent,
+                                        newValue: UnitOption | null
+                                      ) => {
+                                        if (newValue && product) {
+                                          handleUnitChange(
+                                            item.productId,
+                                            newValue,
+                                            item.quantity
+                                          );
+                                        }
+                                      }}
+                                      renderInput={(params) => (
+                                        <TextField
+                                          {...params}
+                                          placeholder="Unidad"
+                                          size="small"
+                                        />
+                                      )}
+                                      isOptionEqualToValue={(option, value) =>
+                                        option.value === value.value
+                                      }
+                                      noOptionsText="No se encontraron opciones"
+                                    />
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step={
+                                      item.unit === "Kg" || item.unit === "L"
+                                        ? "0.001"
+                                        : "1"
+                                    }
+                                    value={
+                                      item.quantity === 0 ? "" : item.quantity
+                                    }
+                                    onRawChange={(e) => {
+                                      const value = e.target.value;
+                                      if (value === "") {
                                         handleQuantityChange(
                                           item.productId,
-                                          Math.max(0.001, numValue),
+                                          0,
+                                          item.unit
+                                        );
+                                      } else {
+                                        const numValue = parseFloat(value);
+                                        if (!isNaN(numValue)) {
+                                          handleQuantityChange(
+                                            item.productId,
+                                            Math.max(0.001, numValue),
+                                            item.unit
+                                          );
+                                        }
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      if (
+                                        e.target.value === "" ||
+                                        parseFloat(e.target.value) < 0.001
+                                      ) {
+                                        handleQuantityChange(
+                                          item.productId,
+                                          1,
                                           item.unit
                                         );
                                       }
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    value={
+                                      item.discount === 0 ? "" : item.discount
                                     }
-                                  }}
-                                  onBlur={(e) => {
-                                    if (
-                                      e.target.value === "" ||
-                                      parseFloat(e.target.value) < 0.001
-                                    ) {
-                                      handleQuantityChange(
-                                        item.productId,
-                                        1,
-                                        item.unit
-                                      );
-                                    }
-                                  }}
-                                />
-                              </td>
-                              <td className="p-2 whitespace-nowrap w-10 max-w-10">
-                                <Input
-                                  type="number"
-                                  step="1"
-                                  value={
-                                    item.discount === 0 ? "" : item.discount
-                                  }
-                                  onRawChange={(e) => {
-                                    const value = e.target.value;
-                                    if (
-                                      value === "" ||
-                                      /^[0-9]*$/.test(value)
-                                    ) {
-                                      handleDiscountChange(
-                                        item.productId,
-                                        value
-                                      );
-                                    }
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === "") {
-                                      handleDiscountChange(item.productId, "0");
-                                    } else {
-                                      const numValue = parseInt(e.target.value);
-                                      if (isNaN(numValue)) {
+                                    onRawChange={(e) => {
+                                      const value = e.target.value;
+                                      if (
+                                        value === "" ||
+                                        /^[0-9]*$/.test(value)
+                                      ) {
                                         handleDiscountChange(
                                           item.productId,
-                                          "0"
-                                        );
-                                      } else if (numValue < 0) {
-                                        handleDiscountChange(
-                                          item.productId,
-                                          "0"
-                                        );
-                                      } else if (numValue > 100) {
-                                        handleDiscountChange(
-                                          item.productId,
-                                          "100"
+                                          value
                                         );
                                       }
+                                    }}
+                                    onBlur={(e) => {
+                                      if (e.target.value === "") {
+                                        handleDiscountChange(
+                                          item.productId,
+                                          "0"
+                                        );
+                                      } else {
+                                        const numValue = parseInt(
+                                          e.target.value
+                                        );
+                                        if (isNaN(numValue)) {
+                                          handleDiscountChange(
+                                            item.productId,
+                                            "0"
+                                          );
+                                        } else if (numValue < 0) {
+                                          handleDiscountChange(
+                                            item.productId,
+                                            "0"
+                                          );
+                                        } else if (numValue > 100) {
+                                          handleDiscountChange(
+                                            item.productId,
+                                            "100"
+                                          );
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "center" }}>
+                                  {formatCurrency(item.price)}
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "center" }}>
+                                  {formatCurrency(
+                                    item.price *
+                                      item.quantity *
+                                      (1 - (item.discount || 0) / 100)
+                                  )}
+                                </TableCell>
+                                <TableCell sx={{ textAlign: "center" }}>
+                                  <IconButton
+                                    onClick={() =>
+                                      handleRemoveProduct(item.productId)
                                     }
-                                  }}
-                                />
-                              </td>
-                              <td className="text-center p-2 whitespace-nowrap ">
-                                {formatCurrency(item.price)}
-                              </td>
-                              <td className=" text-center p-2 whitespace-nowrap">
-                                {formatCurrency(
-                                  item.price *
-                                    item.quantity *
-                                    (1 - (item.discount || 0) / 100)
-                                )}
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap ">
-                                <IconButton
-                                  onClick={() =>
-                                    handleRemoveProduct(item.productId)
+                                    size="small"
+                                    sx={{
+                                      color: "error.main",
+                                      "&:hover": {
+                                        color: "error.dark",
+                                      },
+                                    }}
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </Box>
+
+                    <Divider />
+
+                    <Box sx={{ p: 2, backgroundColor: theme.palette.grey[50] }}>
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Box sx={{ width: "50%" }}>
+                          <Box sx={{ display: "flex", gap: 2 }}>
+                            <Box sx={{ width: "50%" }}>
+                              <Input
+                                label="Seña en efectivo (opcional)"
+                                type="number"
+                                value={newBudget.deposit}
+                                onRawChange={(e) => {
+                                  const value = e.target.value;
+                                  if (
+                                    value === "" ||
+                                    /^[0-9]*\.?[0-9]*$/.test(value)
+                                  ) {
+                                    const depositValue =
+                                      value === "" ? 0 : parseFloat(value);
+                                    const remaining =
+                                      newBudget.total - depositValue;
+                                    setNewBudget({
+                                      ...newBudget,
+                                      deposit: value,
+                                      remaining,
+                                    });
                                   }
-                                  size="small"
-                                  sx={{
-                                    color: "error.main",
-                                    "&:hover": {
-                                      color: "error.dark",
-                                    },
-                                  }}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex justify-between items-center bg-gray_xxl px-4 py-3 text-gray_b">
-                    <div className="flex w-full max-w-[30vw] items-center space-x-4">
-                      <Input
-                        label="Seña en efectivo (opcional)"
-                        type="number"
-                        value={newBudget.deposit}
-                        onRawChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
-                            const depositValue =
-                              value === "" ? 0 : parseFloat(value);
-                            const remaining = newBudget.total - depositValue;
-                            setNewBudget({
-                              ...newBudget,
-                              deposit: value,
-                              remaining,
-                            });
-                          }
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === "") {
-                            setNewBudget({
-                              ...newBudget,
-                              deposit: "",
-                              remaining: newBudget.total,
-                            });
-                          } else {
-                            const numValue = parseFloat(e.target.value);
-                            if (isNaN(numValue)) {
-                              setNewBudget({
-                                ...newBudget,
-                                deposit: "",
-                                remaining: newBudget.total,
-                              });
-                            }
-                          }
-                        }}
-                        placeholder="Ingrese el monto de la seña"
-                      />
-                      <div className="w-full">
-                        <label className="block text-sm font-medium text-gray_m  mb-1">
-                          Saldo restante
-                        </label>
-                        <div className="p-2 border border-gray_xl rounded-md bg-gray_xxl">
-                          {formatCurrency(newBudget.remaining)}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="font-bold text-xl  ">
-                      Total: {formatCurrency(newBudget.total)}
-                    </span>
-                  </div>
-                </div>
+                                }}
+                                onBlur={(e) => {
+                                  if (e.target.value === "") {
+                                    setNewBudget({
+                                      ...newBudget,
+                                      deposit: "",
+                                      remaining: newBudget.total,
+                                    });
+                                  } else {
+                                    const numValue = parseFloat(e.target.value);
+                                    if (isNaN(numValue)) {
+                                      setNewBudget({
+                                        ...newBudget,
+                                        deposit: "",
+                                        remaining: newBudget.total,
+                                      });
+                                    }
+                                  }
+                                }}
+                                placeholder="Ingrese el monto de la seña"
+                              />
+                            </Box>
+                            <Box sx={{ width: "50%" }}>
+                              <Typography
+                                variant="subtitle2"
+                                fontWeight="medium"
+                                sx={{ mb: 1 }}
+                              >
+                                Saldo restante
+                              </Typography>
+                              <Box
+                                sx={{
+                                  p: 1,
+                                  border: 1,
+                                  borderColor: "divider",
+                                  borderRadius: 1,
+                                  backgroundColor: "background.paper",
+                                }}
+                              >
+                                {formatCurrency(newBudget.remaining)}
+                              </Box>
+                            </Box>
+                          </Box>
+                        </Box>
+                        <Box sx={{ width: "50%", textAlign: "right" }}>
+                          <Typography variant="h6" fontWeight="bold">
+                            Total: {formatCurrency(newBudget.total)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
               )}
-            </div>
-          </div>
+            </Box>
+          </Box>
         </Modal>
 
         <Modal

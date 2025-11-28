@@ -48,7 +48,6 @@ import Image from "next/image";
 
 // Material-UI imports
 import {
-  Button,
   Box,
   Typography,
   Table,
@@ -61,7 +60,6 @@ import {
   IconButton,
   useTheme,
   Chip,
-  TextField,
   Card,
   CardContent,
 } from "@mui/material";
@@ -72,6 +70,10 @@ import {
   Description as DescriptionIcon,
   Analytics as AnalyticsIcon,
 } from "@mui/icons-material";
+
+// Componentes personalizados
+import Button from "@/app/components/Button";
+import Input from "@/app/components/Input";
 
 ChartJS.register(
   ArcElement,
@@ -1200,7 +1202,7 @@ const MovimientosPage = () => {
                 />
               </Box>
 
-              {/* Campo para crear nueva categoría - SIEMPRE VISIBLE */}
+              {/* Campo para crear nueva categoría - usando Input personalizado */}
               <Box
                 sx={{
                   display: "flex",
@@ -1215,19 +1217,18 @@ const MovimientosPage = () => {
                   border: `1px dashed ${theme.palette.divider}`,
                 }}
               >
-                <TextField
-                  fullWidth
-                  size="small"
+                <Input
                   label="Crear nueva categoría"
                   placeholder="Ingrese nombre de nueva categoría (Ej: Alquiler, Servicios, Insumos)"
                   value={toCapitalize(newCategory.name)}
-                  onChange={(e) =>
+                  onRawChange={(e) =>
                     setNewCategory({
                       ...newCategory,
                       name: toCapitalize(e.target.value),
                     })
                   }
                   helperText="La categoría se agregará y seleccionará automáticamente"
+                  fullWidth
                 />
                 <Button
                   variant="contained"
@@ -1280,33 +1281,31 @@ const MovimientosPage = () => {
                   });
                 }}
               />
-              <TextField
-                fullWidth
-                size="small"
+              <Input
                 label="Descripción*"
                 placeholder="Concepto"
                 value={newExpense.description}
-                onChange={(e) =>
+                onRawChange={(e) =>
                   setNewExpense({ ...newExpense, description: e.target.value })
                 }
+                fullWidth
               />
             </Box>
 
             {newExpense.paymentMethod === "TARJETA" && (
               <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  fullWidth
-                  size="small"
+                <Input
                   label="Cuotas"
                   type="number"
                   placeholder="Número de cuotas"
                   value={newExpense.installments?.toString() || "1"}
-                  onChange={(e) =>
+                  onRawChange={(e) =>
                     setNewExpense({
                       ...newExpense,
                       installments: parseInt(e.target.value) || 1,
                     })
                   }
+                  fullWidth
                 />
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Typography variant="body2">

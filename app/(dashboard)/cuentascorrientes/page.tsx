@@ -6,6 +6,8 @@ import { es } from "date-fns/locale";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Modal from "@/app/components/Modal";
 import Select from "@/app/components/Select";
+import Button from "@/app/components/Button";
+import Notification from "@/app/components/Notification";
 
 import {
   ChequeFilter,
@@ -14,6 +16,7 @@ import {
   Customer,
   DailyCashMovement,
   Payment,
+  PaymentMethod,
   PaymentSplit,
   SaleItem,
 } from "@/app/lib/types/types";
@@ -37,17 +40,9 @@ import {
   Paper,
   Chip,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormControl,
-  Snackbar,
-  Alert,
   Card,
   CardContent,
-  Button,
-  useTheme,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -55,7 +50,9 @@ import {
   Info as InfoIcon,
   Wallet as WalletIcon,
   CheckCircle as CheckCircleIcon,
+  Add,
 } from "@mui/icons-material";
+import Input from "@/app/components/Input";
 
 const CuentasCorrientesPage = () => {
   const { rubro } = useRubro();
@@ -91,9 +88,6 @@ const CuentasCorrientesPage = () => {
   >([]);
   const [chequeFilter, setChequeFilter] = useState<ChequeFilter>("todos");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const theme = useTheme();
-
-  // ... (resto de las funciones y useEffects se mantienen igual)
 
   const prepareCustomerPDFData = (customerName: string) => {
     const customerSales = salesByCustomer[customerName];
@@ -723,554 +717,807 @@ const CuentasCorrientesPage = () => {
     setIsInfoModalOpen(true);
   };
 
-  // Componentes de Modal con Material-UI
+  // Componentes de Modal personalizados
   const ChequesModal = () => (
-    <Dialog
-      open={isChequesModalOpen}
+    <Modal
+      isOpen={isChequesModalOpen}
       onClose={() => setIsChequesModalOpen(false)}
-      maxWidth="lg"
-      fullWidth
+      title={`Cheques de ${currentCustomerInfo?.name || "Cliente"}`}
+      buttons={
+        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+          <Button
+            variant="outlined"
+            onClick={() => setIsChequesModalOpen(false)}
+          >
+            Cerrar
+          </Button>
+        </Box>
+      }
     >
-      <DialogTitle>
-        Cheques de {currentCustomerInfo?.name || "Cliente"}
-      </DialogTitle>
-      <DialogContent>
-        {currentCustomerCheques.length === 0 ? (
-          <Box sx={{ textAlign: "center", py: 4 }}>
-            <WalletIcon sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
-            <Typography color="text.secondary">
-              El cliente no tiene cheques registrados
+      {currentCustomerCheques.length === 0 ? (
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <WalletIcon sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
+          <Typography color="text.secondary">
+            El cliente no tiene cheques registrados
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+            <Typography variant="body2" fontWeight="medium">
+              Filtrar por estado:
             </Typography>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Select
+                label="Estado"
+                value={chequeFilter}
+                options={[
+                  { value: "todos", label: "Todos" },
+                  { value: "pendiente", label: "Pendientes" },
+                  { value: "cobrado", label: "Cobrados" },
+                ]}
+                onChange={(value: string | number) =>
+                  setChequeFilter(value as ChequeFilter)
+                }
+                size="small"
+              />
+            </FormControl>
           </Box>
-        ) : (
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-              <Typography variant="body2" fontWeight="medium">
-                Filtrar por estado:
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  label="Estado"
-                  value={chequeFilter}
-                  options={[
-                    { value: "todos", label: "Todos" },
-                    { value: "pendiente", label: "Pendientes" },
-                    { value: "cobrado", label: "Cobrados" },
-                  ]}
-                  onChange={(value: string | number) =>
-                    setChequeFilter(value as ChequeFilter)
-                  }
-                  size="small"
-                />
-              </FormControl>
-            </Box>
 
-            <TableContainer component={Paper} sx={{ maxHeight: "55vh" }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
-                      Monto
-                    </TableCell>
-                    <TableCell
-                      sx={{ bgcolor: "primary.main", color: "white" }}
-                      align="center"
-                    >
-                      Fecha
-                    </TableCell>
-                    <TableCell
-                      sx={{ bgcolor: "primary.main", color: "white" }}
-                      align="center"
-                    >
-                      Estado
-                    </TableCell>
-                    <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
-                      Productos
-                    </TableCell>
-                    <TableCell
-                      sx={{ bgcolor: "primary.main", color: "white" }}
-                      align="center"
-                    >
-                      Acciones
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {currentCustomerCheques
-                    .filter(
-                      (cheque) =>
-                        chequeFilter === "todos" ||
-                        cheque.checkStatus === chequeFilter
-                    )
-                    .map((cheque, index) => (
-                      <TableRow key={index} hover>
-                        <TableCell>
-                          {cheque.amount.toLocaleString("es-AR", {
-                            style: "currency",
-                            currency: "ARS",
-                          })}
-                        </TableCell>
-                        <TableCell align="center">
-                          {format(new Date(cheque.date), "dd/MM/yyyy")}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={cheque.checkStatus || "pendiente"}
-                            color={
-                              cheque.checkStatus === "cobrado"
-                                ? "success"
-                                : cheque.checkStatus === "pendiente"
-                                ? "warning"
-                                : "error"
-                            }
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ maxHeight: 80, overflow: "auto" }}>
-                            {cheque.products?.map((product, idx) => (
+          <TableContainer component={Paper} sx={{ maxHeight: "55vh" }}>
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                    Monto
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Fecha
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Estado
+                  </TableCell>
+                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                    Productos
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Acciones
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {currentCustomerCheques
+                  .filter(
+                    (cheque) =>
+                      chequeFilter === "todos" ||
+                      cheque.checkStatus === chequeFilter
+                  )
+                  .map((cheque, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>
+                        {cheque.amount.toLocaleString("es-AR", {
+                          style: "currency",
+                          currency: "ARS",
+                        })}
+                      </TableCell>
+                      <TableCell align="center">
+                        {format(new Date(cheque.date), "dd/MM/yyyy")}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={cheque.checkStatus || "pendiente"}
+                          color={
+                            cheque.checkStatus === "cobrado"
+                              ? "success"
+                              : cheque.checkStatus === "pendiente"
+                              ? "warning"
+                              : "error"
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ maxHeight: 80, overflow: "auto" }}>
+                          {cheque.products?.map((product, idx) => (
+                            <Box
+                              key={idx}
+                              sx={{
+                                py: 0.5,
+                                borderBottom:
+                                  idx < cheque.products.length - 1
+                                    ? "1px solid"
+                                    : "none",
+                                borderColor: "divider",
+                              }}
+                            >
                               <Box
-                                key={idx}
                                 sx={{
-                                  py: 0.5,
-                                  borderBottom:
-                                    idx < cheque.products.length - 1
-                                      ? "1px solid"
-                                      : "none",
-                                  borderColor: "divider",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  fontSize: "0.75rem",
                                 }}
                               >
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    fontSize: "0.75rem",
-                                  }}
-                                >
-                                  <Typography variant="caption">
-                                    {getDisplayProductName(
-                                      {
-                                        name: product.productName,
-                                        size: product.size,
-                                        color: product.color,
-                                        rubro: product.rubro,
-                                      },
-                                      rubro,
-                                      true
-                                    )}
-                                  </Typography>
-                                  <Typography variant="caption">
-                                    {product.quantity} {product.unit}
-                                  </Typography>
-                                  <Typography variant="caption">
-                                    {product.price.toLocaleString("es-AR", {
-                                      style: "currency",
-                                      currency: "ARS",
-                                    })}
-                                  </Typography>
-                                </Box>
+                                <Typography variant="caption">
+                                  {getDisplayProductName(
+                                    {
+                                      name: product.productName,
+                                      size: product.size,
+                                      color: product.color,
+                                      rubro: product.rubro,
+                                    },
+                                    rubro,
+                                    true
+                                  )}
+                                </Typography>
+                                <Typography variant="caption">
+                                  {product.quantity} {product.unit}
+                                </Typography>
+                                <Typography variant="caption">
+                                  {product.price.toLocaleString("es-AR", {
+                                    style: "currency",
+                                    currency: "ARS",
+                                  })}
+                                </Typography>
                               </Box>
-                            ))}
-                          </Box>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "center",
-                              gap: 1,
-                            }}
-                          >
-                            {cheque.checkStatus === "pendiente" && (
-                              <IconButton
-                                onClick={() => handleMarkCheckAsPaid(cheque.id)}
-                                size="small"
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "success.main",
-                                  "&:hover": {
-                                    backgroundColor: "success.main",
-                                    color: "white",
-                                  },
-                                }}
-                                title="Marcar como cobrado"
-                              >
-                                <CheckCircleIcon fontSize="small" />
-                              </IconButton>
-                            )}
+                            </Box>
+                          ))}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            gap: 1,
+                          }}
+                        >
+                          {cheque.checkStatus === "pendiente" && (
                             <IconButton
-                              onClick={() => handleDeleteCheck(cheque.id)}
+                              onClick={() => handleMarkCheckAsPaid(cheque.id)}
                               size="small"
                               sx={{
                                 borderRadius: "4px",
-                                color: "error.main",
+                                color: "success.main",
                                 "&:hover": {
-                                  backgroundColor: "error.main",
+                                  backgroundColor: "success.main",
                                   color: "white",
                                 },
                               }}
-                              title="Eliminar cheque"
+                              title="Marcar como cobrado"
                             >
-                              <DeleteIcon fontSize="small" />
+                              <CheckCircleIcon fontSize="small" />
                             </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button
-          variant="outlined"
-          onClick={() => setIsChequesModalOpen(false)}
-          sx={{
-            color: "text.secondary",
-            borderColor: "divider",
-            "&:hover": {
-              backgroundColor: "action.hover",
-              borderColor: "text.secondary",
-            },
-          }}
-        >
-          Cerrar
-        </Button>
-      </DialogActions>
-    </Dialog>
+                          )}
+                          <IconButton
+                            onClick={() => handleDeleteCheck(cheque.id)}
+                            size="small"
+                            sx={{
+                              borderRadius: "4px",
+                              color: "error.main",
+                              "&:hover": {
+                                backgroundColor: "error.main",
+                                color: "white",
+                              },
+                            }}
+                            title="Eliminar cheque"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
+    </Modal>
   );
 
   const InfoModal = () => (
-    <Dialog
-      open={isInfoModalOpen}
+    <Modal
+      isOpen={isInfoModalOpen}
       onClose={() => setIsInfoModalOpen(false)}
-      maxWidth="lg"
-      fullWidth
-    >
-      <DialogTitle>
-        Cuentas corrientes de {currentCustomerInfo?.name || "Cliente"}
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ maxHeight: "70vh", overflow: "auto", mb: 2 }}>
-          {/* Header con información del cliente */}
-          <Card
-            sx={{
-              background: "linear-gradient(135deg, #3b82f6, #1e40af)",
-              color: "white",
-              mb: 3,
+      title={`Cuentas corrientes de ${currentCustomerInfo?.name || "Cliente"}`}
+      buttons={
+        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={() => {
+              if (currentCustomerInfo) {
+                handleExportCustomerPDF(currentCustomerInfo.name);
+                setIsInfoModalOpen(false);
+              }
             }}
           >
-            <CardContent>
-              <Box
+            Descargar PDF
+          </Button>
+          <Button variant="outlined" onClick={() => setIsInfoModalOpen(false)}>
+            Cerrar
+          </Button>
+        </Box>
+      }
+    >
+      <Box sx={{ maxHeight: "70vh", overflow: "auto", mb: 2 }}>
+        {/* Header con información del cliente */}
+        <Card
+          sx={{
+            background: "linear-gradient(135deg, #3b82f6, #1e40af)",
+            color: "white",
+            mb: 3,
+          }}
+        >
+          <CardContent>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Box>
+                <Typography variant="h6" fontWeight="bold">
+                  Cliente
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  {currentCustomerInfo?.name}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "right" }}>
+                <Typography variant="h6" fontWeight="bold" mb={1}>
+                  Estado
+                </Typography>
+                <Chip
+                  label={
+                    (currentCustomerInfo?.balance ?? 0) <= 0
+                      ? "Al día"
+                      : "En deuda"
+                  }
+                  color={
+                    (currentCustomerInfo?.balance ?? 0) <= 0
+                      ? "success"
+                      : "error"
+                  }
+                  sx={{ color: "white", fontWeight: "bold" }}
+                />
+              </Box>
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
+                <CardContent sx={{ textAlign: "center", py: 2 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Total
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {currentCustomerInfo?.sales
+                      .reduce((sum, sale) => sum + sale.total, 0)
+                      .toLocaleString("es-AR", {
+                        style: "currency",
+                        currency: "ARS",
+                      })}
+                  </Typography>
+                </CardContent>
+              </Card>
+              <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
+                <CardContent sx={{ textAlign: "center", py: 2 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Total pagado
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {currentCustomerInfo?.sales
+                      .reduce((sum, sale) => {
+                        const paymentsForSale = payments
+                          .filter((p) => p.saleId === sale.id)
+                          .reduce((sum, p) => sum + p.amount, 0);
+                        return sum + paymentsForSale;
+                      }, 0)
+                      .toLocaleString("es-AR", {
+                        style: "currency",
+                        currency: "ARS",
+                      })}
+                  </Typography>
+                </CardContent>
+              </Card>
+              <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
+                <CardContent sx={{ textAlign: "center", py: 2 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Saldo pendiente
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {(currentCustomerInfo?.balance ?? 0).toLocaleString(
+                      "es-AR",
+                      {
+                        style: "currency",
+                        currency: "ARS",
+                      }
+                    )}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Historial de ventas */}
+        <Typography variant="h6" fontWeight="medium" mb={2}>
+          Historial de cuentas corrientes
+        </Typography>
+
+        {currentCustomerInfo?.sales
+          .sort((a, b) => {
+            const aBalance = calculateRemainingBalance(a);
+            const bBalance = calculateRemainingBalance(b);
+            const aPaid = aBalance <= 0;
+            const bPaid = bBalance <= 0;
+            if (aPaid !== bPaid) {
+              return aPaid ? 1 : -1;
+            }
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+          })
+          .map((sale) => {
+            const totalPayments = payments
+              .filter((p) => p.saleId === sale.id)
+              .reduce((sum, p) => sum + p.amount, 0);
+            const remainingBalance = sale.total - totalPayments;
+            const isPaid = remainingBalance <= 0;
+
+            return (
+              <Card
+                key={sale.id}
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
                   mb: 2,
+                  border: 1,
+                  borderColor: isPaid ? "success.light" : "error.light",
+                  bgcolor: isPaid ? "success.50" : "error.50",
                 }}
               >
-                <Box>
-                  <Typography variant="h6" fontWeight="bold">
-                    Cliente
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 2,
+                    }}
+                  >
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {format(new Date(sale.date), "dd/MM/yyyy", {
+                        locale: es,
+                      })}
+                    </Typography>
+                    {!isPaid && (
+                      <Button
+                        variant="contained"
+                        onClick={() => {
+                          setCurrentCreditSale(sale);
+                          setIsPaymentModalOpen(true);
+                          setIsInfoModalOpen(false);
+                        }}
+                      >
+                        Pagar
+                      </Button>
+                    )}
+                  </Box>
+
+                  {/* Detalles de productos */}
+                  <Typography variant="body2" fontWeight="medium" mb={1}>
+                    Detalles
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    {currentCustomerInfo?.name}
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: "right" }}>
-                  <Typography variant="h6" fontWeight="bold" mb={1}>
-                    Estado
-                  </Typography>
-                  <Chip
-                    label={
-                      (currentCustomerInfo?.balance ?? 0) <= 0
-                        ? "Al día"
-                        : "En deuda"
-                    }
-                    color={
-                      (currentCustomerInfo?.balance ?? 0) <= 0
-                        ? "success"
-                        : "error"
-                    }
-                    sx={{ color: "white", fontWeight: "bold" }}
-                  />
-                </Box>
-              </Box>
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Producto</TableCell>
+                          <TableCell align="right">Cantidad</TableCell>
+                          <TableCell align="right">Precio</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {sale.products.map((product, idx) => (
+                          <TableRow key={idx} hover>
+                            <TableCell>
+                              {getDisplayProductName(
+                                {
+                                  name: product.name,
+                                  size: product.size,
+                                  color: product.color,
+                                  rubro: product.rubro,
+                                },
+                                rubro,
+                                true
+                              )}
+                            </TableCell>
+                            <TableCell align="right">
+                              {product.quantity} {product.unit}
+                            </TableCell>
+                            <TableCell align="right">
+                              {product.price.toLocaleString("es-AR", {
+                                style: "currency",
+                                currency: "ARS",
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
 
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
-                  <CardContent sx={{ textAlign: "center", py: 2 }}>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Total
-                    </Typography>
-                    <Typography variant="h6" fontWeight="bold">
-                      {currentCustomerInfo?.sales
-                        .reduce((sum, sale) => sum + sale.total, 0)
-                        .toLocaleString("es-AR", {
-                          style: "currency",
-                          currency: "ARS",
-                        })}
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
-                  <CardContent sx={{ textAlign: "center", py: 2 }}>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Total pagado
-                    </Typography>
-                    <Typography variant="h6" fontWeight="bold">
-                      {currentCustomerInfo?.sales
-                        .reduce((sum, sale) => {
-                          const paymentsForSale = payments
-                            .filter((p) => p.saleId === sale.id)
-                            .reduce((sum, p) => sum + p.amount, 0);
-                          return sum + paymentsForSale;
-                        }, 0)
-                        .toLocaleString("es-AR", {
-                          style: "currency",
-                          currency: "ARS",
-                        })}
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
-                  <CardContent sx={{ textAlign: "center", py: 2 }}>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Saldo pendiente
-                    </Typography>
-                    <Typography variant="h6" fontWeight="bold">
-                      {(currentCustomerInfo?.balance ?? 0).toLocaleString(
-                        "es-AR",
-                        {
-                          style: "currency",
-                          currency: "ARS",
-                        }
-                      )}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Historial de ventas */}
-          <Typography variant="h6" fontWeight="medium" mb={2}>
-            Historial de cuentas corrientes
-          </Typography>
-
-          {currentCustomerInfo?.sales
-            .sort((a, b) => {
-              const aBalance = calculateRemainingBalance(a);
-              const bBalance = calculateRemainingBalance(b);
-              const aPaid = aBalance <= 0;
-              const bPaid = bBalance <= 0;
-              if (aPaid !== bPaid) {
-                return aPaid ? 1 : -1;
-              }
-              return new Date(b.date).getTime() - new Date(a.date).getTime();
-            })
-            .map((sale) => {
-              const totalPayments = payments
-                .filter((p) => p.saleId === sale.id)
-                .reduce((sum, p) => sum + p.amount, 0);
-              const remainingBalance = sale.total - totalPayments;
-              const isPaid = remainingBalance <= 0;
-
-              return (
-                <Card
-                  key={sale.id}
-                  sx={{
-                    mb: 2,
-                    border: 1,
-                    borderColor: isPaid ? "success.light" : "error.light",
-                    bgcolor: isPaid ? "success.50" : "error.50",
-                  }}
-                >
-                  <CardContent>
-                    <Box
+                  {/* Resumen financiero */}
+                  <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                    <Card
                       sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 2,
+                        bgcolor: isPaid ? "success.100" : "error.100",
+                        textAlign: "center",
+                        flex: 1,
                       }}
                     >
-                      <Typography variant="subtitle1" fontWeight="medium">
-                        {format(new Date(sale.date), "dd/MM/yyyy", {
-                          locale: es,
-                        })}
-                      </Typography>
-                      {!isPaid && (
-                        <Button
-                          variant="contained"
-                          onClick={() => {
-                            setCurrentCreditSale(sale);
-                            setIsPaymentModalOpen(true);
-                            setIsInfoModalOpen(false);
-                          }}
-                          sx={{
-                            backgroundColor: theme.palette.primary.main,
-                            "&:hover": {
-                              backgroundColor: theme.palette.primary.dark,
-                            },
-                          }}
+                      <CardContent sx={{ py: 1 }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          Saldo pendiente
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight="bold"
+                          color={isPaid ? "success.main" : "error.main"}
                         >
-                          Pagar
-                        </Button>
-                      )}
-                    </Box>
-
-                    {/* Detalles de productos */}
-                    <Typography variant="body2" fontWeight="medium" mb={1}>
-                      Detalles
-                    </Typography>
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Producto</TableCell>
-                            <TableCell align="right">Cantidad</TableCell>
-                            <TableCell align="right">Precio</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {sale.products.map((product, idx) => (
-                            <TableRow key={idx} hover>
-                              <TableCell>
-                                {getDisplayProductName(
-                                  {
-                                    name: product.name,
-                                    size: product.size,
-                                    color: product.color,
-                                    rubro: product.rubro,
-                                  },
-                                  rubro,
-                                  true
-                                )}
-                              </TableCell>
-                              <TableCell align="right">
-                                {product.quantity} {product.unit}
-                              </TableCell>
-                              <TableCell align="right">
-                                {product.price.toLocaleString("es-AR", {
-                                  style: "currency",
-                                  currency: "ARS",
-                                })}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-
-                    {/* Resumen financiero */}
-                    <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                      <Card
-                        sx={{
-                          bgcolor: isPaid ? "success.100" : "error.100",
-                          textAlign: "center",
-                          flex: 1,
-                        }}
-                      >
-                        <CardContent sx={{ py: 1 }}>
-                          <Typography variant="body2" fontWeight="medium">
-                            Saldo pendiente
-                          </Typography>
-                          <Typography
-                            variant="body1"
-                            fontWeight="bold"
-                            color={isPaid ? "success.main" : "error.main"}
-                          >
-                            {remainingBalance.toLocaleString("es-AR", {
-                              style: "currency",
-                              currency: "ARS",
-                            })}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                      <Card
-                        sx={{
-                          bgcolor: "grey.100",
-                          textAlign: "center",
-                          flex: 1,
-                        }}
-                      >
-                        <CardContent sx={{ py: 1 }}>
-                          <Typography variant="body2" fontWeight="medium">
-                            Pagado
-                          </Typography>
-                          <Typography variant="body1" fontWeight="bold">
-                            {totalPayments.toLocaleString("es-AR", {
-                              style: "currency",
-                              currency: "ARS",
-                            })}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                      <Card
-                        sx={{
-                          bgcolor: "grey.100",
-                          textAlign: "center",
-                          flex: 1,
-                        }}
-                      >
-                        <CardContent sx={{ py: 1 }}>
-                          <Typography variant="body2" fontWeight="medium">
-                            Total
-                          </Typography>
-                          <Typography variant="body1" fontWeight="bold">
-                            {sale.total.toLocaleString("es-AR", {
-                              style: "currency",
-                              currency: "ARS",
-                            })}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Box>
-                  </CardContent>
-                </Card>
-              );
-            })}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button
-          variant="contained"
-          startIcon={<DownloadIcon />}
-          onClick={() => {
-            if (currentCustomerInfo) {
-              handleExportCustomerPDF(currentCustomerInfo.name);
-              setIsInfoModalOpen(false);
-            }
-          }}
-          sx={{
-            backgroundColor: theme.palette.primary.main,
-            "&:hover": {
-              backgroundColor: theme.palette.primary.dark,
-            },
-          }}
-        >
-          Descargar PDF
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => setIsInfoModalOpen(false)}
-          sx={{
-            color: "text.secondary",
-            borderColor: "divider",
-            "&:hover": {
-              backgroundColor: "action.hover",
-              borderColor: "text.secondary",
-            },
-          }}
-        >
-          Cerrar
-        </Button>
-      </DialogActions>
-    </Dialog>
+                          {remainingBalance.toLocaleString("es-AR", {
+                            style: "currency",
+                            currency: "ARS",
+                          })}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                    <Card
+                      sx={{
+                        bgcolor: "grey.100",
+                        textAlign: "center",
+                        flex: 1,
+                      }}
+                    >
+                      <CardContent sx={{ py: 1 }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          Pagado
+                        </Typography>
+                        <Typography variant="body1" fontWeight="bold">
+                          {totalPayments.toLocaleString("es-AR", {
+                            style: "currency",
+                            currency: "ARS",
+                          })}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                    <Card
+                      sx={{
+                        bgcolor: "grey.100",
+                        textAlign: "center",
+                        flex: 1,
+                      }}
+                    >
+                      <CardContent sx={{ py: 1 }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          Total
+                        </Typography>
+                        <Typography variant="body1" fontWeight="bold">
+                          {sale.total.toLocaleString("es-AR", {
+                            style: "currency",
+                            currency: "ARS",
+                          })}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })}
+      </Box>
+    </Modal>
   );
+  const PaymentModal = () => (
+    <Modal
+      isOpen={isPaymentModalOpen}
+      onClose={() => setIsPaymentModalOpen(false)}
+      title={`Registrar Pago - ${currentCreditSale?.customerName || "Cliente"}`}
+      buttons={
+        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+          <Button
+            variant="contained"
+            onClick={handlePayment}
+            disabled={
+              paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
+              isFirstGreater(
+                paymentMethods.reduce((sum, m) => sum + m.amount, 0),
+                calculateRemainingBalance(currentCreditSale!)
+              )
+            }
+          >
+            Registrar
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setIsPaymentModalOpen(false);
+              setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+            }}
+          >
+            Cancelar
+          </Button>
+        </Box>
+      }
+    >
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Información de deuda pendiente */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="body1" fontWeight="medium">
+              Deuda pendiente:
+            </Typography>
+            <Chip
+              label={calculateRemainingBalance(
+                currentCreditSale!
+              ).toLocaleString("es-AR", {
+                style: "currency",
+                currency: "ARS",
+              })}
+              color="primary"
+              variant="filled"
+            />
+          </Box>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => {
+              const remaining = calculateRemainingBalance(currentCreditSale!);
+              setPaymentMethods([{ method: "EFECTIVO", amount: remaining }]);
+            }}
+          >
+            Pagar todo
+          </Button>
+        </Box>
+
+        {/* Métodos de pago */}
+        <Box>
+          <Typography variant="subtitle1" fontWeight="medium" mb={2}>
+            Métodos de Pago
+          </Typography>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {paymentMethods.map((method, index) => (
+              <Box
+                key={index}
+                sx={{ display: "flex", alignItems: "center", gap: 2 }}
+              >
+                <FormControl sx={{ minWidth: 140 }}>
+                  <Select
+                    label="Método"
+                    value={method.method}
+                    options={[
+                      { value: "EFECTIVO", label: "Efectivo" },
+                      { value: "TRANSFERENCIA", label: "Transferencia" },
+                      { value: "TARJETA", label: "Tarjeta" },
+                    ]}
+                    onChange={(value) =>
+                      handlePaymentMethodChange(
+                        index,
+                        "method",
+                        value as PaymentMethod
+                      )
+                    }
+                  />
+                </FormControl>
+
+                <Input
+                  type="number"
+                  value={method.amount}
+                  onRawChange={(e) =>
+                    handlePaymentMethodChange(
+                      index,
+                      "amount",
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                  placeholder="0.00"
+                  step="0.01"
+                />
+
+                {paymentMethods.length > 1 && (
+                  <IconButton
+                    onClick={() => removePaymentMethod(index)}
+                    size="small"
+                    sx={{
+                      color: "error.main",
+                      "&:hover": {
+                        backgroundColor: "error.main",
+                        color: "white",
+                      },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            ))}
+          </Box>
+
+          {paymentMethods.length < 3 && (
+            <Button
+              variant="text"
+              startIcon={<Add />}
+              onClick={addPaymentMethod}
+              sx={{ mt: 1 }}
+            >
+              Agregar otro método
+            </Button>
+          )}
+        </Box>
+
+        {/* Resumen del pago */}
+        <Card
+          sx={{
+            backgroundColor: "primary.main",
+            color: "white",
+            textAlign: "center",
+          }}
+        >
+          <CardContent>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Total a pagar
+            </Typography>
+            <Typography variant="h5" fontWeight="bold">
+              {paymentMethods
+                .reduce((sum, m) => sum + m.amount, 0)
+                .toLocaleString("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                })}
+            </Typography>
+
+            {isFirstGreater(
+              paymentMethods.reduce((sum, m) => sum + m.amount, 0),
+              calculateRemainingBalance(currentCreditSale!)
+            ) && (
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 1,
+                  color: "warning.main",
+                  fontWeight: "medium",
+                }}
+              >
+                El monto total excede la deuda pendiente
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
+    </Modal>
+  );
+
+  // Funciones auxiliares para el manejo de métodos de pago
+  const addPaymentMethod = () => {
+    setPaymentMethods((prev) => {
+      if (prev.length >= 3) return prev;
+
+      const total = calculateRemainingBalance(currentCreditSale!);
+      const usedMethods = prev.map((m) => m.method);
+      const availableMethod = [
+        { value: "EFECTIVO", label: "Efectivo" },
+        { value: "TRANSFERENCIA", label: "Transferencia" },
+        { value: "TARJETA", label: "Tarjeta" },
+      ].find((option) => !usedMethods.includes(option.value as PaymentMethod));
+
+      if (!availableMethod) return prev;
+
+      if (prev.length < 2) {
+        const newMethodCount = prev.length + 1;
+        const share = total / newMethodCount;
+
+        const updatedMethods = prev.map((method) => ({
+          ...method,
+          amount: share,
+        }));
+
+        return [
+          ...updatedMethods,
+          {
+            method: availableMethod.value as PaymentMethod,
+            amount: share,
+          },
+        ];
+      }
+
+      return [
+        ...prev,
+        {
+          method: availableMethod.value as PaymentMethod,
+          amount: 0,
+        },
+      ];
+    });
+  };
+
+  const handlePaymentMethodChange = (
+    index: number,
+    field: keyof PaymentSplit,
+    value: string | number
+  ) => {
+    setPaymentMethods((prev) => {
+      const updated = [...prev];
+      const remainingBalance = calculateRemainingBalance(currentCreditSale!);
+
+      if (field === "amount") {
+        const numericValue = typeof value === "number" ? value : 0;
+
+        updated[index] = {
+          ...updated[index],
+          amount: parseFloat(numericValue.toFixed(2)),
+        };
+
+        if (updated.length === 2) {
+          const totalPayment = updated.reduce((sum, m) => sum + m.amount, 0);
+          const difference = remainingBalance - totalPayment;
+
+          if (difference !== 0) {
+            const otherIndex = index === 0 ? 1 : 0;
+            updated[otherIndex].amount = Math.max(
+              0,
+              updated[otherIndex].amount + difference
+            );
+          }
+        }
+      } else {
+        updated[index] = {
+          ...updated[index],
+          method: value as PaymentMethod,
+        };
+      }
+      return updated;
+    });
+  };
+
+  const removePaymentMethod = (index: number) => {
+    setPaymentMethods((prev) => {
+      if (prev.length <= 1) return prev;
+
+      const updatedMethods = [...prev];
+      updatedMethods.splice(index, 1);
+
+      const total = calculateRemainingBalance(currentCreditSale!);
+
+      if (updatedMethods.length === 1) {
+        updatedMethods[0].amount = total;
+      } else {
+        const share = total / updatedMethods.length;
+        updatedMethods.forEach((m, i) => {
+          updatedMethods[i] = {
+            ...m,
+            amount: share,
+          };
+        });
+      }
+
+      return updatedMethods;
+    });
+  };
 
   return (
     <ProtectedRoute>
@@ -1510,7 +1757,7 @@ const CuentasCorrientesPage = () => {
           )}
         </Box>
 
-        {/* Modales de Material-UI */}
+        {/* Modales personalizados */}
         <ChequesModal />
         <InfoModal />
 
@@ -1522,7 +1769,7 @@ const CuentasCorrientesPage = () => {
             currentCreditSale?.customerName || "Cliente"
           }`}
           buttons={
-            <>
+            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
               <Button
                 variant="contained"
                 onClick={handlePayment}
@@ -1533,12 +1780,6 @@ const CuentasCorrientesPage = () => {
                     calculateRemainingBalance(currentCreditSale!)
                   )
                 }
-                sx={{
-                  backgroundColor: theme.palette.primary.main,
-                  "&:hover": {
-                    backgroundColor: theme.palette.primary.dark,
-                  },
-                }}
               >
                 Registrar
               </Button>
@@ -1548,22 +1789,13 @@ const CuentasCorrientesPage = () => {
                   setIsPaymentModalOpen(false);
                   setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
                 }}
-                sx={{
-                  color: "text.secondary",
-                  borderColor: "divider",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.secondary",
-                  },
-                }}
               >
                 Cancelar
               </Button>
-            </>
+            </Box>
           }
         >
-          {/* Contenido del modal de pago (se mantiene igual) */}
-          <Box sx={{ spaceY: 6 }}>{/* ... contenido existente ... */}</Box>
+          <PaymentModal />
         </Modal>
 
         <Modal
@@ -1571,34 +1803,21 @@ const CuentasCorrientesPage = () => {
           onClose={() => setIsDeleteModalOpen(false)}
           title="Eliminar Cuentas corrientes"
           buttons={
-            <>
+            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
               <Button
                 variant="contained"
+                color="error"
                 onClick={handleDeleteCustomerCredits}
-                sx={{
-                  backgroundColor: "error.main",
-                  "&:hover": {
-                    backgroundColor: "error.dark",
-                  },
-                }}
               >
                 Si
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => setIsDeleteModalOpen(false)}
-                sx={{
-                  color: "text.secondary",
-                  borderColor: "divider",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.secondary",
-                  },
-                }}
               >
                 No
               </Button>
-            </>
+            </Box>
           }
         >
           <Box sx={{ spaceY: 6 }}>
@@ -1619,21 +1838,13 @@ const CuentasCorrientesPage = () => {
           </Box>
         </Modal>
 
-        {/* Snackbar de notificaciones */}
-        <Snackbar
-          open={isNotificationOpen}
-          autoHideDuration={2500}
+        {/* Notification personalizada */}
+        <Notification
+          isOpen={isNotificationOpen}
+          message={notificationMessage}
+          type={notificationType}
           onClose={() => setIsNotificationOpen(false)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            onClose={() => setIsNotificationOpen(false)}
-            severity={notificationType}
-            variant="filled"
-          >
-            {notificationMessage}
-          </Alert>
-        </Snackbar>
+        />
       </Box>
     </ProtectedRoute>
   );

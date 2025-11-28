@@ -39,6 +39,7 @@ interface CustomButtonProps {
   fullWidth?: boolean;
   href?: string;
   target?: string;
+  download?: string | boolean;
 
   // Agregar prop sx para estilos personalizados
   sx?: SxProps<Theme>;
@@ -68,13 +69,14 @@ const Button: React.FC<CustomButtonProps> = ({
   title,
   ariaLabel,
   hotkey,
-  variant = "contained", // Cambiado de "primary" a "contained"
+  variant = "contained",
   size = "small",
   fullWidth = false,
   href,
   target,
+  download,
   sx,
-  color = "primary", // Color por defecto
+  color = "primary",
 }) => {
   useHotkeys(
     hotkey || "",
@@ -126,6 +128,7 @@ const Button: React.FC<CustomButtonProps> = ({
     ? {
         href,
         target,
+        download,
       }
     : {};
 

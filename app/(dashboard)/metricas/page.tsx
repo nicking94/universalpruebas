@@ -49,8 +49,6 @@ import {
   Card,
   CardContent,
   Typography,
-  FormControl,
-  InputLabel,
   Chip,
   Stack,
   useTheme,
@@ -60,10 +58,6 @@ import {
   Tabs,
   Tab,
   alpha,
-  MenuItem,
-  Select,
-  Snackbar,
-  Alert,
 } from "@mui/material";
 import {
   TrendingUp,
@@ -77,6 +71,10 @@ import {
   DateRange,
   Analytics,
 } from "@mui/icons-material";
+
+// Componentes personalizados
+import Select, { SelectOption } from "@/app/components/Select";
+import Notification from "@/app/components/Notification";
 
 const WEEK_STARTS_ON = 1;
 
@@ -306,7 +304,7 @@ const ProductRanking = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const unitOptions: { value: Product["unit"] | "General"; label: string }[] = [
+  const unitOptions: SelectOption[] = [
     { value: "General", label: "General" },
     { value: "A", label: "Amperios" },
     { value: "Bulto", label: "Bultos" },
@@ -383,32 +381,20 @@ const ProductRanking = ({
             {title}
             {unit !== "General" && ` por ${unidadLegible[unit]}`}
           </Typography>
-          <FormControl
-            size="small"
+          <Select
+            label="Unidad"
+            options={unitOptions}
+            value={rubro === "indumentaria" ? "Unid." : unit}
+            onChange={(value) =>
+              onUnitChange(value as Product["unit"] | "General")
+            }
+            disabled={rubro === "indumentaria"}
             sx={{
-              minWidth: 120,
               backgroundColor: "white",
               borderRadius: 1,
+              minWidth: 120,
             }}
-            disabled={rubro === "indumentaria"}
-          >
-            <Select
-              value={rubro === "indumentaria" ? "Unid." : unit}
-              onChange={(e) =>
-                onUnitChange(e.target.value as Product["unit"] | "General")
-              }
-              sx={{
-                fontSize: "0.875rem",
-                "& .MuiSelect-select": { py: 1 },
-              }}
-            >
-              {unitOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          />
         </Stack>
 
         {/* Contenedor scrollable para los productos */}
@@ -1183,6 +1169,17 @@ const Metrics = () => {
     ];
   };
 
+  // Opciones para los selects de mes y año
+  const monthOptions: SelectOption[] = Array.from({ length: 12 }, (_, i) => ({
+    value: i + 1,
+    label: format(new Date(selectedYear, i, 1), "MMMM", { locale: es }),
+  }));
+
+  const yearOptions: SelectOption[] = availableYears.map((year) => ({
+    value: year,
+    label: year.toString(),
+  }));
+
   if (loading) {
     return (
       <ProtectedRoute>
@@ -1231,40 +1228,24 @@ const Metrics = () => {
               gap: 2,
             }}
           >
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Mes</InputLabel>
-              <Select
-                value={selectedMonth}
-                label="Mes"
-                onChange={(e) => {
-                  setUserChangedMonth(true);
-                  setSelectedMonth(e.target.value as number);
-                }}
-              >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <MenuItem key={i + 1} value={i + 1}>
-                    {format(new Date(selectedYear, i, 1), "MMMM", {
-                      locale: es,
-                    })}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Select
+              label="Mes"
+              options={monthOptions}
+              value={selectedMonth}
+              onChange={(value) => {
+                setUserChangedMonth(true);
+                setSelectedMonth(value as number);
+              }}
+              sx={{ minWidth: 120 }}
+            />
 
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Año</InputLabel>
-              <Select
-                value={selectedYear}
-                label="Año"
-                onChange={(e) => setSelectedYear(e.target.value as number)}
-              >
-                {availableYears.map((year) => (
-                  <MenuItem key={year} value={year}>
-                    {year}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Select
+              label="Año"
+              options={yearOptions}
+              value={selectedYear}
+              onChange={(value) => setSelectedYear(value as number)}
+              sx={{ minWidth: 120 }}
+            />
           </Box>
         </Box>
 
@@ -1643,21 +1624,14 @@ const Metrics = () => {
           </Box>
         </Box>
 
-        {/* Snackbar para notificaciones - Coherente con VentasPage */}
-        <Snackbar
-          open={isNotificationOpen}
-          autoHideDuration={3000}
+        {/* Notification personalizada */}
+        <Notification
+          isOpen={isNotificationOpen}
+          message={notificationMessage}
+          type={notificationType}
           onClose={() => setIsNotificationOpen(false)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            onClose={() => setIsNotificationOpen(false)}
-            severity={notificationType}
-            variant="filled"
-          >
-            {notificationMessage}
-          </Alert>
-        </Snackbar>
+          autoHideDuration={3000}
+        />
       </Box>
     </ProtectedRoute>
   );

@@ -1,8 +1,5 @@
 "use client";
 import {
-  Button,
-  Snackbar,
-  Alert,
   Table,
   TableBody,
   TableCell,
@@ -16,18 +13,19 @@ import {
   FormControl,
   Chip,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   Autocomplete,
-  Checkbox,
-  FormControlLabel,
   useTheme,
   InputAdornment,
 } from "@mui/material";
-import { Plus, Printer, ShoppingCart, Trash, Tag, Check } from "lucide-react";
+import {
+  Add,
+  Print,
+  ShoppingCart,
+  Delete,
+  LocalOffer,
+  Check,
+} from "@mui/icons-material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { db } from "@/app/database/db";
 import { parseISO, format } from "date-fns";
@@ -71,6 +69,12 @@ import {
 import Select from "@/app/components/Select";
 import { AttachMoney, Settings } from "@mui/icons-material";
 
+// Importar tus componentes personalizados
+import Button from "@/app/components/Button";
+import Notification from "@/app/components/Notification";
+import Modal from "@/app/components/Modal";
+import Checkbox from "@/app/components/Checkbox";
+
 type SelectOption = {
   value: number;
   label: string;
@@ -86,7 +90,7 @@ type CustomerOption = {
 const VentasPage = () => {
   const { businessData, setBusinessData } = useBusinessData();
   const { rubro } = useRubro();
-  const theme = useTheme(); // Hook para acceder al tema actual
+  const theme = useTheme();
   const currentYear = new Date().getFullYear();
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -480,7 +484,7 @@ const VentasPage = () => {
             label={selectedPromotions.name}
             color={isValid ? "success" : "error"}
             size="small"
-            icon={<Tag size={12} />}
+            icon={<LocalOffer fontSize="small" />}
             onDelete={removePromotion}
           />
         </Box>
@@ -534,162 +538,171 @@ const VentasPage = () => {
     };
 
     return (
-      <Dialog
-        open={isPromotionModalOpen}
+      <Modal
+        isOpen={isPromotionModalOpen}
         onClose={handleCloseModal}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: "background.paper",
-          },
-        }}
+        title="Seleccionar Promoción"
+        bgColor="bg-white dark:bg-gray_b"
+        buttons={
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+            <Button
+              variant="text"
+              onClick={handleCloseModal}
+              sx={{
+                color: "text.secondary",
+                borderColor: "text.secondary",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                  borderColor: "text.primary",
+                },
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleApplyPromotion}
+              disabled={!temporarySelectedPromotion}
+              sx={{
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
+            >
+              Aplicar promoción
+            </Button>
+          </Box>
+        }
       >
-        <DialogTitle>Seleccionar Promoción</DialogTitle>
-        <DialogContent>
-          <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
-            <Box sx={{ display: "grid", gap: 2 }}>
-              {availablePromotions.length > 0 ? (
-                availablePromotions.map((promotion) => {
-                  const isApplicable = isPromotionApplicable(promotion);
-                  const currentSubtotal =
-                    calculateCombinedTotal(newSale.products) +
-                    (newSale.manualAmount || 0);
+        <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+          <Box sx={{ display: "grid", gap: 2 }}>
+            {availablePromotions.length > 0 ? (
+              availablePromotions.map((promotion) => {
+                const isApplicable = isPromotionApplicable(promotion);
+                const currentSubtotal =
+                  calculateCombinedTotal(newSale.products) +
+                  (newSale.manualAmount || 0);
 
-                  return (
-                    <Card
-                      key={promotion.id}
+                return (
+                  <Card
+                    key={promotion.id}
+                    sx={{
+                      p: 2,
+                      cursor: isApplicable ? "pointer" : "not-allowed",
+                      border:
+                        temporarySelectedPromotion?.id === promotion.id ? 2 : 1,
+                      borderColor:
+                        temporarySelectedPromotion?.id === promotion.id
+                          ? "primary.main"
+                          : "divider",
+                      bgcolor:
+                        temporarySelectedPromotion?.id === promotion.id
+                          ? "action.selected"
+                          : "background.paper",
+                      opacity: isApplicable ? 1 : 0.7,
+                    }}
+                    onClick={() =>
+                      isApplicable && handlePromotionSelect(promotion)
+                    }
+                  >
+                    <Box
                       sx={{
-                        p: 2,
-                        cursor: isApplicable ? "pointer" : "not-allowed",
-                        border:
-                          temporarySelectedPromotion?.id === promotion.id
-                            ? 2
-                            : 1,
-                        borderColor:
-                          temporarySelectedPromotion?.id === promotion.id
-                            ? "primary.main"
-                            : "divider",
-                        bgcolor:
-                          temporarySelectedPromotion?.id === promotion.id
-                            ? "action.selected"
-                            : "background.paper",
-                        opacity: isApplicable ? 1 : 0.7,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
                       }}
-                      onClick={() =>
-                        isApplicable && handlePromotionSelect(promotion)
-                      }
                     >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Box sx={{ flex: 1 }}>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              mb: 1,
-                            }}
+                      <Box sx={{ flex: 1 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <Typography
+                            variant="h6"
+                            sx={{ textTransform: "uppercase" }}
                           >
-                            <Typography
-                              variant="h6"
-                              sx={{ textTransform: "uppercase" }}
-                            >
-                              {promotion.name}
-                            </Typography>
-                            <Chip
-                              label={
-                                promotion.type === "PERCENTAGE_DISCOUNT"
-                                  ? `${promotion.discount}%`
-                                  : `$${promotion.discount}`
-                              }
-                              color={
-                                promotion.type === "PERCENTAGE_DISCOUNT"
-                                  ? "success"
-                                  : "primary"
-                              }
-                              size="small"
-                            />
-                            {!isApplicable && (
-                              <Chip
-                                label="No aplicable"
-                                color="error"
-                                size="small"
-                              />
-                            )}
-                          </Box>
-                          <Typography variant="body2" color="text.secondary">
-                            {promotion.description}
+                            {promotion.name}
                           </Typography>
-                          {!isApplicable &&
-                            promotion.minPurchaseAmount &&
-                            promotion.minPurchaseAmount > 0 && (
-                              <Typography
-                                variant="body2"
-                                color="error"
-                                sx={{ mt: 1 }}
-                              >
-                                Requiere{" "}
-                                {formatCurrency(promotion.minPurchaseAmount)}{" "}
-                                (actual: {formatCurrency(currentSubtotal)})
-                              </Typography>
-                            )}
-                        </Box>
-                        <Box>
-                          {temporarySelectedPromotion?.id === promotion.id ? (
-                            <Check size={20} color="primary" />
-                          ) : (
-                            <Box
-                              sx={{
-                                width: 20,
-                                height: 20,
-                                border: 2,
-                                borderColor: isApplicable
-                                  ? "primary.main"
-                                  : "text.disabled",
-                                borderRadius: 1,
-                              }}
+                          <Chip
+                            label={
+                              promotion.type === "PERCENTAGE_DISCOUNT"
+                                ? `${promotion.discount}%`
+                                : `$${promotion.discount}`
+                            }
+                            color={
+                              promotion.type === "PERCENTAGE_DISCOUNT"
+                                ? "success"
+                                : "primary"
+                            }
+                            size="small"
+                          />
+                          {!isApplicable && (
+                            <Chip
+                              label="No aplicable"
+                              color="error"
+                              size="small"
                             />
                           )}
                         </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {promotion.description}
+                        </Typography>
+                        {!isApplicable &&
+                          promotion.minPurchaseAmount &&
+                          promotion.minPurchaseAmount > 0 && (
+                            <Typography
+                              variant="body2"
+                              color="error"
+                              sx={{ mt: 1 }}
+                            >
+                              Requiere{" "}
+                              {formatCurrency(promotion.minPurchaseAmount)}{" "}
+                              (actual: {formatCurrency(currentSubtotal)})
+                            </Typography>
+                          )}
                       </Box>
-                    </Card>
-                  );
-                })
-              ) : (
-                <Box sx={{ textAlign: "center", py: 4 }}>
-                  <Tag
-                    size={48}
-                    color="disabled"
-                    style={{ marginBottom: 16 }}
-                  />
-                  <Typography variant="body1" color="text.secondary">
-                    No hay promociones disponibles
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Crea promociones en la sección correspondiente
-                  </Typography>
-                </Box>
-              )}
-            </Box>
+                      <Box>
+                        {temporarySelectedPromotion?.id === promotion.id ? (
+                          <Check fontSize="small" color="primary" />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: 20,
+                              height: 20,
+                              border: 2,
+                              borderColor: isApplicable
+                                ? "primary.main"
+                                : "text.disabled",
+                              borderRadius: 1,
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </Box>
+                  </Card>
+                );
+              })
+            ) : (
+              <Box sx={{ textAlign: "center", py: 4 }}>
+                <LocalOffer
+                  fontSize="large"
+                  color="disabled"
+                  style={{ marginBottom: 16 }}
+                />
+                <Typography variant="body1" color="text.secondary">
+                  No hay promociones disponibles
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Crea promociones en la sección correspondiente
+                </Typography>
+              </Box>
+            )}
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal}>Cancelar</Button>
-          <Button
-            onClick={handleApplyPromotion}
-            variant="contained"
-            disabled={!temporarySelectedPromotion}
-          >
-            Aplicar promoción
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Modal>
     );
   };
 
@@ -720,7 +733,6 @@ const VentasPage = () => {
       setLocalChange(calculatedChange);
     }, [localPaymentAmount, newSale.total]);
 
-    // ✅ SOLUCIÓN SIMPLIFICADA - Eliminar dependencia del evento
     const handleCloseModal = (
       reason?: "backdropClick" | "escapeKeyDown" | "cancelButton"
     ) => {
@@ -953,158 +965,170 @@ const VentasPage = () => {
     };
 
     return (
-      <Dialog
-        open={isPaymentModalOpen}
-        onClose={(event, reason) => handleCloseModal(reason)}
-        maxWidth="sm"
-        fullWidth
-        disableEscapeKeyDown
-      >
-        <DialogTitle>Pago y Cambio</DialogTitle>
-        <DialogContent>
-          <Box sx={{ p: 2, spaceY: 3 }}>
-            {/* Total a pagar */}
-            <Card sx={getCardStyle("primary")}>
-              <Box sx={{ textAlign: "center", p: 2 }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Total a Pagar
-                </Typography>
-                <Typography variant="h4" fontWeight="bold">
-                  {formatCurrency(newSale.total)}
-                </Typography>
-              </Box>
-            </Card>
-
-            {/* Monto recibido */}
-            <Box>
-              <Typography variant="body1" fontWeight="semibold" sx={{ mb: 1 }}>
-                Monto Recibido
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <TextField
-                  type="number"
-                  value={localPaymentAmount === 0 ? "" : localPaymentAmount}
-                  onChange={(e) => {
-                    const value =
-                      e.target.value === "" ? 0 : parseFloat(e.target.value);
-                    setLocalPaymentAmount(isNaN(value) ? 0 : value);
-                  }}
-                  placeholder="0.00"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <AttachMoney />
-                      </InputAdornment>
-                    ),
-                  }}
-                  fullWidth
-                  size="small"
-                />
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={() => setLocalPaymentAmount(newSale.total)}
-                    size="small"
-                  >
-                    Total
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => setLocalPaymentAmount(0)}
-                    size="small"
-                  >
-                    Limpiar
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Cambio */}
-            {localPaymentAmount > 0 && (
-              <Card
-                sx={{
-                  p: 3,
-                  border: 2,
-                  borderColor: localChange >= 0 ? "success.main" : "error.main",
-                  bgcolor: localChange >= 0 ? "success.light" : "error.light",
-                }}
-              >
-                <Box sx={{ textAlign: "center" }}>
-                  <Typography
-                    variant="body1"
-                    fontWeight="bold"
-                    color={localChange >= 0 ? "success.dark" : "error.dark"}
-                    sx={{ mb: 1 }}
-                  >
-                    {localChange >= 0
-                      ? "🎉 Cambio a Entregar"
-                      : "⚠️ Pago Insuficiente"}
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    fontWeight="bold"
-                    color={localChange >= 0 ? "success.dark" : "error.dark"}
-                  >
-                    {formatCurrency(Math.abs(localChange))}
-                  </Typography>
-                  {localChange < 0 && (
-                    <Typography
-                      variant="body2"
-                      color="error.dark"
-                      sx={{ mt: 1 }}
-                    >
-                      Faltan {formatCurrency(Math.abs(localChange))} para
-                      completar el pago
-                    </Typography>
-                  )}
-                </Box>
-              </Card>
-            )}
-
-            {/* Resumen */}
-            <Box
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={handleCloseModal}
+        title="Pago y Cambio"
+        bgColor="bg-white dark:bg-gray_b"
+        buttons={
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+            <Button
+              variant="text"
+              onClick={handleCancelPayment}
+              disabled={isProcessingPayment}
               sx={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 2,
-                p: 2,
-                bgcolor: "grey.50",
-                borderRadius: 1,
+                color: "text.secondary",
+                borderColor: "text.secondary",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                  borderColor: "text.primary",
+                },
               }}
             >
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="body2" color="text.secondary">
-                  Total Venta
-                </Typography>
-                <Typography variant="h6" fontWeight="bold">
-                  {formatCurrency(newSale.total)}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="body2" color="text.secondary">
-                  Monto Recibido
-                </Typography>
-                <Typography variant="h6" fontWeight="bold">
-                  {formatCurrency(localPaymentAmount)}
-                </Typography>
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleConfirmPayment}
+              disabled={
+                localPaymentAmount < newSale.total || isProcessingPayment
+              }
+              sx={{
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
+            >
+              {isProcessingPayment ? "Procesando..." : "Confirmar Pago"}
+            </Button>
+          </Box>
+        }
+      >
+        <Box sx={{ p: 2, spaceY: 3 }}>
+          {/* Total a pagar */}
+          <Card sx={getCardStyle("primary")}>
+            <Box sx={{ textAlign: "center", p: 2 }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                Total a Pagar
+              </Typography>
+              <Typography variant="h4" fontWeight="bold">
+                {formatCurrency(newSale.total)}
+              </Typography>
+            </Box>
+          </Card>
+
+          {/* Monto recibido */}
+          <Box>
+            <Typography variant="body1" fontWeight="semibold" sx={{ mb: 1 }}>
+              Monto Recibido
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <TextField
+                type="number"
+                value={localPaymentAmount === 0 ? "" : localPaymentAmount}
+                onChange={(e) => {
+                  const value =
+                    e.target.value === "" ? 0 : parseFloat(e.target.value);
+                  setLocalPaymentAmount(isNaN(value) ? 0 : value);
+                }}
+                placeholder="0.00"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <AttachMoney />
+                    </InputAdornment>
+                  ),
+                }}
+                fullWidth
+                size="small"
+              />
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => setLocalPaymentAmount(newSale.total)}
+                  size="small"
+                >
+                  Total
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setLocalPaymentAmount(0)}
+                  size="small"
+                >
+                  Limpiar
+                </Button>
               </Box>
             </Box>
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelPayment} disabled={isProcessingPayment}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleConfirmPayment}
-            variant="contained"
-            disabled={localPaymentAmount < newSale.total || isProcessingPayment}
+
+          {/* Cambio */}
+          {localPaymentAmount > 0 && (
+            <Card
+              sx={{
+                p: 3,
+                border: 2,
+                borderColor: localChange >= 0 ? "success.main" : "error.main",
+                bgcolor: localChange >= 0 ? "success.light" : "error.light",
+              }}
+            >
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="body1"
+                  fontWeight="bold"
+                  color={localChange >= 0 ? "success.dark" : "error.dark"}
+                  sx={{ mb: 1 }}
+                >
+                  {localChange >= 0
+                    ? "🎉 Cambio a Entregar"
+                    : "⚠️ Pago Insuficiente"}
+                </Typography>
+                <Typography
+                  variant="h4"
+                  fontWeight="bold"
+                  color={localChange >= 0 ? "success.dark" : "error.dark"}
+                >
+                  {formatCurrency(Math.abs(localChange))}
+                </Typography>
+                {localChange < 0 && (
+                  <Typography variant="body2" color="error.dark" sx={{ mt: 1 }}>
+                    Faltan {formatCurrency(Math.abs(localChange))} para
+                    completar el pago
+                  </Typography>
+                )}
+              </Box>
+            </Card>
+          )}
+
+          {/* Resumen */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 2,
+              p: 2,
+              bgcolor: "grey.50",
+              borderRadius: 1,
+            }}
           >
-            {isProcessingPayment ? "Procesando..." : "Confirmar Pago"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                Total Venta
+              </Typography>
+              <Typography variant="h6" fontWeight="bold">
+                {formatCurrency(newSale.total)}
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                Monto Recibido
+              </Typography>
+              <Typography variant="h6" fontWeight="bold">
+                {formatCurrency(localPaymentAmount)}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Modal>
     );
   };
 
@@ -1285,13 +1309,10 @@ const VentasPage = () => {
     }
   };
 
-  const handleRegisterCheckChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const isCheck = e.target.checked;
-    setRegisterCheck(isCheck);
+  const handleRegisterCheckChange = (checked: boolean) => {
+    setRegisterCheck(checked);
 
-    if (isCheck) {
+    if (checked) {
       setNewSale((prev) => ({
         ...prev,
         paymentMethods: [{ method: "CHEQUE", amount: prev.total }],
@@ -1390,16 +1411,13 @@ const VentasPage = () => {
     });
   };
 
-  const handleCreditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isCredit = e.target.checked;
-    setIsCredit(isCredit);
+  const handleCreditChange = (checked: boolean) => {
+    setIsCredit(checked);
     setRegisterCheck(false);
 
     setNewSale((prev) => ({
       ...prev,
-      paymentMethods: isCredit
-        ? [{ method: "EFECTIVO", amount: prev.total }]
-        : [{ method: "EFECTIVO", amount: prev.total }],
+      paymentMethods: [{ method: "EFECTIVO", amount: prev.total }],
     }));
   };
 
@@ -1977,15 +1995,81 @@ const VentasPage = () => {
     <ProtectedRoute>
       <Box
         sx={{
-          px: 2,
+          px: 4,
           py: 2,
           height: "calc(100vh - 80px)",
           display: "flex",
           flexDirection: "column",
-          bgcolor: "background.default",
-          color: "text.primary",
         }}
       >
+        <Typography variant="h5" fontWeight="semibold" mb={2}>
+          Ventas
+        </Typography>
+
+        {/* Header con filtros y acciones */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 2,
+            width: "100%",
+          }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <Box sx={{ display: "flex", gap: 2, maxWidth: "20rem" }}>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Select
+                  label="Mes"
+                  value={selectedMonth}
+                  options={monthOptions}
+                  onChange={(value) => setSelectedMonth(value as number)}
+                  size="small"
+                />
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Select
+                  label="Año"
+                  value={selectedYear}
+                  options={yearOptions}
+                  onChange={(value) => handleYearChange(value)}
+                  size="small"
+                />
+              </FormControl>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              mt: 1,
+              gap: 2,
+              visibility: rubro === "Todos los rubros" ? "hidden" : "visible",
+            }}
+          >
+            <Button
+              variant="contained"
+              onClick={handleAddSale}
+              sx={{
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
+              startIcon={<Add fontSize="small" />}
+            >
+              Nueva Venta [F1]
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Tabla de ventas */}
         <Box
           sx={{
             display: "flex",
@@ -1994,293 +2078,282 @@ const VentasPage = () => {
             justifyContent: "space-between",
           }}
         >
-          <Box>
-            <Typography variant="h5" fontWeight="semibold" mb={2}>
-              Ventas
-            </Typography>
-
-            <Box
-              sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}
+          <Box sx={{ flex: 1, minHeight: "auto" }}>
+            <TableContainer
+              component={Paper}
+              sx={{ maxHeight: "calc(100vh - 250px)", flex: 1 }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 2,
-                  width: "100%",
-                  maxWidth: "20rem",
-                }}
-              >
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <Select
-                    label="Mes"
-                    value={selectedMonth}
-                    options={monthOptions}
-                    onChange={(value) => setSelectedMonth(value as number)}
-                    size="small"
-                  />
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <Select
-                    label="Año"
-                    value={selectedYear}
-                    options={yearOptions}
-                    onChange={(value) => handleYearChange(value)}
-                    size="small"
-                  />
-                </FormControl>
-              </Box>
-              {rubro !== "Todos los rubros" && (
-                <Box
-                  sx={{
-                    width: "100%",
-                    display: "flex",
-                    justifyContent: "end",
-                    mt: 1,
-                  }}
-                >
-                  <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
-                    onClick={handleAddSale}
-                  >
-                    Nueva Venta [F1]
-                  </Button>
-                </Box>
-              )}
-            </Box>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                    >
+                      Productos
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Concepto
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Fecha
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Forma de Pago
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                      }}
+                      align="center"
+                    >
+                      Total
+                    </TableCell>
+                    {rubro !== "Todos los rubros" && (
+                      <TableCell
+                        sx={{
+                          bgcolor: "primary.main",
+                          color: "primary.contrastText",
+                        }}
+                        align="center"
+                      >
+                        Acciones
+                      </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {currentSales.length > 0 ? (
+                    currentSales.map((sale) => {
+                      const products = sale.products || [];
+                      const paymentMethods = sale.paymentMethods || [];
+                      const saleDate = sale.date
+                        ? parseISO(sale.date)
+                        : new Date();
+                      const total = sale.total || 0;
 
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                flex: 1,
-                minHeight: "auto",
-              }}
-            >
-              <TableContainer
-                component={Paper}
-                sx={{
-                  maxHeight: "70vh",
-                  flex: 1,
-                  bgcolor: "background.paper",
-                }}
-              >
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={getTableHeaderStyle()}>
-                        Productos
-                      </TableCell>
-                      <TableCell sx={getTableHeaderStyle()} align="center">
-                        Concepto
-                      </TableCell>
-                      <TableCell sx={getTableHeaderStyle()} align="center">
-                        Fecha
-                      </TableCell>
-                      <TableCell sx={getTableHeaderStyle()} align="center">
-                        Forma de Pago
-                      </TableCell>
-                      <TableCell sx={getTableHeaderStyle()} align="center">
-                        Total
-                      </TableCell>
-                      {rubro !== "Todos los rubros" && (
-                        <TableCell sx={getTableHeaderStyle()} align="center">
-                          Acciones
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {currentSales.length > 0 ? (
-                      currentSales.map((sale) => {
-                        const products = sale.products || [];
-                        const paymentMethods = sale.paymentMethods || [];
-                        const saleDate = sale.date
-                          ? parseISO(sale.date)
-                          : new Date();
-                        const total = sale.total || 0;
+                      return (
+                        <TableRow
+                          key={sale.id || Date.now()}
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            "&:hover": { backgroundColor: "action.hover" },
+                            transition: "all 0.3s",
+                          }}
+                        >
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: "semibold",
+                                textTransform: "capitalize",
+                                maxWidth: "200px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                              title={products
+                                .map((p) => getDisplayProductName(p, rubro))
+                                .join(", ")}
+                            >
+                              {products
+                                .map((p) => getDisplayProductName(p, rubro))
+                                .join(", ").length > 60
+                                ? products
+                                    .map((p) => getDisplayProductName(p, rubro))
+                                    .join(", ")
+                                    .slice(0, 30) + "..."
+                                : products
+                                    .map((p) => getDisplayProductName(p, rubro))
+                                    .join(" | ")}
+                            </Typography>
+                          </TableCell>
 
-                        return (
-                          <TableRow key={sale.id || Date.now()} hover>
-                            <TableCell>
+                          <TableCell>
+                            {sale.concept ? (
                               <Typography
                                 variant="body2"
+                                color="text.secondary"
                                 sx={{
-                                  fontWeight: "semibold",
-                                  textTransform: "capitalize",
-                                  maxWidth: "200px",
+                                  maxWidth: "150px",
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
                                   whiteSpace: "nowrap",
                                 }}
-                                title={products
-                                  .map((p) => getDisplayProductName(p, rubro))
-                                  .join(", ")}
+                                title={sale.concept}
                               >
-                                {products
-                                  .map((p) => getDisplayProductName(p, rubro))
-                                  .join(", ").length > 60
-                                  ? products
-                                      .map((p) =>
-                                        getDisplayProductName(p, rubro)
-                                      )
-                                      .join(", ")
-                                      .slice(0, 30) + "..."
-                                  : products
-                                      .map((p) =>
-                                        getDisplayProductName(p, rubro)
-                                      )
-                                      .join(" | ")}
+                                {sale.concept.length > 50
+                                  ? `${sale.concept.substring(0, 50)}...`
+                                  : sale.concept}
                               </Typography>
-                            </TableCell>
-
-                            <TableCell>
-                              {sale.concept ? (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                  sx={{
-                                    maxWidth: "150px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  title={sale.concept}
-                                >
-                                  {sale.concept.length > 50
-                                    ? `${sale.concept.substring(0, 50)}...`
-                                    : sale.concept}
-                                </Typography>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.disabled"
-                                  fontStyle="italic"
-                                >
-                                  -
-                                </Typography>
-                              )}
-                            </TableCell>
-
-                            <TableCell align="center">
-                              <Typography variant="body2">
-                                {format(saleDate, "dd/MM/yyyy", { locale: es })}
-                              </Typography>
-                            </TableCell>
-
-                            <TableCell align="center">
-                              {sale.credit ? (
-                                <Chip
-                                  label={
-                                    sale.chequeInfo
-                                      ? "Cheque"
-                                      : "Cuenta corriente"
-                                  }
-                                  color="warning"
-                                  size="small"
-                                />
-                              ) : (
-                                <Box>
-                                  {sale.deposit !== undefined &&
-                                  sale.deposit > 0 ? (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        mb: 0.5,
-                                      }}
-                                    >
-                                      <Typography variant="body2">
-                                        SEÑA:
-                                      </Typography>
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight="bold"
-                                      >
-                                        {formatCurrency(sale.deposit)}
-                                      </Typography>
-                                    </Box>
-                                  ) : null}
-
-                                  {paymentMethods.map((payment, i) => (
-                                    <Box
-                                      key={i}
-                                      sx={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                      }}
-                                    >
-                                      <Typography variant="body2">
-                                        {payment?.method ||
-                                          "Método no especificado"}
-                                        :
-                                      </Typography>
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight="bold"
-                                      >
-                                        {formatCurrency(payment?.amount || 0)}
-                                      </Typography>
-                                    </Box>
-                                  ))}
-                                </Box>
-                              )}
-                            </TableCell>
-                            <TableCell align="center">
+                            ) : (
                               <Typography
                                 variant="body2"
-                                fontWeight="bold"
-                                color={
-                                  sale.credit ? "warning.main" : "text.primary"
-                                }
+                                color="text.disabled"
+                                fontStyle="italic"
                               >
-                                {formatCurrency(total)}
+                                -
                               </Typography>
-                            </TableCell>
-                            {rubro !== "Todos los rubros" && (
-                              <TableCell align="center">
+                            )}
+                          </TableCell>
+
+                          <TableCell align="center">
+                            <Typography variant="body2">
+                              {format(saleDate, "dd/MM/yyyy", { locale: es })}
+                            </Typography>
+                          </TableCell>
+
+                          <TableCell align="center">
+                            {sale.credit ? (
+                              <Chip
+                                label={
+                                  sale.chequeInfo
+                                    ? "Cheque"
+                                    : "Cuenta corriente"
+                                }
+                                color="warning"
+                                size="small"
+                              />
+                            ) : (
+                              <Box>
+                                {sale.deposit !== undefined &&
+                                sale.deposit > 0 ? (
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      mb: 0.5,
+                                    }}
+                                  >
+                                    <Typography variant="body2">
+                                      SEÑA:
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="bold"
+                                    >
+                                      {formatCurrency(sale.deposit)}
+                                    </Typography>
+                                  </Box>
+                                ) : null}
+
+                                {paymentMethods.map((payment, i) => (
+                                  <Box
+                                    key={i}
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Typography variant="body2">
+                                      {payment?.method ||
+                                        "Método no especificado"}
+                                      :
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="bold"
+                                    >
+                                      {formatCurrency(payment?.amount || 0)}
+                                    </Typography>
+                                  </Box>
+                                ))}
+                              </Box>
+                            )}
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography
+                              variant="body2"
+                              fontWeight="bold"
+                              color={
+                                sale.credit ? "warning.main" : "text.primary"
+                              }
+                            >
+                              {formatCurrency(total)}
+                            </Typography>
+                          </TableCell>
+                          {rubro !== "Todos los rubros" && (
+                            <TableCell align="center">
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  gap: 0.5,
+                                }}
+                              >
                                 <IconButton
                                   onClick={() => handleOpenInfoModal(sale)}
                                   size="small"
-                                  title="Imprimir ticket"
+                                  sx={{
+                                    borderRadius: "4px",
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "primary.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                  title="Ver ticket"
                                 >
-                                  <Printer size={18} />
+                                  <Print fontSize="small" />
                                 </IconButton>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          align="center"
-                          sx={{ height: "50vh" }}
+                              </Box>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={rubro !== "Todos los rubros" ? 6 : 5}
+                        align="center"
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            color: "text.secondary",
+                            py: 4,
+                          }}
                         >
-                          <Box
+                          <ShoppingCart
                             sx={{
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              color: "text.secondary",
+                              marginBottom: 2,
+                              color: "#9CA3AF",
+                              fontSize: 64,
                             }}
-                          >
-                            <ShoppingCart
-                              size={64}
-                              style={{ marginBottom: 16 }}
-                            />
-                            <Typography variant="body1">
-                              Todavía no hay ventas.
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
+                          />
+                          <Typography>Todavía no hay ventas.</Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
 
           {filteredSales.length > 0 && (
@@ -2292,723 +2365,480 @@ const VentasPage = () => {
           )}
         </Box>
 
-        <Dialog
-          open={isInfoModalOpen}
+        {/* Modales */}
+        <Modal
+          isOpen={isInfoModalOpen}
           onClose={handleCloseInfoModal}
-          maxWidth="lg"
-          fullWidth
-          PaperProps={{
-            sx: {
-              bgcolor: "background.paper",
-            },
-          }}
-        >
-          <DialogTitle>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Typography variant="h6">Ticket de la venta</Typography>
-              <Chip
-                label="Vista previa"
-                color="info"
-                size="small"
-                variant="outlined"
-              />
+          title="Ticket de la venta"
+          bgColor="bg-white dark:bg-gray_b"
+          buttons={
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+              <Button
+                onClick={handlePrintTicket}
+                variant="contained"
+                startIcon={<Print fontSize="small" />}
+                disabled={!selectedSale || selectedSale?.credit}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Imprimir Ticket
+              </Button>
+              <Button
+                variant="text"
+                onClick={handleCloseInfoModal}
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
+                }}
+              >
+                Cerrar
+              </Button>
             </Box>
-          </DialogTitle>
-
-          <DialogContent>
-            {selectedSale ? (
-              <>
-                {/* Mensaje para cambiar datos del ticket */}
-                <Box
+          }
+        >
+          {selectedSale ? (
+            <>
+              {/* Mensaje para cambiar datos del ticket */}
+              <Box
+                sx={{
+                  textAlign: "center",
+                  mb: 3,
+                  p: 2,
+                  backgroundColor: "info.light",
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: "info.main",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ mb: 1, fontWeight: "medium" }}
+                >
+                  Cambia los datos de tu ticket haciendo click Aquí
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => {
+                    handleCloseInfoModal();
+                    handleOpenBusinessDataModal();
+                  }}
+                  startIcon={<Settings sx={{ fontSize: 16 }} />}
                   sx={{
-                    textAlign: "center",
-                    mb: 3,
-                    p: 2,
-                    backgroundColor: "info.light",
-                    borderRadius: 1,
-                    border: 1,
-                    borderColor: "info.main",
+                    bgcolor: "primary.main",
+                    "&:hover": { bgcolor: "primary.dark" },
                   }}
                 >
-                  <Typography
-                    variant="body2"
-                    sx={{ mb: 1, fontWeight: "medium" }}
-                  >
-                    Cambia los datos de tu ticket haciendo click Aquí
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => {
-                      handleCloseInfoModal();
-                      handleOpenBusinessDataModal();
-                    }}
-                    startIcon={<Settings sx={{ fontSize: 16 }} />}
-                  >
-                    Modificar datos del negocio
-                  </Button>
-                </Box>
-
-                <Box
-                  sx={{ width: "100%", minWidth: "180mm", overflow: "auto" }}
-                >
-                  <PrintableTicket
-                    ref={ticketRef}
-                    sale={selectedSale}
-                    rubro={rubro}
-                    businessData={businessData}
-                  />
-                </Box>
-              </>
-            ) : (
-              <Box sx={{ textAlign: "center", py: 4 }}>
-                <Typography variant="body1" color="error">
-                  No se pudo cargar la información de la venta
-                </Typography>
+                  Modificar datos del negocio
+                </Button>
               </Box>
-            )}
-          </DialogContent>
 
-          <DialogActions>
-            <Button
-              onClick={handlePrintTicket}
-              variant="contained"
-              startIcon={<Printer size={18} />}
-              disabled={!selectedSale || selectedSale?.credit}
-            >
-              Imprimir Ticket
-            </Button>
-            <Button onClick={handleCloseInfoModal}>Cerrar</Button>
-          </DialogActions>
-        </Dialog>
+              <Box sx={{ width: "100%", minWidth: "180mm", overflow: "auto" }}>
+                <PrintableTicket
+                  ref={ticketRef}
+                  sale={selectedSale}
+                  rubro={rubro}
+                  businessData={businessData}
+                />
+              </Box>
+            </>
+          ) : (
+            <Box sx={{ textAlign: "center", py: 4 }}>
+              <Typography variant="body1" color="error">
+                No se pudo cargar la información de la venta
+              </Typography>
+            </Box>
+          )}
+        </Modal>
 
         {/* Modal de Nueva Venta */}
-        <Dialog
-          open={isOpenModal}
+        <Modal
+          isOpen={isOpenModal}
           onClose={handleCloseModal}
-          maxWidth="lg"
-          fullWidth
-          sx={{
-            "& .MuiDialog-paper": {
-              height: "80vh",
-              bgcolor: "background.paper",
-            },
-          }}
+          title="Nueva Venta"
+          bgColor="bg-white dark:bg-gray_b"
+          buttons={
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+              <Button
+                variant="text"
+                onClick={handleCloseModal}
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleOpenPaymentModal}
+                disabled={isProcessingPayment}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  "&:disabled": { bgcolor: "action.disabled" },
+                }}
+              >
+                {isProcessingPayment ? "Procesando..." : "Cobrar"}
+              </Button>
+            </Box>
+          }
         >
-          <DialogTitle>Nueva Venta</DialogTitle>
-          <DialogContent sx={{ height: "100%", overflow: "hidden" }}>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", height: "100%" }}
-            >
-              {/* Contenido principal con scroll */}
-              <Box sx={{ flex: 1, overflow: "auto", pb: 8 }}>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {/* Sección de Promociones */}
-                  <Box
+          <Box
+            sx={{ display: "flex", flexDirection: "column", height: "100%" }}
+          >
+            {/* Contenido principal con scroll */}
+            <Box sx={{ flex: 1, overflow: "auto", pb: 8 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {/* Sección de Promociones */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Button
+                    variant="contained"
+                    startIcon={<LocalOffer fontSize="small" />}
+                    onClick={() => setIsPromotionModalOpen(true)}
+                    disabled={newSale.products.length === 0}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
+                      bgcolor: "primary.main",
+                      "&:hover": { bgcolor: "primary.dark" },
                     }}
                   >
-                    <Button
-                      variant="contained"
-                      startIcon={<Tag size={16} />}
-                      onClick={() => setIsPromotionModalOpen(true)}
-                      disabled={newSale.products.length === 0}
-                    >
-                      Seleccionar Promociones
-                    </Button>
-                    <Box sx={{ flex: 1 }}>
-                      <SelectedPromotionsBadge />
-                    </Box>
+                    Seleccionar Promociones
+                  </Button>
+                  <Box sx={{ flex: 1 }}>
+                    <SelectedPromotionsBadge />
                   </Box>
+                </Box>
 
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Box sx={{ width: "100%" }}>
-                      <Typography
-                        variant="body2"
-                        fontWeight="medium"
-                        sx={{ mb: 1 }}
-                      >
-                        Escanear código de barras
-                      </Typography>
-                      <BarcodeScanner
-                        value={newSale.barcode || ""}
-                        onChange={(value) =>
-                          setNewSale({ ...newSale, barcode: value })
-                        }
-                        onScanComplete={(code) => {
-                          const productToAdd = products.find(
-                            (p) => p.barcode === code
-                          );
-                          if (productToAdd) {
-                            handleProductScan(productToAdd.id);
-                          } else {
-                            showNotification("Producto no encontrado", "error");
-                          }
-                        }}
-                      />
-                    </Box>
-                    <Box sx={{ width: "100%" }}>
-                      <Typography
-                        variant="body2"
-                        fontWeight="medium"
-                        sx={{ mb: 1 }}
-                      >
-                        Productos*
-                      </Typography>
-                      <Autocomplete
-                        multiple
-                        options={productOptions}
-                        getOptionLabel={(option) => option.label}
-                        getOptionDisabled={(option) => option.isDisabled}
-                        // ✅ AGREGAR ESTA PROPIEDAD PARA CLAVES ÚNICAS
-                        getOptionKey={(option) =>
-                          `${option.value}-${option.label}`
-                        }
-                        value={newSale.products.map((p) => ({
-                          value: p.id,
-                          label: getDisplayProductName(p, rubro, true),
-                          product: p,
-                          isDisabled: false,
-                        }))}
-                        onChange={handleProductSelect}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            placeholder="Seleccionar productos"
-                            variant="outlined"
-                            size="small"
-                          />
-                        )}
-                        renderTags={(value, getTagProps) =>
-                          value.map((option, index) => (
-                            <Chip
-                              {...getTagProps({ index })}
-                              key={`${option.value}-${option.label}-${index}`} // ✅ CLAVE ÚNICA
-                              label={option.label}
-                              disabled={option.isDisabled}
-                              size="small"
-                            />
-                          ))
-                        }
-                        isOptionEqualToValue={(option, value) =>
-                          option.value === value.value
-                        }
-                      />
-                    </Box>
-                  </Box>
-
-                  {newSale.products.length > 0 && (
-                    <TableContainer
-                      component={Paper}
-                      sx={{
-                        maxHeight: "16rem",
-                        bgcolor: "background.paper",
-                      }}
-                    >
-                      <Table size="small" stickyHeader>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={getTableHeaderStyle()}>
-                              Producto
-                            </TableCell>
-                            <TableCell
-                              sx={getTableHeaderStyle()}
-                              align="center"
-                            >
-                              Unidad
-                            </TableCell>
-                            <TableCell
-                              sx={getTableHeaderStyle()}
-                              align="center"
-                            >
-                              Cantidad
-                            </TableCell>
-                            <TableCell
-                              sx={getTableHeaderStyle()}
-                              align="center"
-                            >
-                              % descuento
-                            </TableCell>
-                            <TableCell
-                              sx={getTableHeaderStyle()}
-                              align="center"
-                            >
-                              % recargo
-                            </TableCell>
-                            <TableCell
-                              sx={getTableHeaderStyle()}
-                              align="center"
-                            >
-                              Total
-                            </TableCell>
-                            <TableCell
-                              sx={getTableHeaderStyle()}
-                              align="center"
-                            >
-                              Acciones
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {newSale.products.map((product) => (
-                            <TableRow key={product.id} hover>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {getDisplayProductName(product, rubro)}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                {[
-                                  "Kg",
-                                  "gr",
-                                  "L",
-                                  "ml",
-                                  "mm",
-                                  "cm",
-                                  "m",
-                                  "pulg",
-                                  "ton",
-                                ].includes(product.unit) ? (
-                                  <Select
-                                    label="Unidad"
-                                    options={getCompatibleUnitOptions(
-                                      product.unit
-                                    )}
-                                    value={product.unit}
-                                    onChange={(value) =>
-                                      handleUnitChange(
-                                        product.id,
-                                        value,
-                                        product.quantity
-                                      )
-                                    }
-                                    fullWidth
-                                    size="small"
-                                  />
-                                ) : (
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    align="center"
-                                  >
-                                    {product.unit}
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  type="number"
-                                  value={product.quantity.toString() || ""}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (value === "" || !isNaN(Number(value))) {
-                                      handleQuantityChange(
-                                        product.id,
-                                        value === "" ? 0 : Number(value),
-                                        product.unit
-                                      );
-                                    }
-                                  }}
-                                  inputProps={{
-                                    step:
-                                      product.unit === "Kg" ||
-                                      product.unit === "L"
-                                        ? "0.001"
-                                        : "1",
-                                  }}
-                                  onBlur={(
-                                    e: React.FocusEvent<HTMLInputElement>
-                                  ) => {
-                                    if (e.target.value === "") {
-                                      handleQuantityChange(
-                                        product.id,
-                                        0,
-                                        product.unit
-                                      );
-                                    }
-                                  }}
-                                  size="small"
-                                  fullWidth
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  type="number"
-                                  value={product.discount?.toString() || "0"}
-                                  onChange={(e) => {
-                                    const value = Math.min(
-                                      100,
-                                      Math.max(0, Number(e.target.value))
-                                    );
-                                    setNewSale((prev) => {
-                                      const updatedProducts = prev.products.map(
-                                        (p) =>
-                                          p.id === product.id
-                                            ? { ...p, discount: value }
-                                            : p
-                                      );
-                                      const newTotal = calculateFinalTotal(
-                                        updatedProducts,
-                                        prev.manualAmount || 0,
-                                        selectedPromotions
-                                      );
-                                      return {
-                                        ...prev,
-                                        products: updatedProducts,
-                                        total: newTotal,
-                                      };
-                                    });
-                                  }}
-                                  inputProps={{ min: 0, max: 100, step: "1" }}
-                                  size="small"
-                                  fullWidth
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  type="number"
-                                  value={product.surcharge?.toString() || "0"}
-                                  onChange={(e) => {
-                                    const value = Math.min(
-                                      100,
-                                      Math.max(0, Number(e.target.value))
-                                    );
-                                    setNewSale((prev) => {
-                                      const updatedProducts = prev.products.map(
-                                        (p) =>
-                                          p.id === product.id
-                                            ? { ...p, surcharge: value }
-                                            : p
-                                      );
-                                      const newTotal = calculateFinalTotal(
-                                        updatedProducts,
-                                        prev.manualAmount || 0,
-                                        selectedPromotions
-                                      );
-                                      return {
-                                        ...prev,
-                                        products: updatedProducts,
-                                        total: newTotal,
-                                      };
-                                    });
-                                  }}
-                                  inputProps={{ min: 0, max: 100, step: "1" }}
-                                  size="small"
-                                  fullWidth
-                                />
-                              </TableCell>
-                              <TableCell align="center">
-                                <Typography variant="body2" fontWeight="bold">
-                                  {formatCurrency(
-                                    calculatePrice(
-                                      {
-                                        ...product,
-                                        price: product.price || 0,
-                                        quantity: product.quantity || 0,
-                                        unit: product.unit || "Unid.",
-                                        costPrice: product.costPrice || 0,
-                                      },
-                                      product.quantity || 0,
-                                      product.unit || "Unid."
-                                    ).finalPrice
-                                  )}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                <IconButton
-                                  onClick={() =>
-                                    handleRemoveProduct(product.id)
-                                  }
-                                  size="small"
-                                  color="error"
-                                >
-                                  <Trash size={18} />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    {!isCredit && (
-                      <Box sx={{ width: "100%" }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight="medium"
-                          sx={{ mb: 1 }}
-                        >
-                          Cliente
-                        </Typography>
-                        <Autocomplete
-                          options={customerOptions}
-                          value={selectedCustomer}
-                          onChange={(
-                            event: React.SyntheticEvent,
-                            newValue: CustomerOption | null
-                          ) => {
-                            setSelectedCustomer(newValue);
-                            if (newValue) {
-                              const customer = customers.find(
-                                (c) => c.id === newValue.value
-                              );
-                              setCustomerName(customer?.name || "");
-                              setCustomerPhone(customer?.phone || "");
-                            } else {
-                              setCustomerName("");
-                              setCustomerPhone("");
-                            }
-                          }}
-                          getOptionLabel={(option) => option.label}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              placeholder="Ningún cliente seleccionado"
-                              variant="outlined"
-                              size="small"
-                            />
-                          )}
-                          isOptionEqualToValue={(option, value) =>
-                            option.value === value.value
-                          }
-                        />
-                      </Box>
-                    )}
-
-                    <Box sx={{ width: "100%" }}>
-                      {isCredit ? (
-                        <Card sx={{ p: 2, bgcolor: "grey.50" }}>
-                          <Typography variant="body2" fontWeight="semibold">
-                            Monto manual deshabilitado
-                          </Typography>
-                        </Card>
-                      ) : (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 2,
-                            marginTop: 3,
-                          }}
-                        >
-                          <Box sx={{ width: "100%" }}>
-                            <InputCash
-                              label="Monto manual"
-                              value={newSale.manualAmount || 0}
-                              onChange={handleManualAmountChange}
-                              disabled={isCredit}
-                            />
-                          </Box>
-                          <Box sx={{ width: "100%" }}>
-                            <TextField
-                              type="number"
-                              value={
-                                newSale.manualProfitPercentage?.toString() ||
-                                "0"
-                              }
-                              onChange={(e) => {
-                                const value = Math.min(
-                                  100,
-                                  Math.max(0, Number(e.target.value))
-                                );
-                                setNewSale((prev) => ({
-                                  ...prev,
-                                  manualProfitPercentage: value || 0,
-                                  total: calculateFinalTotal(
-                                    prev.products,
-                                    prev.manualAmount || 0,
-                                    selectedPromotions
-                                  ),
-                                }));
-                              }}
-                              label="% Ganancia"
-                              inputProps={{ min: 0, max: 100, step: "1" }}
-                              size="small"
-                              fullWidth
-                              disabled={isCredit}
-                            />
-                          </Box>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   <Box sx={{ width: "100%" }}>
-                    {isCredit && (
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={registerCheck}
-                            onChange={handleRegisterCheckChange}
-                            color="primary"
-                          />
-                        }
-                        label="Registrar cheque"
-                      />
-                    )}
-                    {isCredit && registerCheck ? (
-                      <Box sx={{ p: 1 }}>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <Select
-                            label="Método"
-                            options={[{ value: "CHEQUE", label: "Cheque" }]}
-                            value="CHEQUE"
-                            onChange={() => {}}
-                            disabled
-                            fullWidth
-                            size="small"
-                          />
-                          <InputCash
-                            value={newSale.paymentMethods[0]?.amount || 0}
-                            onChange={(value) =>
-                              handlePaymentMethodChange(0, "amount", value)
-                            }
-                            placeholder="Monto del cheque"
-                          />
-                        </Box>
-                      </Box>
-                    ) : !isCredit ? (
-                      <>
-                        {newSale.paymentMethods.map((payment, index) => (
-                          <Box
-                            key={index}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              my: 1,
-                            }}
-                          >
-                            <Select
-                              label="Método"
-                              options={paymentOptions}
-                              value={payment.method}
-                              onChange={(value) =>
-                                handlePaymentMethodChange(
-                                  index,
-                                  "method",
-                                  value
-                                )
-                              }
-                              disabled={isCredit}
-                              fullWidth
-                              size="small"
-                            />
-
-                            <Box sx={{ position: "relative", width: "100%" }}>
-                              <InputCash
-                                value={payment.amount}
-                                onChange={(value) =>
-                                  handlePaymentMethodChange(
-                                    index,
-                                    "amount",
-                                    value
-                                  )
-                                }
-                                placeholder="Monto"
-                                disabled={isCredit}
-                              />
-                              {index === newSale.paymentMethods.length - 1 &&
-                                newSale.paymentMethods.reduce(
-                                  (sum, m) => sum + m.amount,
-                                  0
-                                ) >
-                                  newSale.total + 0.1 && (
-                                  <Typography
-                                    variant="caption"
-                                    color="error"
-                                    sx={{ ml: 1 }}
-                                  >
-                                    Exceso:{" "}
-                                    {formatCurrency(
-                                      newSale.paymentMethods.reduce(
-                                        (sum, m) => sum + m.amount,
-                                        0
-                                      ) - newSale.total
-                                    )}
-                                  </Typography>
-                                )}
-                            </Box>
-
-                            {newSale.paymentMethods.length > 1 && (
-                              <IconButton
-                                onClick={() => removePaymentMethod(index)}
-                                size="small"
-                                color="error"
-                              >
-                                <Trash size={18} />
-                              </IconButton>
-                            )}
-                          </Box>
-                        ))}
-                        {!isCredit && newSale.paymentMethods.length < 3 && (
-                          <Button
-                            startIcon={<Plus size={18} />}
-                            onClick={addPaymentMethod}
-                            sx={{
-                              justifyContent: "flex-start",
-                              px: 1,
-                              minWidth: "auto",
-                            }}
-                          >
-                            Agregar otro método de pago
-                          </Button>
-                        )}
-                      </>
-                    ) : null}
-                  </Box>
-
-                  <Box sx={{ width: "100%" }}>
-                    <TextField
-                      value={newSale.concept || ""}
-                      onChange={(e) =>
-                        setNewSale((prev) => ({
-                          ...prev,
-                          concept: e.target.value,
-                        }))
+                    <Typography
+                      variant="body2"
+                      fontWeight="medium"
+                      sx={{ mb: 1 }}
+                    >
+                      Escanear código de barras
+                    </Typography>
+                    <BarcodeScanner
+                      value={newSale.barcode || ""}
+                      onChange={(value) =>
+                        setNewSale({ ...newSale, barcode: value })
                       }
-                      label="Concepto (Opcional)"
-                      placeholder="Ingrese un concepto para esta venta..."
-                      multiline
-                      rows={3}
-                      inputProps={{ maxLength: 50 }}
-                      variant="outlined"
-                      fullWidth
+                      onScanComplete={(code) => {
+                        const productToAdd = products.find(
+                          (p) => p.barcode === code
+                        );
+                        if (productToAdd) {
+                          handleProductScan(productToAdd.id);
+                        } else {
+                          showNotification("Producto no encontrado", "error");
+                        }
+                      }}
                     />
                   </Box>
+                  <Box sx={{ width: "100%" }}>
+                    <Typography
+                      variant="body2"
+                      fontWeight="medium"
+                      sx={{ mb: 1 }}
+                    >
+                      Productos*
+                    </Typography>
+                    <Autocomplete
+                      multiple
+                      options={productOptions}
+                      getOptionLabel={(option) => option.label}
+                      getOptionDisabled={(option) => option.isDisabled}
+                      getOptionKey={(option) =>
+                        `${option.value}-${option.label}`
+                      }
+                      value={newSale.products.map((p) => ({
+                        value: p.id,
+                        label: getDisplayProductName(p, rubro, true),
+                        product: p,
+                        isDisabled: false,
+                      }))}
+                      onChange={handleProductSelect}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Seleccionar productos"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => (
+                          <Chip
+                            {...getTagProps({ index })}
+                            key={`${option.value}-${option.label}-${index}`}
+                            label={option.label}
+                            disabled={option.isDisabled}
+                            size="small"
+                          />
+                        ))
+                      }
+                      isOptionEqualToValue={(option, value) =>
+                        option.value === value.value
+                      }
+                    />
+                  </Box>
+                </Box>
 
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={isCredit}
-                        onChange={handleCreditChange}
-                        color="primary"
-                      />
-                    }
-                    label="Registrar Cuenta corriente"
-                  />
+                {newSale.products.length > 0 && (
+                  <TableContainer
+                    component={Paper}
+                    sx={{
+                      maxHeight: "16rem",
+                      bgcolor: "background.paper",
+                    }}
+                  >
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={getTableHeaderStyle()}>
+                            Producto
+                          </TableCell>
+                          <TableCell sx={getTableHeaderStyle()} align="center">
+                            Unidad
+                          </TableCell>
+                          <TableCell sx={getTableHeaderStyle()} align="center">
+                            Cantidad
+                          </TableCell>
+                          <TableCell sx={getTableHeaderStyle()} align="center">
+                            % descuento
+                          </TableCell>
+                          <TableCell sx={getTableHeaderStyle()} align="center">
+                            % recargo
+                          </TableCell>
+                          <TableCell sx={getTableHeaderStyle()} align="center">
+                            Total
+                          </TableCell>
+                          <TableCell sx={getTableHeaderStyle()} align="center">
+                            Acciones
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {newSale.products.map((product) => (
+                          <TableRow
+                            key={product.id}
+                            hover
+                            sx={{
+                              border: "1px solid",
+                              borderColor: "divider",
+                              "&:hover": { backgroundColor: "action.hover" },
+                            }}
+                          >
+                            <TableCell>
+                              <Typography variant="body2">
+                                {getDisplayProductName(product, rubro)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {[
+                                "Kg",
+                                "gr",
+                                "L",
+                                "ml",
+                                "mm",
+                                "cm",
+                                "m",
+                                "pulg",
+                                "ton",
+                              ].includes(product.unit) ? (
+                                <Select
+                                  label="Unidad"
+                                  options={getCompatibleUnitOptions(
+                                    product.unit
+                                  )}
+                                  value={product.unit}
+                                  onChange={(value) =>
+                                    handleUnitChange(
+                                      product.id,
+                                      value,
+                                      product.quantity
+                                    )
+                                  }
+                                  fullWidth
+                                  size="small"
+                                />
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  align="center"
+                                >
+                                  {product.unit}
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                type="number"
+                                value={product.quantity.toString() || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === "" || !isNaN(Number(value))) {
+                                    handleQuantityChange(
+                                      product.id,
+                                      value === "" ? 0 : Number(value),
+                                      product.unit
+                                    );
+                                  }
+                                }}
+                                inputProps={{
+                                  step:
+                                    product.unit === "Kg" ||
+                                    product.unit === "L"
+                                      ? "0.001"
+                                      : "1",
+                                }}
+                                onBlur={(
+                                  e: React.FocusEvent<HTMLInputElement>
+                                ) => {
+                                  if (e.target.value === "") {
+                                    handleQuantityChange(
+                                      product.id,
+                                      0,
+                                      product.unit
+                                    );
+                                  }
+                                }}
+                                size="small"
+                                fullWidth
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                type="number"
+                                value={product.discount?.toString() || "0"}
+                                onChange={(e) => {
+                                  const value = Math.min(
+                                    100,
+                                    Math.max(0, Number(e.target.value))
+                                  );
+                                  setNewSale((prev) => {
+                                    const updatedProducts = prev.products.map(
+                                      (p) =>
+                                        p.id === product.id
+                                          ? { ...p, discount: value }
+                                          : p
+                                    );
+                                    const newTotal = calculateFinalTotal(
+                                      updatedProducts,
+                                      prev.manualAmount || 0,
+                                      selectedPromotions
+                                    );
+                                    return {
+                                      ...prev,
+                                      products: updatedProducts,
+                                      total: newTotal,
+                                    };
+                                  });
+                                }}
+                                inputProps={{ min: 0, max: 100, step: "1" }}
+                                size="small"
+                                fullWidth
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                type="number"
+                                value={product.surcharge?.toString() || "0"}
+                                onChange={(e) => {
+                                  const value = Math.min(
+                                    100,
+                                    Math.max(0, Number(e.target.value))
+                                  );
+                                  setNewSale((prev) => {
+                                    const updatedProducts = prev.products.map(
+                                      (p) =>
+                                        p.id === product.id
+                                          ? { ...p, surcharge: value }
+                                          : p
+                                    );
+                                    const newTotal = calculateFinalTotal(
+                                      updatedProducts,
+                                      prev.manualAmount || 0,
+                                      selectedPromotions
+                                    );
+                                    return {
+                                      ...prev,
+                                      products: updatedProducts,
+                                      total: newTotal,
+                                    };
+                                  });
+                                }}
+                                inputProps={{ min: 0, max: 100, step: "1" }}
+                                size="small"
+                                fullWidth
+                              />
+                            </TableCell>
+                            <TableCell align="center">
+                              <Typography variant="body2" fontWeight="bold">
+                                {formatCurrency(
+                                  calculatePrice(
+                                    {
+                                      ...product,
+                                      price: product.price || 0,
+                                      quantity: product.quantity || 0,
+                                      unit: product.unit || "Unid.",
+                                      costPrice: product.costPrice || 0,
+                                    },
+                                    product.quantity || 0,
+                                    product.unit || "Unid."
+                                  ).finalPrice
+                                )}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <IconButton
+                                onClick={() => handleRemoveProduct(product.id)}
+                                size="small"
+                                sx={{
+                                  borderRadius: "4px",
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    backgroundColor: "error.main",
+                                    color: "white",
+                                  },
+                                }}
+                              >
+                                <Delete fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
 
-                  {isCredit && (
-                    <Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  {!isCredit && (
+                    <Box sx={{ width: "100%" }}>
                       <Typography
                         variant="body2"
                         fontWeight="medium"
                         sx={{ mb: 1 }}
                       >
-                        Cliente existente*
+                        Cliente
                       </Typography>
                       <Autocomplete
                         options={customerOptions}
@@ -3030,7 +2860,7 @@ const VentasPage = () => {
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            placeholder="Buscar cliente"
+                            placeholder="Ningún cliente seleccionado"
                             variant="outlined"
                             size="small"
                           />
@@ -3039,118 +2869,374 @@ const VentasPage = () => {
                           option.value === value.value
                         }
                       />
+                    </Box>
+                  )}
+
+                  <Box sx={{ width: "100%" }}>
+                    {isCredit ? (
+                      <Card sx={{ p: 2, bgcolor: "grey.50" }}>
+                        <Typography variant="body2" fontWeight="semibold">
+                          Monto manual deshabilitado
+                        </Typography>
+                      </Card>
+                    ) : (
                       <Box
                         sx={{
                           display: "flex",
                           alignItems: "center",
                           gap: 2,
-                          mt: 2,
+                          marginTop: 3,
                         }}
                       >
-                        <TextField
-                          label="Nuevo cliente"
-                          placeholder="Nombre del cliente"
-                          value={customerName}
-                          onChange={(e) => {
-                            setCustomerName(e.target.value);
-                            setSelectedCustomer(null);
-                          }}
-                          disabled={!!selectedCustomer}
-                          onBlur={(e) => {
-                            setCustomerName(e.target.value.trim());
-                          }}
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                        />
+                        <Box sx={{ width: "100%" }}>
+                          <InputCash
+                            label="Monto manual"
+                            value={newSale.manualAmount || 0}
+                            onChange={handleManualAmountChange}
+                            disabled={isCredit}
+                          />
+                        </Box>
+                        <Box sx={{ width: "100%" }}>
+                          <TextField
+                            type="number"
+                            value={
+                              newSale.manualProfitPercentage?.toString() || "0"
+                            }
+                            onChange={(e) => {
+                              const value = Math.min(
+                                100,
+                                Math.max(0, Number(e.target.value))
+                              );
+                              setNewSale((prev) => ({
+                                ...prev,
+                                manualProfitPercentage: value || 0,
+                                total: calculateFinalTotal(
+                                  prev.products,
+                                  prev.manualAmount || 0,
+                                  selectedPromotions
+                                ),
+                              }));
+                            }}
+                            label="% Ganancia"
+                            inputProps={{ min: 0, max: 100, step: "1" }}
+                            size="small"
+                            fullWidth
+                            disabled={isCredit}
+                          />
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
 
-                        <TextField
-                          label="Teléfono del cliente"
-                          placeholder="Teléfono del cliente"
-                          value={customerPhone}
-                          onChange={(e) => setCustomerPhone(e.target.value)}
-                          variant="outlined"
-                          size="small"
+                <Box sx={{ width: "100%" }}>
+                  {isCredit && (
+                    <Checkbox
+                      label="Registrar cheque"
+                      checked={registerCheck}
+                      onChange={handleRegisterCheckChange}
+                    />
+                  )}
+                  {isCredit && registerCheck ? (
+                    <Box sx={{ p: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Select
+                          label="Método"
+                          options={[{ value: "CHEQUE", label: "Cheque" }]}
+                          value="CHEQUE"
+                          onChange={() => {}}
+                          disabled
                           fullWidth
+                          size="small"
+                        />
+                        <InputCash
+                          value={newSale.paymentMethods[0]?.amount || 0}
+                          onChange={(value) =>
+                            handlePaymentMethodChange(0, "amount", value)
+                          }
+                          placeholder="Monto del cheque"
                         />
                       </Box>
                     </Box>
-                  )}
-                </Box>
-              </Box>
+                  ) : !isCredit ? (
+                    <>
+                      {newSale.paymentMethods.map((payment, index) => (
+                        <Box
+                          key={index}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            my: 1,
+                          }}
+                        >
+                          <Select
+                            label="Método"
+                            options={paymentOptions}
+                            value={payment.method}
+                            onChange={(value) =>
+                              handlePaymentMethodChange(index, "method", value)
+                            }
+                            disabled={isCredit}
+                            fullWidth
+                            size="small"
+                          />
 
-              {/* Sección fija del TOTAL - CENTRADO */}
-              <Box
-                sx={{
-                  ...getCardStyle("primary"),
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  textAlign: "center",
-                  p: 2,
-                }}
-              >
-                <Typography variant="h4" fontWeight="bold">
-                  TOTAL: {formatCurrency(newSale.total)}
-                </Typography>
+                          <Box sx={{ position: "relative", width: "100%" }}>
+                            <InputCash
+                              value={payment.amount}
+                              onChange={(value) =>
+                                handlePaymentMethodChange(
+                                  index,
+                                  "amount",
+                                  value
+                                )
+                              }
+                              placeholder="Monto"
+                              disabled={isCredit}
+                            />
+                            {index === newSale.paymentMethods.length - 1 &&
+                              newSale.paymentMethods.reduce(
+                                (sum, m) => sum + m.amount,
+                                0
+                              ) >
+                                newSale.total + 0.1 && (
+                                <Typography
+                                  variant="caption"
+                                  color="error"
+                                  sx={{ ml: 1 }}
+                                >
+                                  Exceso:{" "}
+                                  {formatCurrency(
+                                    newSale.paymentMethods.reduce(
+                                      (sum, m) => sum + m.amount,
+                                      0
+                                    ) - newSale.total
+                                  )}
+                                </Typography>
+                              )}
+                          </Box>
+
+                          {newSale.paymentMethods.length > 1 && (
+                            <IconButton
+                              onClick={() => removePaymentMethod(index)}
+                              size="small"
+                              sx={{
+                                borderRadius: "4px",
+                                color: "text.secondary",
+                                "&:hover": {
+                                  backgroundColor: "error.main",
+                                  color: "white",
+                                },
+                              }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      ))}
+                      {!isCredit && newSale.paymentMethods.length < 3 && (
+                        <Button
+                          variant="outlined"
+                          startIcon={<Add fontSize="small" />}
+                          onClick={addPaymentMethod}
+                          sx={{
+                            justifyContent: "flex-start",
+                            px: 1,
+                            minWidth: "auto",
+                          }}
+                        >
+                          Agregar otro método de pago
+                        </Button>
+                      )}
+                    </>
+                  ) : null}
+                </Box>
+
+                <Box sx={{ width: "100%" }}>
+                  <TextField
+                    value={newSale.concept || ""}
+                    onChange={(e) =>
+                      setNewSale((prev) => ({
+                        ...prev,
+                        concept: e.target.value,
+                      }))
+                    }
+                    label="Concepto (Opcional)"
+                    placeholder="Ingrese un concepto para esta venta..."
+                    multiline
+                    rows={3}
+                    inputProps={{ maxLength: 50 }}
+                    variant="outlined"
+                    fullWidth
+                  />
+                </Box>
+
+                <Checkbox
+                  label="Registrar Cuenta corriente"
+                  checked={isCredit}
+                  onChange={handleCreditChange}
+                />
+
+                {isCredit && (
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      fontWeight="medium"
+                      sx={{ mb: 1 }}
+                    >
+                      Cliente existente*
+                    </Typography>
+                    <Autocomplete
+                      options={customerOptions}
+                      value={selectedCustomer}
+                      onChange={(
+                        event: React.SyntheticEvent,
+                        newValue: CustomerOption | null
+                      ) => {
+                        setSelectedCustomer(newValue);
+                        if (newValue) {
+                          const customer = customers.find(
+                            (c) => c.id === newValue.value
+                          );
+                          setCustomerName(customer?.name || "");
+                          setCustomerPhone(customer?.phone || "");
+                        }
+                      }}
+                      getOptionLabel={(option) => option.label}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Buscar cliente"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                      isOptionEqualToValue={(option, value) =>
+                        option.value === value.value
+                      }
+                    />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        mt: 2,
+                      }}
+                    >
+                      <TextField
+                        label="Nuevo cliente"
+                        placeholder="Nombre del cliente"
+                        value={customerName}
+                        onChange={(e) => {
+                          setCustomerName(e.target.value);
+                          setSelectedCustomer(null);
+                        }}
+                        disabled={!!selectedCustomer}
+                        onBlur={(e) => {
+                          setCustomerName(e.target.value.trim());
+                        }}
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                      />
+
+                      <TextField
+                        label="Teléfono del cliente"
+                        placeholder="Teléfono del cliente"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                      />
+                    </Box>
+                  </Box>
+                )}
               </Box>
             </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseModal}>Cancelar</Button>
-            <Button
-              onClick={handleOpenPaymentModal}
-              variant="contained"
-              disabled={isProcessingPayment}
+
+            {/* Sección fija del TOTAL - CENTRADO */}
+            <Box
+              sx={{
+                ...getCardStyle("primary"),
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+                p: 2,
+              }}
             >
-              {isProcessingPayment ? "Procesando..." : "Cobrar"}
-            </Button>
-          </DialogActions>
-        </Dialog>
+              <Typography variant="h4" fontWeight="bold">
+                TOTAL: {formatCurrency(newSale.total)}
+              </Typography>
+            </Box>
+          </Box>
+        </Modal>
 
         <PromotionSelectionModal />
         <PaymentModal />
 
-        <Snackbar
-          open={isNotificationOpen}
-          autoHideDuration={2500}
+        <Notification
+          isOpen={isNotificationOpen}
+          message={notificationMessage}
+          type={notificationType}
           onClose={() => setIsNotificationOpen(false)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            onClose={() => setIsNotificationOpen(false)}
-            severity={notificationType}
-            variant="filled"
-          >
-            {notificationMessage}
-          </Alert>
-        </Snackbar>
-      </Box>
-      {/* Modal de Datos del Negocio */}
-      <Dialog
-        open={isBusinessDataModalOpen}
-        onClose={handleCloseBusinessDataModal}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: theme.palette.background.paper,
-            backgroundImage: "none",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            pb: 2,
-          }}
-        >
-          <Typography variant="h6" component="h2">
-            Datos del negocio para tickets
-          </Typography>
-        </DialogTitle>
+        />
 
-        <DialogContent sx={{ pt: 3 }}>
+        {/* Modal de Datos del Negocio */}
+        <Modal
+          isOpen={isBusinessDataModalOpen}
+          onClose={handleCloseBusinessDataModal}
+          title="Datos del negocio para tickets"
+          bgColor="bg-white dark:bg-gray_b"
+          buttons={
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+              <Button
+                variant="text"
+                onClick={handleCloseBusinessDataModal}
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={async () => {
+                  try {
+                    await setBusinessData(businessData);
+                    handleCloseBusinessDataModal();
+                    showNotification(
+                      "Datos del negocio actualizados correctamente",
+                      "success"
+                    );
+
+                    // Volver a abrir el modal del ticket si se cerró
+                    if (selectedSale) {
+                      setIsInfoModalOpen(true);
+                    }
+                  } catch {
+                    showNotification("Error al guardar los datos", "error");
+                  }
+                }}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Guardar Cambios
+              </Button>
+            </Box>
+          }
+        >
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 4 }}>
             <TextField
               label="Nombre del Negocio"
@@ -3193,36 +3279,8 @@ const VentasPage = () => {
               size="small"
             />
           </Box>
-        </DialogContent>
-
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button variant="outlined" onClick={handleCloseBusinessDataModal}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            onClick={async () => {
-              try {
-                await setBusinessData(businessData);
-                handleCloseBusinessDataModal();
-                showNotification(
-                  "Datos del negocio actualizados correctamente",
-                  "success"
-                );
-
-                // Volver a abrir el modal del ticket si se cerró
-                if (selectedSale) {
-                  setIsInfoModalOpen(true);
-                }
-              } catch {
-                showNotification("Error al guardar los datos", "error");
-              }
-            }}
-          >
-            Guardar Cambios
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Modal>
+      </Box>
     </ProtectedRoute>
   );
 };
