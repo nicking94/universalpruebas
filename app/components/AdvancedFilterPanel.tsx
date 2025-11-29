@@ -9,26 +9,14 @@ import {
   SortConfig,
   UnifiedFilter,
 } from "../lib/types/types";
-import {
-  Box,
-  Typography,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Chip,
-  Stack,
-  useTheme,
-  useMediaQuery,
-  Button,
-} from "@mui/material";
+import { Box, Chip, Stack, useTheme } from "@mui/material";
 import {
   FilterList as FilterIcon,
-  Close as CloseIcon,
   Clear as ClearIcon,
 } from "@mui/icons-material";
 import Select, { SelectOption } from "./Select";
+import Button from "./Button";
+import Modal from "./Modal";
 
 interface AdvancedFilterPanelProps<T> {
   data?: T[];
@@ -59,7 +47,6 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
   const [selectedSort, setSelectedSort] = useState<string>("");
   const [prevRubro, setPrevRubro] = useState<Rubro>(rubro);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const expenseTypeOptions: SelectOption<string>[] = [
     { value: "EGRESO", label: "Egreso" },
@@ -475,19 +462,20 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
         {rubro !== "Todos los rubros" && (
           <Box sx={{ position: "relative" }}>
             <Button
-              variant="contained"
-              startIcon={<FilterIcon />}
+              text="Filtros"
+              icon={<FilterIcon />}
+              iconPosition="left"
               onClick={() => setIsFiltersOpen(true)}
+              variant="contained"
+              size="small"
               sx={{
-                backgroundColor: "#3b82f6", // bg-blue_b equivalent
-                color: "white",
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
                 "&:hover": {
-                  backgroundColor: "#2563eb",
+                  backgroundColor: theme.palette.primary.dark,
                 },
               }}
-            >
-              Filtros
-            </Button>
+            />
             {activeFiltersCount > 0 && (
               <Chip
                 label={activeFiltersCount}
@@ -500,7 +488,7 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
                   height: 20,
                   fontSize: "0.75rem",
                   backgroundColor: theme.palette.error.main,
-                  color: "white",
+                  color: theme.palette.error.contrastText,
                 }}
               />
             )}
@@ -508,76 +496,61 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
         )}
       </Stack>
 
-      <Dialog
-        open={isFiltersOpen}
+      <Modal
+        isOpen={isFiltersOpen}
+        title="Filtrar Por"
         onClose={() => setIsFiltersOpen(false)}
-        maxWidth="lg"
-        fullWidth
-        fullScreen={isMobile}
+        buttons={
+          <>
+            <Button
+              text="Limpiar Filtros"
+              icon={<ClearIcon />}
+              iconPosition="left"
+              onClick={clearAllFilters}
+              variant="outlined"
+              size="small"
+              sx={{
+                color: theme.palette.text.secondary,
+                borderColor: theme.palette.divider,
+                "&:hover": {
+                  backgroundColor: theme.palette.action.hover,
+                  borderColor: theme.palette.text.secondary,
+                },
+              }}
+            />
+            <Button
+              text="Aplicar Filtros"
+              onClick={() => setIsFiltersOpen(false)}
+              variant="contained"
+              size="small"
+              sx={{
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.dark,
+                },
+              }}
+            />
+          </>
+        }
       >
-        <DialogTitle>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Typography variant="h6">Filtrar Por</Typography>
-            <IconButton onClick={() => setIsFiltersOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-        </DialogTitle>
-
-        <DialogContent>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                md:
-                  isExpense || rubro !== "indumentaria"
-                    ? "repeat(2, 1fr)"
-                    : "repeat(3, 1fr)",
-              },
-              gap: 2,
-              mt: 1,
-            }}
-          >
-            {renderFilters()}
-          </Box>
-        </DialogContent>
-
-        <DialogActions>
-          <Button
-            variant="outlined"
-            startIcon={<ClearIcon />}
-            onClick={clearAllFilters}
-            sx={{
-              color: "#374151", // text-gray_b equivalent
-              borderColor: "#d1d5db",
-              "&:hover": {
-                backgroundColor: "#f3f4f6",
-                borderColor: "#9ca3af",
-              },
-            }}
-          >
-            Limpiar Filtros
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => setIsFiltersOpen(false)}
-            sx={{
-              backgroundColor: "#3b82f6", // bg-blue_b equivalent
-              color: "white",
-              "&:hover": {
-                backgroundColor: "#2563eb",
-              },
-            }}
-          >
-            Aplicar Filtros
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              md:
+                isExpense || rubro !== "indumentaria"
+                  ? "repeat(2, 1fr)"
+                  : "repeat(3, 1fr)",
+            },
+            gap: 2,
+            mt: 1,
+          }}
+        >
+          {renderFilters()}
+        </Box>
+      </Modal>
     </Box>
   );
 };

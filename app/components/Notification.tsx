@@ -16,7 +16,7 @@ export default function Notification({
   message,
   type,
   onClose,
-  autoHideDuration = 6000,
+  autoHideDuration = 3000,
 }: NotificationProps & { onClose?: () => void; autoHideDuration?: number }) {
   const theme = useTheme();
 
@@ -43,6 +43,78 @@ export default function Notification({
     onClose?.();
   };
 
+  // Estilos adaptados al theme
+  const getAlertStyles = () => ({
+    boxShadow: theme.shadows[3],
+    borderRadius: theme.shape.borderRadius,
+    fontWeight: 500,
+    fontSize: "0.875rem",
+    alignItems: "center",
+    minWidth: 300,
+    maxWidth: 500,
+    width: "auto",
+    fontFamily: theme.typography.fontFamily,
+    "& .MuiAlert-message": {
+      padding: "8px 0",
+      color: "white",
+      display: "flex",
+      alignItems: "center",
+    },
+    "& .MuiAlert-action": {
+      alignItems: "center",
+      padding: 0,
+      marginRight: 0,
+      "& .MuiIconButton-root": {
+        color: "white",
+        "&:hover": {
+          backgroundColor: "rgba(255, 255, 255, 0.1)",
+        },
+      },
+    },
+    // Estilos específicos para cada tipo de notificación
+    ...(type === "success" && {
+      backgroundColor: theme.palette.success.main,
+      "& .MuiAlert-icon": {
+        color: "white",
+      },
+    }),
+    ...(type === "error" && {
+      backgroundColor: theme.palette.error.main,
+      "& .MuiAlert-icon": {
+        color: "white",
+      },
+    }),
+    ...(type === "info" && {
+      backgroundColor: theme.palette.primary.main,
+      "& .MuiAlert-icon": {
+        color: "white",
+      },
+    }),
+    // Responsive styles
+    [theme.breakpoints.down("sm")]: {
+      minWidth: "auto",
+      width: "100%",
+      maxWidth: "calc(100vw - 32px)",
+      margin: "0 8px",
+    },
+  });
+
+  const getSnackbarStyles = () => ({
+    position: "fixed" as const,
+    zIndex: theme.zIndex.snackbar,
+    "& .MuiSnackbar-root": {
+      position: "fixed",
+    },
+    // Responsive positioning
+    "&.MuiSnackbar-anchorOriginBottomRight": {
+      [theme.breakpoints.down("sm")]: {
+        bottom: 16,
+        right: 16,
+        left: 16,
+      },
+    },
+  });
+
   return (
     <Snackbar
       open={isOpen}
@@ -50,54 +122,13 @@ export default function Notification({
       onClose={handleClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       TransitionComponent={SlideTransition}
-      sx={{
-        position: "fixed",
-        zIndex: 9999,
-        "& .MuiSnackbar-root": {
-          position: "fixed",
-        },
-        // Responsive positioning
-        "&.MuiSnackbar-anchorOriginBottomRight": {
-          [theme.breakpoints.down("sm")]: {
-            bottom: 16,
-            right: 16,
-            left: 16,
-          },
-        },
-      }}
+      sx={getSnackbarStyles()}
     >
       <Alert
         severity={getSeverity()}
         onClose={handleClose}
         variant="filled"
-        sx={{
-          boxShadow: 3,
-          borderRadius: 2,
-          fontWeight: 500,
-          fontSize: "0.875rem",
-          alignItems: "center",
-          minWidth: 300,
-          maxWidth: 500,
-          width: "auto",
-          "& .MuiAlert-message": {
-            padding: "8px 0",
-            color: "white",
-          },
-          "& .MuiAlert-action": {
-            alignItems: "center",
-            padding: 0,
-            marginRight: 0,
-            "& .MuiIconButton-root": {
-              color: "white",
-            },
-          },
-          // Responsive styles
-          [theme.breakpoints.down("sm")]: {
-            minWidth: "auto",
-            width: "100%",
-            maxWidth: "calc(100vw - 32px)",
-          },
-        }}
+        sx={getAlertStyles()}
       >
         {message}
       </Alert>

@@ -16,12 +16,12 @@ import {
   CardContent,
 } from "@mui/material";
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  LocalOffer as LocalOfferIcon,
-  Percent as PercentIcon,
-  AttachMoney as AttachMoneyIcon,
+  Add,
+  Edit,
+  Delete,
+  LocalOffer,
+  Percent,
+  AttachMoney,
 } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import { db } from "@/app/database/db";
@@ -42,6 +42,8 @@ import Modal from "@/app/components/Modal";
 import Select from "@/app/components/Select";
 import Input from "@/app/components/Input";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
+// Importar el hook useNotification
+import { useNotification } from "@/app/hooks/useNotification";
 
 const PromocionesPage = () => {
   const { rubro } = useRubro();
@@ -55,11 +57,14 @@ const PromocionesPage = () => {
   const [promotionToDelete, setPromotionToDelete] = useState<Promotion | null>(
     null
   );
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<
-    "success" | "error" | "info"
-  >("success");
+  // REEMPLAZADO: Usar el hook personalizado en lugar del estado local
+  const {
+    isNotificationOpen,
+    notificationMessage,
+    notificationType,
+    showNotification,
+    closeNotification,
+  } = useNotification();
   const { currentPage, itemsPerPage } = usePagination();
 
   const [newPromotion, setNewPromotion] = useState<
@@ -115,14 +120,8 @@ const PromocionesPage = () => {
     { value: "inactive", label: "Inactiva" },
   ];
 
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setNotificationType(type);
-    setNotificationMessage(message);
-    setIsNotificationOpen(true);
-  };
+  // ELIMINADO: La función showNotification local ya no es necesaria
+  // ya que usamos showNotification del hook personalizado
 
   // Validación mejorada
   const validatePromotion = (promotion: typeof newPromotion): boolean => {
@@ -341,7 +340,7 @@ const PromocionesPage = () => {
                     {promotions.length}
                   </Typography>
                 </Box>
-                <LocalOfferIcon fontSize="large" />
+                <LocalOffer fontSize="large" />
               </Box>
             </CardContent>
           </Card>
@@ -365,7 +364,7 @@ const PromocionesPage = () => {
                     }
                   </Typography>
                 </Box>
-                <LocalOfferIcon fontSize="large" />
+                <LocalOffer fontSize="large" />
               </Box>
             </CardContent>
           </Card>
@@ -389,13 +388,12 @@ const PromocionesPage = () => {
                     }
                   </Typography>
                 </Box>
-                <LocalOfferIcon fontSize="large" />
+                <LocalOffer fontSize="large" />
               </Box>
             </CardContent>
           </Card>
         </Box>
 
-        {/* Botón Nueva Promoción - POSICIÓN CORREGIDA */}
         <Box
           sx={{
             display: "flex",
@@ -411,7 +409,7 @@ const PromocionesPage = () => {
               bgcolor: "primary.main",
               "&:hover": { bgcolor: "primary.dark" },
             }}
-            startIcon={<AddIcon fontSize="small" />}
+            startIcon={<Add fontSize="small" />}
           >
             Nueva Promoción
           </Button>
@@ -497,9 +495,9 @@ const PromocionesPage = () => {
                               }}
                             >
                               {promotion.type === "PERCENTAGE_DISCOUNT" ? (
-                                <PercentIcon fontSize="small" />
+                                <Percent fontSize="small" />
                               ) : (
-                                <AttachMoneyIcon fontSize="small" />
+                                <AttachMoney fontSize="small" />
                               )}
                               <Typography variant="body2">
                                 {
@@ -566,7 +564,7 @@ const PromocionesPage = () => {
                                   }}
                                   title="Editar promoción"
                                 >
-                                  <EditIcon fontSize="small" />
+                                  <Edit fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   size="small"
@@ -583,7 +581,7 @@ const PromocionesPage = () => {
                                   }}
                                   title="Eliminar promoción"
                                 >
-                                  <DeleteIcon fontSize="small" />
+                                  <Delete fontSize="small" />
                                 </IconButton>
                               </Box>
                             </TableCell>
@@ -606,7 +604,7 @@ const PromocionesPage = () => {
                             py: 4,
                           }}
                         >
-                          <LocalOfferIcon
+                          <LocalOffer
                             sx={{
                               marginBottom: 2,
                               color: "#9CA3AF",
@@ -874,7 +872,7 @@ const PromocionesPage = () => {
           }
         >
           <Box sx={{ textAlign: "center", py: 2 }}>
-            <DeleteIcon
+            <Delete
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
@@ -886,11 +884,12 @@ const PromocionesPage = () => {
           </Box>
         </Modal>
 
+        {/* REEMPLAZADO: Usar closeNotification del hook en lugar de la función local */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
-          onClose={() => setIsNotificationOpen(false)}
+          onClose={closeNotification}
         />
       </Box>
     </ProtectedRoute>

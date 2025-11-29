@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/app/database/db";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -8,7 +8,15 @@ import Modal from "@/app/components/Modal";
 import Select from "@/app/components/Select";
 import Button from "@/app/components/Button";
 import Notification from "@/app/components/Notification";
-
+import SearchBar from "@/app/components/SearchBar";
+import Pagination from "@/app/components/Pagination";
+import Input from "@/app/components/Input";
+import { useRubro } from "@/app/context/RubroContext";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
+import { usePagination } from "@/app/context/PaginationContext";
+import { ClienteCuentaCorrientePDF } from "@/app/components/ClienteCuentaCorrientePDF";
+import { pdf } from "@react-pdf/renderer";
 import {
   ChequeFilter,
   ChequeWithDetails,
@@ -19,15 +27,8 @@ import {
   PaymentMethod,
   PaymentSplit,
   SaleItem,
+  Rubro,
 } from "@/app/lib/types/types";
-import SearchBar from "@/app/components/SearchBar";
-import Pagination from "@/app/components/Pagination";
-import { useRubro } from "@/app/context/RubroContext";
-import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
-import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
-import { usePagination } from "@/app/context/PaginationContext";
-import { ClienteCuentaCorrientePDF } from "@/app/components/ClienteCuentaCorrientePDF";
-import { pdf } from "@react-pdf/renderer";
 import {
   Box,
   Typography,
@@ -43,6 +44,17 @@ import {
   FormControl,
   Card,
   CardContent,
+  Divider,
+  LinearProgress,
+  Tooltip,
+  Tabs,
+  Tab,
+  Badge,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -51,27 +63,665 @@ import {
   Wallet as WalletIcon,
   CheckCircle as CheckCircleIcon,
   Add,
+  Receipt as ReceiptIcon,
+  Payment as PaymentIcon,
+  AttachMoney as AttachMoneyIcon,
+  CalendarToday as CalendarIcon,
+  AccountBalance as AccountBalanceIcon,
+  ExpandLess,
+  ExpandMore,
+  History as HistoryIcon,
+  CreditCard as CreditCardIcon,
+  LocalAtm as LocalAtmIcon,
+  AccountCircle as AccountCircleIcon,
 } from "@mui/icons-material";
-import Input from "@/app/components/Input";
+import { useNotification } from "@/app/hooks/useNotification";
+
+// Constantes de configuración
+const CUENTAS_CONFIG = {
+  NOTIFICATION_DURATION: 2500,
+  MAX_PAYMENT_METHODS: 3,
+} as const;
+
+// Custom hook para datos de cuentas corrientes
+const useCreditSales = () => {
+  const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [allSales, allPayments, allCustomers] = await Promise.all([
+        db.sales.toArray(),
+        db.payments.toArray(),
+        db.customers.toArray(),
+      ]);
+
+      const sales = allSales.filter(
+        (sale) => sale.credit === true
+      ) as CreditSale[];
+
+      setCreditSales(sales);
+      setPayments(allPayments);
+      setCustomers(allCustomers);
+      return { sales, payments: allPayments, customers: allCustomers };
+    } catch (error) {
+      console.error("Error loading data:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    creditSales,
+    payments,
+    customers,
+    loading,
+    fetchData,
+    setCreditSales,
+    setPayments,
+  };
+};
+
+// Componente para el resumen financiero del cliente
+const CustomerFinancialSummary = ({
+  customerInfo,
+  payments,
+}: {
+  customerInfo: { name: string; balance: number; sales: CreditSale[] };
+  payments: Payment[];
+}) => {
+  const totalFacturado = customerInfo.sales.reduce(
+    (sum, sale) => sum + sale.total,
+    0
+  );
+  const totalPagado = customerInfo.sales.reduce((sum, sale) => {
+    const paymentsForSale = payments
+      .filter((p) => p.saleId === sale.id)
+      .reduce((sum, p) => sum + p.amount, 0);
+    return sum + paymentsForSale;
+  }, 0);
+
+  const porcentajePagado =
+    totalFacturado > 0 ? (totalPagado / totalFacturado) * 100 : 0;
+
+  const stats = [
+    {
+      label: "Total Facturado",
+      value: totalFacturado,
+      icon: <AttachMoneyIcon />,
+      color: "linear-gradient(135deg, #2d78b9, #85c1e9)",
+      format: "currency",
+    },
+    {
+      label: "Total Pagado",
+      value: totalPagado,
+      icon: <PaymentIcon />,
+      color: "linear-gradient(135deg, #2d78b9, #85c1e9)",
+      format: "currency",
+    },
+    {
+      label: customerInfo.balance <= 0 ? "Saldo a Favor" : "Saldo Pendiente",
+      value: Math.abs(customerInfo.balance),
+      icon: <AccountBalanceIcon />,
+      color: customerInfo.balance <= 0 ? "#1e8449" : "#c0392b",
+      format: "currency",
+    },
+  ];
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Box
+        sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}
+      >
+        {stats.map((stat, index) => (
+          <Card
+            key={index}
+            sx={{
+              height: "100%",
+              background: stat.color,
+              transition:
+                "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow: 3,
+              },
+            }}
+          >
+            <CardContent
+              sx={{
+                color: stat.format === "number" ? "inherit" : "white",
+                textAlign: "center",
+                p: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
+                {stat.icon}
+              </Box>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                {stat.format === "currency"
+                  ? stat.value.toLocaleString("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                    })
+                  : stat.value}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  opacity: 0.9,
+                  fontSize: "0.75rem",
+                }}
+              >
+                {stat.label}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+
+      {/* Barra de progreso y métricas adicionales */}
+      <Card sx={{ mt: 2, p: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            gap: 2,
+            alignItems: "center",
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+            >
+              <Typography variant="body2" fontWeight="medium">
+                Progreso de Pago
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {porcentajePagado.toFixed(1)}%
+              </Typography>
+            </Box>
+            <LinearProgress
+              variant="determinate"
+              value={Math.min(100, porcentajePagado)}
+              color={
+                porcentajePagado >= 100
+                  ? "success"
+                  : porcentajePagado >= 50
+                  ? "primary"
+                  : "warning"
+              }
+              sx={{ height: 8, borderRadius: 4 }}
+            />
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                Pagado:{" "}
+                {totalPagado.toLocaleString("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Pendiente:{" "}
+                {Math.max(0, customerInfo.balance).toLocaleString("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                })}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Card>
+    </Box>
+  );
+};
+
+// Componente para el historial de pagos
+const PaymentHistory = ({
+  sale,
+  payments,
+}: {
+  sale: CreditSale;
+  payments: Payment[];
+}) => {
+  const salePayments = payments.filter((p) => p.saleId === sale.id);
+
+  if (salePayments.length === 0) {
+    return (
+      <Box sx={{ textAlign: "center", py: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          No hay pagos registrados
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
+        Historial de Pagos
+      </Typography>
+      <List dense>
+        {salePayments.map((payment, index) => (
+          <ListItem
+            key={payment.id}
+            sx={{
+              borderBottom:
+                index < salePayments.length - 1 ? "1px solid" : "none",
+              borderColor: "divider",
+              py: 1,
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 32 }}>
+              {payment.method === "EFECTIVO" && (
+                <LocalAtmIcon color="primary" fontSize="small" />
+              )}
+              {payment.method === "TRANSFERENCIA" && (
+                <AccountBalanceIcon color="secondary" fontSize="small" />
+              )}
+              {payment.method === "TARJETA" && (
+                <CreditCardIcon color="info" fontSize="small" />
+              )}
+              {payment.method === "CHEQUE" && (
+                <ReceiptIcon color="warning" fontSize="small" />
+              )}
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="body2" fontWeight="medium">
+                    {payment.amount.toLocaleString("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                    })}
+                  </Typography>
+                  <Chip
+                    label={payment.method}
+                    size="small"
+                    color={
+                      payment.method === "EFECTIVO"
+                        ? "primary"
+                        : payment.method === "TRANSFERENCIA"
+                        ? "secondary"
+                        : payment.method === "TARJETA"
+                        ? "info"
+                        : "warning"
+                    }
+                  />
+                </Box>
+              }
+              secondary={
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    mt: 0.5,
+                  }}
+                >
+                  <CalendarIcon sx={{ fontSize: 14 }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {format(new Date(payment.date), "dd/MM/yyyy HH:mm")}
+                  </Typography>
+                  {payment.method === "CHEQUE" && payment.checkStatus && (
+                    <Chip
+                      label={payment.checkStatus}
+                      size="small"
+                      variant="outlined"
+                      color={
+                        payment.checkStatus === "cobrado"
+                          ? "success"
+                          : "warning"
+                      }
+                      sx={{ ml: 1, height: 20 }}
+                    />
+                  )}
+                </Box>
+              }
+            />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  );
+};
+
+// Componente para el detalle de productos de una venta
+const SaleProductsDetail = ({
+  sale,
+  rubro,
+}: {
+  sale: CreditSale;
+  rubro: Rubro | undefined;
+}) => {
+  return (
+    <TableContainer component={Paper} variant="outlined">
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: "bold", bgcolor: "action.hover" }}>
+              Producto
+            </TableCell>
+            <TableCell
+              align="right"
+              sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+            >
+              Cantidad
+            </TableCell>
+            <TableCell
+              align="right"
+              sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+            >
+              Precio Unit.
+            </TableCell>
+            <TableCell
+              align="right"
+              sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+            >
+              Subtotal
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {sale.products.map((product, idx) => (
+            <TableRow
+              key={`${sale.id}-${product.id}-${idx}`}
+              hover
+              sx={{
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                },
+                transition: "background-color 0.2s",
+              }}
+            >
+              <TableCell>
+                <Typography variant="body2">
+                  {getDisplayProductName(
+                    {
+                      name: product.name,
+                      size: product.size,
+                      color: product.color,
+                      rubro: product.rubro,
+                    },
+                    rubro,
+                    true
+                  )}
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography variant="body2">
+                  {product.quantity} {product.unit}
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography variant="body2">
+                  {product.price.toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography variant="body2" fontWeight="medium">
+                  {(product.quantity * product.price).toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+                </Typography>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
+
+// Componente para la tarjeta de venta individual
+const SaleCard = ({
+  sale,
+  payments,
+  rubro,
+  onPayment,
+  isExpanded,
+  onToggleExpand,
+}: {
+  sale: CreditSale;
+  payments: Payment[];
+  rubro: Rubro | undefined;
+  onPayment: (sale: CreditSale) => void;
+  isExpanded: boolean;
+  onToggleExpand: (saleId: number) => void;
+}) => {
+  const totalPayments = payments
+    .filter((p) => p.saleId === sale.id)
+    .reduce((sum, p) => sum + p.amount, 0);
+  const remainingBalance = sale.total - totalPayments;
+  const isPaid = remainingBalance <= 0;
+  const paymentProgress = (totalPayments / sale.total) * 100;
+
+  return (
+    <Card
+      sx={{
+        border: 2,
+        borderColor: isPaid ? "success.main" : "warning.main",
+        bgcolor: isPaid ? "success.50" : "warning.50",
+        transition: "all 0.3s ease",
+        "&:hover": {
+          boxShadow: 3,
+          transform: "translateY(-2px)",
+        },
+        overflow: "visible",
+      }}
+    >
+      <CardContent sx={{ p: 2 }}>
+        {/* Header de la venta */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 2,
+            cursor: "pointer",
+          }}
+          onClick={() => onToggleExpand(sale.id)}
+        >
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <ReceiptIcon color="primary" fontSize="small" />
+              <Typography
+                variant="subtitle1"
+                fontWeight="bold"
+                color="text.primary"
+              >
+                Venta #{sale.id}
+              </Typography>
+              <Chip
+                label={isPaid ? "Pagado" : "Pendiente"}
+                color={isPaid ? "success" : "warning"}
+                size="small"
+              />
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {format(new Date(sale.date), "dd/MM/yyyy HH:mm", { locale: es })}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {!isPaid && (
+              <Button
+                variant="contained"
+                size="small"
+                onClick={(e) => {
+                  e?.stopPropagation();
+                  onPayment(sale);
+                }}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Registrar Pago
+              </Button>
+            )}
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand(sale.id);
+              }}
+            >
+              {isExpanded ? <ExpandLess /> : <ExpandMore />}
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* Resumen financiero compacto */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 1,
+            mb: 2,
+          }}
+        >
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
+              Total
+            </Typography>
+            <Typography variant="body2" fontWeight="bold">
+              {sale.total.toLocaleString("es-AR", {
+                style: "currency",
+                currency: "ARS",
+              })}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
+              Pagado
+            </Typography>
+            <Typography variant="body2" fontWeight="bold" color="success.main">
+              {totalPayments.toLocaleString("es-AR", {
+                style: "currency",
+                currency: "ARS",
+              })}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
+              Pendiente
+            </Typography>
+            <Typography
+              variant="body2"
+              fontWeight="bold"
+              color={isPaid ? "success.main" : "warning.main"}
+            >
+              {remainingBalance.toLocaleString("es-AR", {
+                style: "currency",
+                currency: "ARS",
+              })}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Barra de progreso de pago */}
+        {!isPaid && (
+          <Box sx={{ mb: 2 }}>
+            <LinearProgress
+              variant="determinate"
+              value={paymentProgress}
+              color={
+                paymentProgress >= 100
+                  ? "success"
+                  : paymentProgress >= 50
+                  ? "primary"
+                  : "warning"
+              }
+              sx={{ height: 6, borderRadius: 3 }}
+            />
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 0.5, display: "block", textAlign: "center" }}
+            >
+              {paymentProgress.toFixed(1)}% pagado
+            </Typography>
+          </Box>
+        )}
+
+        {/* Contenido expandible */}
+        {isExpanded && (
+          <Box sx={{ mt: 2 }}>
+            <Divider sx={{ mb: 2 }} />
+
+            {/* Productos */}
+            <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
+              Detalles de Productos
+            </Typography>
+            <SaleProductsDetail sale={sale} rubro={rubro} />
+
+            {/* Historial de pagos */}
+            <Box sx={{ mt: 2 }}>
+              <PaymentHistory sale={sale} payments={payments} />
+            </Box>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const CuentasCorrientesPage = () => {
   const { rubro } = useRubro();
   const { currentPage, itemsPerPage } = usePagination();
-  const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentSplit[]>([
-    { method: "EFECTIVO", amount: 0 },
-  ]);
 
+  // Custom hooks
+  const {
+    creditSales,
+    payments,
+    customers,
+    loading,
+    fetchData,
+    setCreditSales,
+    setPayments,
+  } = useCreditSales();
+
+  const {
+    isNotificationOpen,
+    notificationMessage,
+    notificationType,
+    showNotification,
+    closeNotification,
+  } = useNotification();
+
+  // Estados
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [currentCreditSale, setCurrentCreditSale] = useState<CreditSale | null>(
     null
   );
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<
-    "success" | "error" | "info"
-  >("success");
   const [searchQuery, setSearchQuery] = useState("");
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -81,19 +731,58 @@ const CuentasCorrientesPage = () => {
     balance: number;
     sales: CreditSale[];
   } | null>(null);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isChequesModalOpen, setIsChequesModalOpen] = useState(false);
   const [currentCustomerCheques, setCurrentCustomerCheques] = useState<
     ChequeWithDetails[]
   >([]);
   const [chequeFilter, setChequeFilter] = useState<ChequeFilter>("todos");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentSplit[]>([
+    { method: "EFECTIVO", amount: 0 },
+  ]);
+  const [expandedSale, setExpandedSale] = useState<number | null>(null);
+  const [infoModalTab, setInfoModalTab] = useState(0);
 
-  const prepareCustomerPDFData = (customerName: string) => {
-    const customerSales = salesByCustomer[customerName];
-    const customerBalance = calculateCustomerBalance(customerName);
+  // Funciones de utilidad - memoizadas
+  const isFirstGreater = useCallback((a: number, b: number, epsilon = 0.01) => {
+    return a - b > epsilon;
+  }, []);
 
-    const salesData = customerSales.map((sale) => {
+  const validateCurrency = useCallback((value: string): boolean => {
+    return /^\d+(\.\d{1,2})?$/.test(value);
+  }, []);
+
+  // Funciones principales - memoizadas
+  const calculateCustomerBalance = useCallback(
+    (customerName: string) => {
+      const customerSales = creditSales.filter(
+        (sale) => sale.customerName === customerName && !sale.chequeInfo
+      );
+
+      const customerPayments = payments.filter((p) =>
+        customerSales.some((s) => s.id === p.saleId)
+      );
+
+      const totalSales = customerSales.reduce(
+        (sum, sale) => sum + sale.total,
+        0
+      );
+      const totalPayments = customerPayments.reduce((sum, p) => {
+        if (p.method === "CHEQUE" && p.checkStatus !== "cobrado") {
+          return sum;
+        }
+        return sum + p.amount;
+      }, 0);
+
+      return totalSales - totalPayments;
+    },
+    [creditSales, payments]
+  );
+
+  const calculateRemainingBalance = useCallback(
+    (sale: CreditSale) => {
+      if (!sale || sale.chequeInfo) return 0;
+
       const salePayments = payments.filter((p) => p.saleId === sale.id);
       const totalPayments = salePayments.reduce((sum, p) => {
         if (p.method === "CHEQUE" && p.checkStatus !== "cobrado") {
@@ -101,175 +790,13 @@ const CuentasCorrientesPage = () => {
         }
         return sum + p.amount;
       }, 0);
-      const remainingBalance = sale.total - totalPayments;
-      const isPaid = remainingBalance <= 0;
 
-      return {
-        id: sale.id,
-        date: sale.date,
-        products: sale.products.map((product) => ({
-          name: getDisplayProductName(
-            {
-              name: product.name,
-              size: product.size,
-              color: product.color,
-              rubro: product.rubro,
-            },
-            rubro,
-            false
-          ),
-          quantity: product.quantity,
-          unit: product.unit,
-          price: product.price,
-          size: product.size,
-          color: product.color,
-        })),
-        total: sale.total,
-        totalPayments,
-        remainingBalance,
-        isPaid,
-      };
-    });
-
-    const totalDeuda = salesData.reduce(
-      (sum, sale) =>
-        sale.remainingBalance > 0 ? sum + sale.remainingBalance : sum,
-      0
-    );
-
-    const totalPagado = salesData.reduce(
-      (sum, sale) => sum + sale.totalPayments,
-      0
-    );
-
-    return {
-      customerName,
-      sales: salesData,
-      totalBalance: customerBalance,
-      totalDeuda,
-      totalPagado,
-      fechaReporte: format(new Date(), "dd/MM/yyyy", { locale: es }),
-    };
-  };
-
-  const filteredSales = creditSales
-    .filter((sale) => {
-      const matchesSearch = sale.customerName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesRubro =
-        rubro === "Todos los rubros" ||
-        sale.products.some((product) => product.rubro === rubro);
-
-      return matchesSearch && matchesRubro;
-    })
-    .sort((a, b) => {
-      if (a.paid !== b.paid) {
-        return a.paid ? 1 : -1;
-      }
-
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
-
-  const salesByCustomer = filteredSales.reduce((acc, sale) => {
-    if (!acc[sale.customerName]) {
-      acc[sale.customerName] = [];
-    }
-    acc[sale.customerName].push(sale);
-    return acc;
-  }, {} as Record<string, CreditSale[]>);
-
-  const sortedCustomerNames = Object.keys(salesByCustomer).sort((a, b) => {
-    const customerAHasUnpaid = salesByCustomer[a].some((sale) => !sale.paid);
-    const customerBHasUnpaid = salesByCustomer[b].some((sale) => !sale.paid);
-    if (customerAHasUnpaid !== customerBHasUnpaid) {
-      return customerAHasUnpaid ? -1 : 1;
-    }
-    return a.localeCompare(b);
-  });
-
-  const uniqueCustomers = Object.keys(salesByCustomer);
-  const totalCustomers = uniqueCustomers.length;
-  const indexOfLastCredit = currentPage * itemsPerPage;
-  const indexOfFirstCredit = indexOfLastCredit - itemsPerPage;
-  const currentCustomers = sortedCustomerNames.slice(
-    indexOfFirstCredit,
-    indexOfLastCredit
+      return sale.total - totalPayments;
+    },
+    [payments]
   );
 
-  const isFirstGreater = (a: number, b: number, epsilon = 0.01) => {
-    return a - b > epsilon;
-  };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const allSales = await db.sales.toArray();
-        const sales = allSales.filter((sale) => sale.credit === true);
-
-        const [payments, customers] = await Promise.all([
-          db.payments.toArray(),
-          db.customers.toArray(),
-        ]);
-
-        setCreditSales(sales as CreditSale[]);
-        setPayments(payments);
-        setCustomers(customers);
-      } catch (error) {
-        console.error("Error loading data:", error);
-        showNotification("Error al cargar las cuentas corrientes", "error");
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setIsNotificationOpen(true);
-  };
-
-  const calculateCustomerBalance = (customerName: string) => {
-    const customerSales = creditSales.filter(
-      (sale) => sale.customerName === customerName && !sale.chequeInfo
-    );
-
-    const customerPayments = payments.filter((p) =>
-      customerSales.some((s) => s.id === p.saleId)
-    );
-
-    const totalSales = customerSales.reduce((sum, sale) => sum + sale.total, 0);
-
-    const totalPayments = customerPayments.reduce((sum, p) => {
-      if (p.method === "CHEQUE" && p.checkStatus !== "cobrado") {
-        return sum;
-      }
-      return sum + p.amount;
-    }, 0);
-
-    return totalSales - totalPayments;
-  };
-
-  const calculateRemainingBalance = (sale: CreditSale) => {
-    if (!sale || sale.chequeInfo) return 0;
-
-    const salePayments = payments.filter((p) => p.saleId === sale.id);
-
-    const totalPayments = salePayments.reduce((sum, p) => {
-      if (p.method === "CHEQUE" && p.checkStatus !== "cobrado") {
-        return sum;
-      }
-      return sum + p.amount;
-    }, 0);
-
-    return sale.total - totalPayments;
-  };
-
-  const addIncomeToDailyCash = async (sale: CreditSale) => {
+  const addIncomeToDailyCash = useCallback(async (sale: CreditSale) => {
     try {
       const today = getLocalDateString();
       let dailyCash = await db.dailyCashes.get({ date: today });
@@ -334,192 +861,298 @@ const CuentasCorrientesPage = () => {
       console.error("Error al registrar ingreso en caja diaria:", error);
       throw error;
     }
-  };
+  }, []);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-  };
+  }, []);
 
-  const handleExportCustomerPDF = async (customerName: string) => {
-    setIsGeneratingPDF(true);
-    try {
-      const pdfData = prepareCustomerPDFData(customerName);
-      const blob = await pdf(
-        <ClienteCuentaCorrientePDF {...pdfData} />
-      ).toBlob();
+  const handleExportCustomerPDF = useCallback(
+    async (customerName: string) => {
+      setIsGeneratingPDF(true);
+      try {
+        const customerSales = creditSales.filter(
+          (sale) => sale.customerName === customerName
+        );
+        const customerBalance = calculateCustomerBalance(customerName);
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
+        const salesData = customerSales.map((sale) => {
+          const salePayments = payments.filter((p) => p.saleId === sale.id);
+          const totalPayments = salePayments.reduce((sum, p) => {
+            if (p.method === "CHEQUE" && p.checkStatus !== "cobrado") {
+              return sum;
+            }
+            return sum + p.amount;
+          }, 0);
+          const remainingBalance = sale.total - totalPayments;
+          const isPaid = remainingBalance <= 0;
 
-      const fileName = `cuenta-corriente-${customerName.replace(
-        /[^a-zA-Z0-9]/g,
-        "-"
-      )}-${format(new Date(), "dd-MM-yyyy")}.pdf`;
-      link.download = fileName;
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      showNotification(
-        `PDF de ${customerName} generado correctamente`,
-        "success"
-      );
-    } catch (error) {
-      console.error("Error al generar PDF:", error);
-      showNotification("Error al generar PDF", "error");
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
-  const handleMarkCheckAsPaid = async (checkId: number) => {
-    try {
-      const payment = await db.payments.get(checkId);
-      if (!payment) return;
-
-      const sale = await db.sales.get(payment.saleId);
-      if (!sale) return;
-
-      const totalProfit = sale.products.reduce((sum, product) => {
-        const cost = product.costPrice || 0;
-        return sum + (product.price - cost) * product.quantity;
-      }, 0);
-
-      const paymentRatio = payment.amount / sale.total;
-      const profitCheque = totalProfit * paymentRatio;
-
-      const today = getLocalDateString();
-      const dailyCash = await db.dailyCashes.get({ date: today });
-
-      const movement: DailyCashMovement = {
-        id: Date.now(),
-        amount: payment.amount,
-        description: `Cobro de cheque - ${payment.customerName}`,
-        type: "INGRESO",
-        date: new Date().toISOString(),
-        paymentMethod: "CHEQUE",
-        isCreditPayment: true,
-        originalSaleId: payment.saleId,
-        profit: profitCheque,
-        items: sale.products.map((p) => ({
-          productId: p.id,
-          productName: p.name,
-          quantity: p.quantity,
-          unit: p.unit,
-          price: p.price,
-        })),
-      };
-
-      if (dailyCash) {
-        const updatedCash = {
-          ...dailyCash,
-          movements: [...dailyCash.movements, movement],
-          totalIncome: (dailyCash.totalIncome || 0) + payment.amount,
-          totalProfit: (dailyCash.totalProfit || 0) + (profitCheque || 0),
-        };
-        await db.dailyCashes.update(dailyCash.id, updatedCash);
-      } else {
-        await db.dailyCashes.add({
-          id: Date.now(),
-          date: today,
-          movements: [movement],
-          closed: false,
-          totalIncome: payment.amount,
-          totalExpense: 0,
-          totalProfit: profitCheque || 0,
+          return {
+            id: sale.id,
+            date: sale.date,
+            products: sale.products.map((product) => ({
+              name: getDisplayProductName(
+                {
+                  name: product.name,
+                  size: product.size,
+                  color: product.color,
+                  rubro: product.rubro,
+                },
+                rubro,
+                false
+              ),
+              quantity: product.quantity,
+              unit: product.unit,
+              price: product.price,
+              size: product.size,
+              color: product.color,
+            })),
+            total: sale.total,
+            totalPayments,
+            remainingBalance,
+            isPaid,
+          };
         });
+
+        const totalDeuda = salesData.reduce(
+          (sum, sale) =>
+            sale.remainingBalance > 0 ? sum + sale.remainingBalance : sum,
+          0
+        );
+
+        const totalPagado = salesData.reduce(
+          (sum, sale) => sum + sale.totalPayments,
+          0
+        );
+
+        const pdfData = {
+          customerName,
+          sales: salesData,
+          totalBalance: customerBalance,
+          totalDeuda,
+          totalPagado,
+          fechaReporte: format(new Date(), "dd/MM/yyyy", { locale: es }),
+        };
+
+        const blob = await pdf(
+          <ClienteCuentaCorrientePDF {...pdfData} />
+        ).toBlob();
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+
+        const fileName = `cuenta-corriente-${customerName.replace(
+          /[^a-zA-Z0-9]/g,
+          "-"
+        )}-${format(new Date(), "dd-MM-yyyy")}.pdf`;
+        link.download = fileName;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showNotification(
+          `PDF de ${customerName} generado correctamente`,
+          "success"
+        );
+      } catch (error) {
+        console.error("Error al generar PDF:", error);
+        showNotification("Error al generar PDF", "error");
+      } finally {
+        setIsGeneratingPDF(false);
       }
+    },
+    [creditSales, payments, rubro, calculateCustomerBalance, showNotification]
+  );
 
-      await db.payments.update(checkId, { checkStatus: "cobrado" });
-      await db.sales.update(payment.saleId, {
-        "chequeInfo.status": "cobrado",
-      } as Partial<CreditSale>);
+  const handleMarkCheckAsPaid = useCallback(
+    async (checkId: number) => {
+      try {
+        const payment = await db.payments.get(checkId);
+        if (!payment) return;
 
-      const updatedPayments = await db.payments.toArray();
-      const updatedSales = await db.sales.toArray();
+        const sale = await db.sales.get(payment.saleId);
+        if (!sale) return;
 
-      setPayments(updatedPayments);
-      setCreditSales(updatedSales.filter((s) => s.credit) as CreditSale[]);
-      setCurrentCustomerCheques(
-        currentCustomerCheques.map((c) =>
-          c.id === checkId ? { ...c, checkStatus: "cobrado" } : c
-        )
-      );
+        const totalProfit = sale.products.reduce((sum, product) => {
+          const cost = product.costPrice || 0;
+          return sum + (product.price - cost) * product.quantity;
+        }, 0);
 
-      showNotification(
-        "Cheque marcado como cobrado e ingresado en caja",
-        "success"
-      );
-    } catch (error) {
-      console.error("Error al actualizar estado del cheque:", error);
-      showNotification("Error al actualizar cheque", "error");
-    }
-  };
+        const paymentRatio = payment.amount / sale.total;
+        const profitCheque = totalProfit * paymentRatio;
 
-  const handleDeleteCheck = async (checkId: number) => {
-    try {
-      const cheque = await db.payments.get(checkId);
-      if (!cheque) {
-        showNotification("Cheque no encontrado", "error");
-        return;
-      }
+        const today = getLocalDateString();
+        const dailyCash = await db.dailyCashes.get({ date: today });
 
-      await db.payments.delete(checkId);
+        const movement: DailyCashMovement = {
+          id: Date.now(),
+          amount: payment.amount,
+          description: `Cobro de cheque - ${payment.customerName}`,
+          type: "INGRESO",
+          date: new Date().toISOString(),
+          paymentMethod: "CHEQUE",
+          isCreditPayment: true,
+          originalSaleId: payment.saleId,
+          profit: profitCheque,
+          items: sale.products.map((p) => ({
+            productId: p.id,
+            productName: p.name,
+            quantity: p.quantity,
+            unit: p.unit,
+            price: p.price,
+          })),
+        };
 
-      const remainingPayments = await db.payments
-        .where("saleId")
-        .equals(cheque.saleId)
-        .toArray();
-
-      if (remainingPayments.length === 0) {
-        await db.sales.delete(cheque.saleId);
-      } else {
-        const sale = await db.sales.get(cheque.saleId);
-        if (sale) {
-          await db.sales.update(cheque.saleId, {
-            paid: remainingPayments.some(
-              (p) => p.method !== "CHEQUE" || p.checkStatus === "cobrado"
-            ),
-            chequeInfo: undefined,
+        if (dailyCash) {
+          const updatedCash = {
+            ...dailyCash,
+            movements: [...dailyCash.movements, movement],
+            totalIncome: (dailyCash.totalIncome || 0) + payment.amount,
+            totalProfit: (dailyCash.totalProfit || 0) + (profitCheque || 0),
+          };
+          await db.dailyCashes.update(dailyCash.id, updatedCash);
+        } else {
+          await db.dailyCashes.add({
+            id: Date.now(),
+            date: today,
+            movements: [movement],
+            closed: false,
+            totalIncome: payment.amount,
+            totalExpense: 0,
+            totalProfit: profitCheque || 0,
           });
         }
+
+        await db.payments.update(checkId, { checkStatus: "cobrado" });
+
+        const updatedChequeInfo = sale.chequeInfo
+          ? {
+              ...sale.chequeInfo,
+              status: "cobrado" as const,
+            }
+          : {
+              amount: payment.amount,
+              status: "cobrado" as const,
+              date: new Date().toISOString(),
+            };
+
+        await db.sales.update(payment.saleId, {
+          chequeInfo: updatedChequeInfo,
+        } as Partial<CreditSale>);
+
+        setPayments((prev) =>
+          prev.map((p) =>
+            p.id === checkId ? { ...p, checkStatus: "cobrado" } : p
+          )
+        );
+
+        setCreditSales((prev) =>
+          prev.map((s) =>
+            s.id === payment.saleId
+              ? {
+                  ...s,
+                  chequeInfo: updatedChequeInfo,
+                }
+              : s
+          )
+        );
+
+        setCurrentCustomerCheques((prev) =>
+          prev.map((c) =>
+            c.id === checkId ? { ...c, checkStatus: "cobrado" } : c
+          )
+        );
+
+        showNotification(
+          "Cheque marcado como cobrado e ingresado en caja",
+          "success"
+        );
+      } catch (error) {
+        console.error("Error al actualizar estado del cheque:", error);
+        showNotification("Error al actualizar cheque", "error");
       }
+    },
+    [setCreditSales, setPayments, showNotification]
+  );
 
-      const [updatedPayments, updatedSales] = await Promise.all([
-        db.payments.toArray(),
-        db.sales.toArray(),
-      ]);
+  const handleDeleteCheck = useCallback(
+    async (checkId: number) => {
+      try {
+        const cheque = await db.payments.get(checkId);
+        if (!cheque) {
+          showNotification("Cheque no encontrado", "error");
+          return;
+        }
 
-      setPayments(updatedPayments);
-      setCreditSales(updatedSales.filter((s) => s.credit) as CreditSale[]);
+        await db.payments.delete(checkId);
 
-      setCurrentCustomerCheques(
-        currentCustomerCheques.filter((c) => c.id !== checkId)
-      );
+        const remainingPayments = await db.payments
+          .where("saleId")
+          .equals(cheque.saleId)
+          .toArray();
 
-      if (currentCustomerInfo) {
-        const customerSales = updatedSales.filter(
-          (s) => s.credit && s.customerName === currentCustomerInfo.name
-        ) as CreditSale[];
+        if (remainingPayments.length === 0) {
+          await db.sales.delete(cheque.saleId);
+          setCreditSales((prev) => prev.filter((s) => s.id !== cheque.saleId));
+        } else {
+          const sale = await db.sales.get(cheque.saleId);
+          if (sale) {
+            await db.sales.update(cheque.saleId, {
+              paid: remainingPayments.some(
+                (p) => p.method !== "CHEQUE" || p.checkStatus === "cobrado"
+              ),
+              chequeInfo: undefined,
+            });
+            setCreditSales((prev) =>
+              prev.map((s) =>
+                s.id === cheque.saleId
+                  ? {
+                      ...s,
+                      paid: remainingPayments.some(
+                        (p) =>
+                          p.method !== "CHEQUE" || p.checkStatus === "cobrado"
+                      ),
+                      chequeInfo: undefined,
+                    }
+                  : s
+              )
+            );
+          }
+        }
 
-        setCurrentCustomerInfo({
-          ...currentCustomerInfo,
-          balance: calculateCustomerBalance(currentCustomerInfo.name),
-          sales: customerSales,
-        });
+        setPayments((prev) => prev.filter((p) => p.id !== checkId));
+        setCurrentCustomerCheques((prev) =>
+          prev.filter((c) => c.id !== checkId)
+        );
+
+        if (currentCustomerInfo) {
+          const updatedBalance = calculateCustomerBalance(
+            currentCustomerInfo.name
+          );
+          setCurrentCustomerInfo((prev) =>
+            prev ? { ...prev, balance: updatedBalance } : null
+          );
+        }
+
+        showNotification("Cheque eliminado correctamente", "success");
+      } catch (error) {
+        console.error("Error al eliminar cheque:", error);
+        showNotification("Error al eliminar cheque", "error");
       }
+    },
+    [
+      currentCustomerInfo,
+      calculateCustomerBalance,
+      setCreditSales,
+      setPayments,
+      showNotification,
+    ]
+  );
 
-      showNotification("Cheque eliminado correctamente", "success");
-    } catch (error) {
-      console.error("Error al eliminar cheque:", error);
-      showNotification("Error al eliminar cheque", "error");
-    }
-  };
-
-  const handleDeleteCustomerCredits = async () => {
+  const handleDeleteCustomerCredits = useCallback(async () => {
     if (!customerToDelete) return;
 
     try {
@@ -537,10 +1170,12 @@ const CuentasCorrientesPage = () => {
       await db.sales.bulkDelete(salesToDelete);
       await db.payments.where("saleId").anyOf(salesToDelete).delete();
 
-      setCreditSales(
-        creditSales.filter((sale) => sale.customerName !== customerToDelete)
+      setCreditSales((prev) =>
+        prev.filter((sale) => sale.customerName !== customerToDelete)
       );
-      setPayments(payments.filter((p) => !salesToDelete.includes(p.saleId)));
+      setPayments((prev) =>
+        prev.filter((p) => !salesToDelete.includes(p.saleId))
+      );
 
       showNotification(
         `Todas las cuentas corrientes de ${customerToDelete} eliminadas`,
@@ -553,13 +1188,16 @@ const CuentasCorrientesPage = () => {
       console.error("Error al eliminar cuentas corrientes:", error);
       showNotification("Error al eliminar cuentas corrientes", "error");
     }
-  };
+  }, [
+    customerToDelete,
+    creditSales,
+    customers,
+    setCreditSales,
+    setPayments,
+    showNotification,
+  ]);
 
-  const validateCurrency = (value: string): boolean => {
-    return /^\d+(\.\d{1,2})?$/.test(value);
-  };
-
-  const handlePayment = async () => {
+  const handlePayment = useCallback(async () => {
     const invalidPayment = paymentMethods.some(
       (method) => !validateCurrency(method.amount.toString())
     );
@@ -588,16 +1226,6 @@ const CuentasCorrientesPage = () => {
     }
 
     try {
-      const [updatedSales, updatedPayments] = await Promise.all([
-        db.sales.toArray(),
-        db.payments.toArray(),
-      ]);
-
-      setCreditSales(
-        updatedSales.filter((sale) => sale.credit === true) as CreditSale[]
-      );
-      setPayments(updatedPayments);
-
       for (const method of paymentMethods) {
         if (method.amount > 0) {
           const newPayment: Payment = {
@@ -618,14 +1246,15 @@ const CuentasCorrientesPage = () => {
         await db.sales.update(currentCreditSale.id, {
           paid: true,
         } as Partial<CreditSale>);
+        setCreditSales((prev) =>
+          prev.map((s) =>
+            s.id === currentCreditSale.id ? { ...s, paid: true } : s
+          )
+        );
       }
 
-      const allSales = await db.sales.toArray();
-      const sales = allSales.filter((sale) => sale.credit === true);
-      const allPayments = await db.payments.toArray();
-
-      setCreditSales(sales as CreditSale[]);
-      setPayments(allPayments);
+      const updatedPayments = await db.payments.toArray();
+      setPayments(updatedPayments);
 
       if (newRemainingBalance <= 0.01) {
         const saleToRegister: CreditSale = {
@@ -642,780 +1271,216 @@ const CuentasCorrientesPage = () => {
       setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
 
       if (currentCustomerInfo) {
-        const updatedSales = (await db.sales
-          .where("customerName")
-          .equals(currentCustomerInfo.name)
-          .toArray()) as CreditSale[];
-
-        setCurrentCustomerInfo({
-          ...currentCustomerInfo,
-          balance:
-            updatedSales.reduce((total, sale) => total + (sale.total || 0), 0) -
-            allPayments
-              .filter((p) => updatedSales.some((s) => s.id === p.saleId))
-              .reduce((sum, p) => sum + p.amount, 0),
-          sales: updatedSales,
-        });
+        const updatedBalance = calculateCustomerBalance(
+          currentCustomerInfo.name
+        );
+        setCurrentCustomerInfo((prev) =>
+          prev ? { ...prev, balance: updatedBalance } : null
+        );
       }
     } catch (error) {
       console.error("Error al registrar pago:", error);
       showNotification("Error al registrar pago", "error");
     }
-  };
+  }, [
+    currentCreditSale,
+    paymentMethods,
+    validateCurrency,
+    isFirstGreater,
+    calculateRemainingBalance,
+    setCreditSales,
+    setPayments,
+    addIncomeToDailyCash,
+    currentCustomerInfo,
+    calculateCustomerBalance,
+    showNotification,
+  ]);
 
-  const handleOpenChequesModal = async (customerName: string) => {
-    try {
-      const customerCheques = await db.payments
-        .where("method")
-        .equals("CHEQUE")
-        .and((p) => p.customerName === customerName)
-        .toArray();
+  const handleOpenChequesModal = useCallback(
+    async (customerName: string) => {
+      try {
+        console.log("🔍 Buscando cheques para:", customerName);
 
-      const chequesWithDetails = await Promise.all(
-        customerCheques.map(async (cheque) => {
-          const sale = await db.sales.get(cheque.saleId);
+        // Obtener todos los cheques
+        const allCheques = await db.payments
+          .where("method")
+          .equals("CHEQUE")
+          .toArray();
 
-          const saleItems: SaleItem[] =
-            sale?.products?.map((product) => ({
-              productId: product.id,
-              productName: product.name,
-              quantity: product.quantity,
-              unit: product.unit,
-              price: product.price,
-              size: product.size,
-              color: product.color,
-              rubro: product.rubro,
-            })) || [];
+        console.log("📋 Todos los cheques encontrados:", allCheques);
 
-          return {
-            ...cheque,
-            saleDate: sale?.date || "",
-            products: saleItems,
-            saleTotal: sale?.total || 0,
-          };
-        })
+        // DEBUG: Verificar la estructura de los cheques
+        allCheques.forEach((cheque, index) => {
+          console.log(`Cheque ${index}:`, {
+            id: cheque.id,
+            customerName: cheque.customerName,
+            saleId: cheque.saleId,
+            amount: cheque.amount,
+            method: cheque.method,
+          });
+        });
+
+        // Estrategia mejorada para encontrar cheques del cliente
+        const customerCheques = allCheques.filter((cheque) => {
+          // Opción 1: Buscar por customerName directo
+          if (
+            cheque.customerName &&
+            cheque.customerName.toLowerCase().trim() ===
+              customerName.toLowerCase().trim()
+          ) {
+            return true;
+          }
+
+          // Opción 2: Buscar a través de la venta asociada
+          if (cheque.saleId) {
+            // Esta parte requiere cargar la venta para verificar el customerName
+            return false; // Se manejará después
+          }
+
+          return false;
+        });
+
+        console.log("✅ Cheques filtrados por nombre:", customerCheques);
+
+        // Si no encontramos cheques por nombre directo, buscar por ventas
+        if (customerCheques.length === 0) {
+          console.log("🔄 Buscando cheques a través de las ventas...");
+
+          const chequesWithSales = await Promise.all(
+            allCheques.map(async (cheque) => {
+              if (!cheque.saleId) return null;
+
+              try {
+                const sale = await db.sales.get(cheque.saleId);
+                if (
+                  sale &&
+                  sale.customerName &&
+                  sale.customerName.toLowerCase().trim() ===
+                    customerName.toLowerCase().trim()
+                ) {
+                  return { cheque, sale };
+                }
+              } catch (error) {
+                console.error("Error al cargar venta:", error);
+              }
+              return null;
+            })
+          );
+
+          const validCheques = chequesWithSales.filter(Boolean) as {
+            cheque: Payment;
+            sale: CreditSale;
+          }[];
+          console.log(
+            "📊 Cheques encontrados a través de ventas:",
+            validCheques
+          );
+
+          if (validCheques.length > 0) {
+            const chequesWithDetails = await Promise.all(
+              validCheques.map(async ({ cheque, sale }) => {
+                const saleItems: SaleItem[] =
+                  sale.products?.map((product) => ({
+                    productId: product.id,
+                    productName: product.name,
+                    quantity: product.quantity,
+                    unit: product.unit,
+                    price: product.price,
+                    size: product.size,
+                    color: product.color,
+                    rubro: product.rubro,
+                  })) || [];
+
+                return {
+                  ...cheque,
+                  customerName: sale.customerName, // Asegurar que tenga el customerName
+                  saleDate: sale.date,
+                  products: saleItems,
+                  saleTotal: sale.total,
+                };
+              })
+            );
+
+            setCurrentCustomerCheques(chequesWithDetails);
+            setIsChequesModalOpen(true);
+            return;
+          }
+        } else {
+          // Procesar cheques encontrados por nombre directo
+          const chequesWithDetails = await Promise.all(
+            customerCheques.map(async (cheque) => {
+              const sale = await db.sales.get(cheque.saleId);
+
+              const saleItems: SaleItem[] =
+                sale?.products?.map((product) => ({
+                  productId: product.id,
+                  productName: product.name,
+                  quantity: product.quantity,
+                  unit: product.unit,
+                  price: product.price,
+                  size: product.size,
+                  color: product.color,
+                  rubro: product.rubro,
+                })) || [];
+
+              return {
+                ...cheque,
+                saleDate: sale?.date || "",
+                products: saleItems,
+                saleTotal: sale?.total || 0,
+              };
+            })
+          );
+
+          setCurrentCustomerCheques(chequesWithDetails);
+        }
+
+        setIsChequesModalOpen(true);
+
+        // Mostrar resumen final
+        console.log("🎯 Cheques finales para mostrar:", currentCustomerCheques);
+
+        if (currentCustomerCheques.length === 0) {
+          console.log("❌ No se encontraron cheques para:", customerName);
+          showNotification(
+            `No se encontraron cheques para ${customerName}`,
+            "info"
+          );
+        } else {
+          console.log(
+            `✅ Se encontraron ${currentCustomerCheques.length} cheques para ${customerName}`
+          );
+        }
+      } catch (error) {
+        console.error("❌ Error al cargar cheques:", error);
+        showNotification("Error al cargar cheques del cliente", "error");
+      }
+    },
+    [showNotification]
+  );
+
+  const handleOpenInfoModal = useCallback(
+    (sale: CreditSale) => {
+      const customerSales = creditSales.filter(
+        (cs) => cs.customerName === sale.customerName && !cs.chequeInfo
       );
 
-      setCurrentCustomerCheques(chequesWithDetails);
-      setIsChequesModalOpen(true);
-    } catch (error) {
-      console.error("Error al cargar cheques:", error);
-      showNotification("Error al cargar cheques del cliente", "error");
-    }
-  };
-
-  const handleOpenInfoModal = (sale: CreditSale) => {
-    const customerSales = creditSales.filter(
-      (cs) => cs.customerName === sale.customerName && !cs.chequeInfo
-    );
-
-    setCurrentCustomerInfo({
-      name: sale.customerName,
-      balance: calculateCustomerBalance(sale.customerName),
-      sales: customerSales,
-    });
-    setIsInfoModalOpen(true);
-  };
-
-  // Componentes de Modal personalizados
-  const ChequesModal = () => (
-    <Modal
-      isOpen={isChequesModalOpen}
-      onClose={() => setIsChequesModalOpen(false)}
-      title={`Cheques de ${currentCustomerInfo?.name || "Cliente"}`}
-      buttons={
-        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
-          <Button
-            variant="outlined"
-            onClick={() => setIsChequesModalOpen(false)}
-          >
-            Cerrar
-          </Button>
-        </Box>
-      }
-    >
-      {currentCustomerCheques.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: 4 }}>
-          <WalletIcon sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
-          <Typography color="text.secondary">
-            El cliente no tiene cheques registrados
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ mb: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-            <Typography variant="body2" fontWeight="medium">
-              Filtrar por estado:
-            </Typography>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <Select
-                label="Estado"
-                value={chequeFilter}
-                options={[
-                  { value: "todos", label: "Todos" },
-                  { value: "pendiente", label: "Pendientes" },
-                  { value: "cobrado", label: "Cobrados" },
-                ]}
-                onChange={(value: string | number) =>
-                  setChequeFilter(value as ChequeFilter)
-                }
-                size="small"
-              />
-            </FormControl>
-          </Box>
-
-          <TableContainer component={Paper} sx={{ maxHeight: "55vh" }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
-                    Monto
-                  </TableCell>
-                  <TableCell
-                    sx={{ bgcolor: "primary.main", color: "white" }}
-                    align="center"
-                  >
-                    Fecha
-                  </TableCell>
-                  <TableCell
-                    sx={{ bgcolor: "primary.main", color: "white" }}
-                    align="center"
-                  >
-                    Estado
-                  </TableCell>
-                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
-                    Productos
-                  </TableCell>
-                  <TableCell
-                    sx={{ bgcolor: "primary.main", color: "white" }}
-                    align="center"
-                  >
-                    Acciones
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {currentCustomerCheques
-                  .filter(
-                    (cheque) =>
-                      chequeFilter === "todos" ||
-                      cheque.checkStatus === chequeFilter
-                  )
-                  .map((cheque, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell>
-                        {cheque.amount.toLocaleString("es-AR", {
-                          style: "currency",
-                          currency: "ARS",
-                        })}
-                      </TableCell>
-                      <TableCell align="center">
-                        {format(new Date(cheque.date), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={cheque.checkStatus || "pendiente"}
-                          color={
-                            cheque.checkStatus === "cobrado"
-                              ? "success"
-                              : cheque.checkStatus === "pendiente"
-                              ? "warning"
-                              : "error"
-                          }
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ maxHeight: 80, overflow: "auto" }}>
-                          {cheque.products?.map((product, idx) => (
-                            <Box
-                              key={idx}
-                              sx={{
-                                py: 0.5,
-                                borderBottom:
-                                  idx < cheque.products.length - 1
-                                    ? "1px solid"
-                                    : "none",
-                                borderColor: "divider",
-                              }}
-                            >
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  fontSize: "0.75rem",
-                                }}
-                              >
-                                <Typography variant="caption">
-                                  {getDisplayProductName(
-                                    {
-                                      name: product.productName,
-                                      size: product.size,
-                                      color: product.color,
-                                      rubro: product.rubro,
-                                    },
-                                    rubro,
-                                    true
-                                  )}
-                                </Typography>
-                                <Typography variant="caption">
-                                  {product.quantity} {product.unit}
-                                </Typography>
-                                <Typography variant="caption">
-                                  {product.price.toLocaleString("es-AR", {
-                                    style: "currency",
-                                    currency: "ARS",
-                                  })}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          ))}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            gap: 1,
-                          }}
-                        >
-                          {cheque.checkStatus === "pendiente" && (
-                            <IconButton
-                              onClick={() => handleMarkCheckAsPaid(cheque.id)}
-                              size="small"
-                              sx={{
-                                borderRadius: "4px",
-                                color: "success.main",
-                                "&:hover": {
-                                  backgroundColor: "success.main",
-                                  color: "white",
-                                },
-                              }}
-                              title="Marcar como cobrado"
-                            >
-                              <CheckCircleIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                          <IconButton
-                            onClick={() => handleDeleteCheck(cheque.id)}
-                            size="small"
-                            sx={{
-                              borderRadius: "4px",
-                              color: "error.main",
-                              "&:hover": {
-                                backgroundColor: "error.main",
-                                color: "white",
-                              },
-                            }}
-                            title="Eliminar cheque"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
-    </Modal>
+      setCurrentCustomerInfo({
+        name: sale.customerName,
+        balance: calculateCustomerBalance(sale.customerName),
+        sales: customerSales,
+      });
+      setIsInfoModalOpen(true);
+      setExpandedSale(null);
+      setInfoModalTab(0);
+    },
+    [creditSales, calculateCustomerBalance]
   );
 
-  const InfoModal = () => (
-    <Modal
-      isOpen={isInfoModalOpen}
-      onClose={() => setIsInfoModalOpen(false)}
-      title={`Cuentas corrientes de ${currentCustomerInfo?.name || "Cliente"}`}
-      buttons={
-        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
-          <Button
-            variant="contained"
-            startIcon={<DownloadIcon />}
-            onClick={() => {
-              if (currentCustomerInfo) {
-                handleExportCustomerPDF(currentCustomerInfo.name);
-                setIsInfoModalOpen(false);
-              }
-            }}
-          >
-            Descargar PDF
-          </Button>
-          <Button variant="outlined" onClick={() => setIsInfoModalOpen(false)}>
-            Cerrar
-          </Button>
-        </Box>
-      }
-    >
-      <Box sx={{ maxHeight: "70vh", overflow: "auto", mb: 2 }}>
-        {/* Header con información del cliente */}
-        <Card
-          sx={{
-            background: "linear-gradient(135deg, #3b82f6, #1e40af)",
-            color: "white",
-            mb: 3,
-          }}
-        >
-          <CardContent>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
-              }}
-            >
-              <Box>
-                <Typography variant="h6" fontWeight="bold">
-                  Cliente
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  {currentCustomerInfo?.name}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "right" }}>
-                <Typography variant="h6" fontWeight="bold" mb={1}>
-                  Estado
-                </Typography>
-                <Chip
-                  label={
-                    (currentCustomerInfo?.balance ?? 0) <= 0
-                      ? "Al día"
-                      : "En deuda"
-                  }
-                  color={
-                    (currentCustomerInfo?.balance ?? 0) <= 0
-                      ? "success"
-                      : "error"
-                  }
-                  sx={{ color: "white", fontWeight: "bold" }}
-                />
-              </Box>
-            </Box>
-
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
-                <CardContent sx={{ textAlign: "center", py: 2 }}>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {currentCustomerInfo?.sales
-                      .reduce((sum, sale) => sum + sale.total, 0)
-                      .toLocaleString("es-AR", {
-                        style: "currency",
-                        currency: "ARS",
-                      })}
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
-                <CardContent sx={{ textAlign: "center", py: 2 }}>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total pagado
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {currentCustomerInfo?.sales
-                      .reduce((sum, sale) => {
-                        const paymentsForSale = payments
-                          .filter((p) => p.saleId === sale.id)
-                          .reduce((sum, p) => sum + p.amount, 0);
-                        return sum + paymentsForSale;
-                      }, 0)
-                      .toLocaleString("es-AR", {
-                        style: "currency",
-                        currency: "ARS",
-                      })}
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card sx={{ bgcolor: "rgba(255,255,255,0.2)", flex: 1 }}>
-                <CardContent sx={{ textAlign: "center", py: 2 }}>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Saldo pendiente
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {(currentCustomerInfo?.balance ?? 0).toLocaleString(
-                      "es-AR",
-                      {
-                        style: "currency",
-                        currency: "ARS",
-                      }
-                    )}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Historial de ventas */}
-        <Typography variant="h6" fontWeight="medium" mb={2}>
-          Historial de cuentas corrientes
-        </Typography>
-
-        {currentCustomerInfo?.sales
-          .sort((a, b) => {
-            const aBalance = calculateRemainingBalance(a);
-            const bBalance = calculateRemainingBalance(b);
-            const aPaid = aBalance <= 0;
-            const bPaid = bBalance <= 0;
-            if (aPaid !== bPaid) {
-              return aPaid ? 1 : -1;
-            }
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
-          })
-          .map((sale) => {
-            const totalPayments = payments
-              .filter((p) => p.saleId === sale.id)
-              .reduce((sum, p) => sum + p.amount, 0);
-            const remainingBalance = sale.total - totalPayments;
-            const isPaid = remainingBalance <= 0;
-
-            return (
-              <Card
-                key={sale.id}
-                sx={{
-                  mb: 2,
-                  border: 1,
-                  borderColor: isPaid ? "success.light" : "error.light",
-                  bgcolor: isPaid ? "success.50" : "error.50",
-                }}
-              >
-                <CardContent>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 2,
-                    }}
-                  >
-                    <Typography variant="subtitle1" fontWeight="medium">
-                      {format(new Date(sale.date), "dd/MM/yyyy", {
-                        locale: es,
-                      })}
-                    </Typography>
-                    {!isPaid && (
-                      <Button
-                        variant="contained"
-                        onClick={() => {
-                          setCurrentCreditSale(sale);
-                          setIsPaymentModalOpen(true);
-                          setIsInfoModalOpen(false);
-                        }}
-                      >
-                        Pagar
-                      </Button>
-                    )}
-                  </Box>
-
-                  {/* Detalles de productos */}
-                  <Typography variant="body2" fontWeight="medium" mb={1}>
-                    Detalles
-                  </Typography>
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Producto</TableCell>
-                          <TableCell align="right">Cantidad</TableCell>
-                          <TableCell align="right">Precio</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {sale.products.map((product, idx) => (
-                          <TableRow key={idx} hover>
-                            <TableCell>
-                              {getDisplayProductName(
-                                {
-                                  name: product.name,
-                                  size: product.size,
-                                  color: product.color,
-                                  rubro: product.rubro,
-                                },
-                                rubro,
-                                true
-                              )}
-                            </TableCell>
-                            <TableCell align="right">
-                              {product.quantity} {product.unit}
-                            </TableCell>
-                            <TableCell align="right">
-                              {product.price.toLocaleString("es-AR", {
-                                style: "currency",
-                                currency: "ARS",
-                              })}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-
-                  {/* Resumen financiero */}
-                  <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                    <Card
-                      sx={{
-                        bgcolor: isPaid ? "success.100" : "error.100",
-                        textAlign: "center",
-                        flex: 1,
-                      }}
-                    >
-                      <CardContent sx={{ py: 1 }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          Saldo pendiente
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          fontWeight="bold"
-                          color={isPaid ? "success.main" : "error.main"}
-                        >
-                          {remainingBalance.toLocaleString("es-AR", {
-                            style: "currency",
-                            currency: "ARS",
-                          })}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                    <Card
-                      sx={{
-                        bgcolor: "grey.100",
-                        textAlign: "center",
-                        flex: 1,
-                      }}
-                    >
-                      <CardContent sx={{ py: 1 }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          Pagado
-                        </Typography>
-                        <Typography variant="body1" fontWeight="bold">
-                          {totalPayments.toLocaleString("es-AR", {
-                            style: "currency",
-                            currency: "ARS",
-                          })}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                    <Card
-                      sx={{
-                        bgcolor: "grey.100",
-                        textAlign: "center",
-                        flex: 1,
-                      }}
-                    >
-                      <CardContent sx={{ py: 1 }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          Total
-                        </Typography>
-                        <Typography variant="body1" fontWeight="bold">
-                          {sale.total.toLocaleString("es-AR", {
-                            style: "currency",
-                            currency: "ARS",
-                          })}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Box>
-                </CardContent>
-              </Card>
-            );
-          })}
-      </Box>
-    </Modal>
-  );
-  const PaymentModal = () => (
-    <Modal
-      isOpen={isPaymentModalOpen}
-      onClose={() => setIsPaymentModalOpen(false)}
-      title={`Registrar Pago - ${currentCreditSale?.customerName || "Cliente"}`}
-      buttons={
-        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
-          <Button
-            variant="contained"
-            onClick={handlePayment}
-            disabled={
-              paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
-              isFirstGreater(
-                paymentMethods.reduce((sum, m) => sum + m.amount, 0),
-                calculateRemainingBalance(currentCreditSale!)
-              )
-            }
-          >
-            Registrar
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setIsPaymentModalOpen(false);
-              setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
-            }}
-          >
-            Cancelar
-          </Button>
-        </Box>
-      }
-    >
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        {/* Información de deuda pendiente */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="body1" fontWeight="medium">
-              Deuda pendiente:
-            </Typography>
-            <Chip
-              label={calculateRemainingBalance(
-                currentCreditSale!
-              ).toLocaleString("es-AR", {
-                style: "currency",
-                currency: "ARS",
-              })}
-              color="primary"
-              variant="filled"
-            />
-          </Box>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => {
-              const remaining = calculateRemainingBalance(currentCreditSale!);
-              setPaymentMethods([{ method: "EFECTIVO", amount: remaining }]);
-            }}
-          >
-            Pagar todo
-          </Button>
-        </Box>
-
-        {/* Métodos de pago */}
-        <Box>
-          <Typography variant="subtitle1" fontWeight="medium" mb={2}>
-            Métodos de Pago
-          </Typography>
-
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {paymentMethods.map((method, index) => (
-              <Box
-                key={index}
-                sx={{ display: "flex", alignItems: "center", gap: 2 }}
-              >
-                <FormControl sx={{ minWidth: 140 }}>
-                  <Select
-                    label="Método"
-                    value={method.method}
-                    options={[
-                      { value: "EFECTIVO", label: "Efectivo" },
-                      { value: "TRANSFERENCIA", label: "Transferencia" },
-                      { value: "TARJETA", label: "Tarjeta" },
-                    ]}
-                    onChange={(value) =>
-                      handlePaymentMethodChange(
-                        index,
-                        "method",
-                        value as PaymentMethod
-                      )
-                    }
-                  />
-                </FormControl>
-
-                <Input
-                  type="number"
-                  value={method.amount}
-                  onRawChange={(e) =>
-                    handlePaymentMethodChange(
-                      index,
-                      "amount",
-                      parseFloat(e.target.value) || 0
-                    )
-                  }
-                  placeholder="0.00"
-                  step="0.01"
-                />
-
-                {paymentMethods.length > 1 && (
-                  <IconButton
-                    onClick={() => removePaymentMethod(index)}
-                    size="small"
-                    sx={{
-                      color: "error.main",
-                      "&:hover": {
-                        backgroundColor: "error.main",
-                        color: "white",
-                      },
-                    }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Box>
-            ))}
-          </Box>
-
-          {paymentMethods.length < 3 && (
-            <Button
-              variant="text"
-              startIcon={<Add />}
-              onClick={addPaymentMethod}
-              sx={{ mt: 1 }}
-            >
-              Agregar otro método
-            </Button>
-          )}
-        </Box>
-
-        {/* Resumen del pago */}
-        <Card
-          sx={{
-            backgroundColor: "primary.main",
-            color: "white",
-            textAlign: "center",
-          }}
-        >
-          <CardContent>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Total a pagar
-            </Typography>
-            <Typography variant="h5" fontWeight="bold">
-              {paymentMethods
-                .reduce((sum, m) => sum + m.amount, 0)
-                .toLocaleString("es-AR", {
-                  style: "currency",
-                  currency: "ARS",
-                })}
-            </Typography>
-
-            {isFirstGreater(
-              paymentMethods.reduce((sum, m) => sum + m.amount, 0),
-              calculateRemainingBalance(currentCreditSale!)
-            ) && (
-              <Typography
-                variant="body2"
-                sx={{
-                  mt: 1,
-                  color: "warning.main",
-                  fontWeight: "medium",
-                }}
-              >
-                El monto total excede la deuda pendiente
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
-    </Modal>
-  );
-
-  // Funciones auxiliares para el manejo de métodos de pago
-  const addPaymentMethod = () => {
+  // Funciones para manejo de métodos de pago - memoizadas
+  const addPaymentMethod = useCallback(() => {
     setPaymentMethods((prev) => {
-      if (prev.length >= 3) return prev;
+      if (prev.length >= CUENTAS_CONFIG.MAX_PAYMENT_METHODS) return prev;
 
       const total = calculateRemainingBalance(currentCreditSale!);
       const usedMethods = prev.map((m) => m.method);
@@ -1453,77 +1518,912 @@ const CuentasCorrientesPage = () => {
         },
       ];
     });
-  };
+  }, [currentCreditSale, calculateRemainingBalance]);
 
-  const handlePaymentMethodChange = (
-    index: number,
-    field: keyof PaymentSplit,
-    value: string | number
-  ) => {
-    setPaymentMethods((prev) => {
-      const updated = [...prev];
-      const remainingBalance = calculateRemainingBalance(currentCreditSale!);
+  const handlePaymentMethodChange = useCallback(
+    (index: number, field: keyof PaymentSplit, value: string | number) => {
+      setPaymentMethods((prev) => {
+        const updated = [...prev];
+        const remainingBalance = calculateRemainingBalance(currentCreditSale!);
 
-      if (field === "amount") {
-        const numericValue = typeof value === "number" ? value : 0;
+        if (field === "amount") {
+          const numericValue = typeof value === "number" ? value : 0;
 
-        updated[index] = {
-          ...updated[index],
-          amount: parseFloat(numericValue.toFixed(2)),
-        };
-
-        if (updated.length === 2) {
-          const totalPayment = updated.reduce((sum, m) => sum + m.amount, 0);
-          const difference = remainingBalance - totalPayment;
-
-          if (difference !== 0) {
-            const otherIndex = index === 0 ? 1 : 0;
-            updated[otherIndex].amount = Math.max(
-              0,
-              updated[otherIndex].amount + difference
-            );
-          }
-        }
-      } else {
-        updated[index] = {
-          ...updated[index],
-          method: value as PaymentMethod,
-        };
-      }
-      return updated;
-    });
-  };
-
-  const removePaymentMethod = (index: number) => {
-    setPaymentMethods((prev) => {
-      if (prev.length <= 1) return prev;
-
-      const updatedMethods = [...prev];
-      updatedMethods.splice(index, 1);
-
-      const total = calculateRemainingBalance(currentCreditSale!);
-
-      if (updatedMethods.length === 1) {
-        updatedMethods[0].amount = total;
-      } else {
-        const share = total / updatedMethods.length;
-        updatedMethods.forEach((m, i) => {
-          updatedMethods[i] = {
-            ...m,
-            amount: share,
+          updated[index] = {
+            ...updated[index],
+            amount: parseFloat(numericValue.toFixed(2)),
           };
-        });
-      }
 
-      return updatedMethods;
+          if (updated.length === 2) {
+            const totalPayment = updated.reduce((sum, m) => sum + m.amount, 0);
+            const difference = remainingBalance - totalPayment;
+
+            if (difference !== 0) {
+              const otherIndex = index === 0 ? 1 : 0;
+              updated[otherIndex].amount = Math.max(
+                0,
+                updated[otherIndex].amount + difference
+              );
+            }
+          }
+        } else {
+          updated[index] = {
+            ...updated[index],
+            method: value as PaymentMethod,
+          };
+        }
+        return updated;
+      });
+    },
+    [currentCreditSale, calculateRemainingBalance]
+  );
+
+  const removePaymentMethod = useCallback(
+    (index: number) => {
+      setPaymentMethods((prev) => {
+        if (prev.length <= 1) return prev;
+
+        const updatedMethods = [...prev];
+        updatedMethods.splice(index, 1);
+
+        const total = calculateRemainingBalance(currentCreditSale!);
+
+        if (updatedMethods.length === 1) {
+          updatedMethods[0].amount = total;
+        } else {
+          const share = total / updatedMethods.length;
+          updatedMethods.forEach((m, i) => {
+            updatedMethods[i] = {
+              ...m,
+              amount: share,
+            };
+          });
+        }
+
+        return updatedMethods;
+      });
+    },
+    [currentCreditSale, calculateRemainingBalance]
+  );
+
+  // Nueva función para manejar la expansión de ventas
+  const handleExpandSale = useCallback(
+    (saleId: number) => {
+      setExpandedSale(expandedSale === saleId ? null : saleId);
+    },
+    [expandedSale]
+  );
+
+  // Cálculos memoizados - OPTIMIZADOS CON useMemo
+  const filteredSales = useMemo(() => {
+    return creditSales
+      .filter((sale) => {
+        const matchesSearch = sale.customerName
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const matchesRubro =
+          rubro === "Todos los rubros" ||
+          sale.products.some((product) => product.rubro === rubro);
+
+        return matchesSearch && matchesRubro;
+      })
+      .sort((a, b) => {
+        if (a.paid !== b.paid) {
+          return a.paid ? 1 : -1;
+        }
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+  }, [creditSales, searchQuery, rubro]);
+
+  const salesByCustomer = useMemo(() => {
+    return filteredSales.reduce((acc, sale) => {
+      if (!acc[sale.customerName]) {
+        acc[sale.customerName] = [];
+      }
+      acc[sale.customerName].push(sale);
+      return acc;
+    }, {} as Record<string, CreditSale[]>);
+  }, [filteredSales]);
+
+  const sortedCustomerNames = useMemo(() => {
+    return Object.keys(salesByCustomer).sort((a, b) => {
+      const customerAHasUnpaid = salesByCustomer[a].some((sale) => !sale.paid);
+      const customerBHasUnpaid = salesByCustomer[b].some((sale) => !sale.paid);
+      if (customerAHasUnpaid !== customerBHasUnpaid) {
+        return customerAHasUnpaid ? -1 : 1;
+      }
+      return a.localeCompare(b);
     });
-  };
+  }, [salesByCustomer]);
+
+  // Paginación memoizada
+  const totalCustomers = sortedCustomerNames.length;
+  const indexOfLastCredit = currentPage * itemsPerPage;
+  const indexOfFirstCredit = indexOfLastCredit - itemsPerPage;
+
+  const currentCustomers = useMemo(() => {
+    return sortedCustomerNames.slice(indexOfFirstCredit, indexOfLastCredit);
+  }, [sortedCustomerNames, indexOfFirstCredit, indexOfLastCredit]);
+
+  // Memoización de valores calculados para la tabla
+  const customerBalanceMap = useMemo(() => {
+    const balanceMap: Record<string, number> = {};
+    sortedCustomerNames.forEach((customerName) => {
+      balanceMap[customerName] = calculateCustomerBalance(customerName);
+    });
+    return balanceMap;
+  }, [sortedCustomerNames, calculateCustomerBalance]);
+
+  const oldestSaleMap = useMemo(() => {
+    const oldestMap: Record<string, CreditSale> = {};
+    sortedCustomerNames.forEach((customerName) => {
+      const sales = salesByCustomer[customerName];
+      const sortedSales = [...sales].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      oldestMap[customerName] = sortedSales[0];
+    });
+    return oldestMap;
+  }, [sortedCustomerNames, salesByCustomer]);
+
+  // Efectos
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchData();
+      } catch {
+        showNotification("Error al cargar las cuentas corrientes", "error");
+      }
+    };
+
+    loadData();
+  }, [fetchData, showNotification]);
+
+  // Componente de modal de información mejorado
+  const InfoModalComponent = useMemo(
+    () =>
+      function InfoModalComponent() {
+        if (!currentCustomerInfo) return null;
+
+        const ventasPendientes = currentCustomerInfo.sales.filter((sale) => {
+          const remainingBalance = calculateRemainingBalance(sale);
+          return remainingBalance > 0;
+        });
+
+        const ventasPagadas = currentCustomerInfo.sales.filter((sale) => {
+          const remainingBalance = calculateRemainingBalance(sale);
+          return remainingBalance <= 0;
+        });
+
+        return (
+          <Modal
+            isOpen={isInfoModalOpen}
+            onClose={() => {
+              setIsInfoModalOpen(false);
+              setExpandedSale(null);
+              setInfoModalTab(0);
+            }}
+            title={`Gestión de Cuenta Corriente - ${currentCustomerInfo.name}`}
+            bgColor="bg-white dark:bg-gray-800"
+            buttons={
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "end",
+                  width: "100%",
+                }}
+              >
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    variant="text"
+                    onClick={() => {
+                      setIsInfoModalOpen(false);
+                      setExpandedSale(null);
+                      setInfoModalTab(0);
+                    }}
+                    sx={{
+                      color: "text.secondary",
+                      "&:hover": {
+                        backgroundColor: "action.hover",
+                      },
+                    }}
+                  >
+                    Cerrar
+                  </Button>
+                </Box>
+              </Box>
+            }
+          >
+            <Box sx={{ width: "100%" }}>
+              {/* Header con avatar */}
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}
+              >
+                <Avatar sx={{ bgcolor: "primary.main" }}>
+                  <AccountCircleIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">
+                    {currentCustomerInfo.name}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Resumen financiero */}
+              <CustomerFinancialSummary
+                customerInfo={currentCustomerInfo}
+                payments={payments}
+              />
+
+              {/* Tabs para organizar la información */}
+              <Card sx={{ mb: 2 }}>
+                <Tabs
+                  value={infoModalTab}
+                  onChange={(_, newValue) => setInfoModalTab(newValue)}
+                  sx={{
+                    borderBottom: 1,
+                    borderColor: "divider",
+                    "& .MuiTab-root": {
+                      textTransform: "none",
+                      fontWeight: "medium",
+                      minHeight: 48,
+                    },
+                  }}
+                >
+                  <Tab
+                    icon={<ReceiptIcon />}
+                    iconPosition="start"
+                    label={
+                      <Badge
+                        badgeContent={currentCustomerInfo.sales.length}
+                        color="primary"
+                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                      >
+                        Todas las Ventas
+                      </Badge>
+                    }
+                  />
+                  <Tab
+                    icon={<PaymentIcon />}
+                    iconPosition="start"
+                    label={
+                      <Badge
+                        badgeContent={ventasPendientes.length}
+                        color="warning"
+                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                      >
+                        Pendientes
+                      </Badge>
+                    }
+                  />
+                  <Tab
+                    icon={<CheckCircleIcon />}
+                    iconPosition="start"
+                    label={
+                      <Badge
+                        badgeContent={ventasPagadas.length}
+                        color="success"
+                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                      >
+                        Pagadas
+                      </Badge>
+                    }
+                  />
+                </Tabs>
+              </Card>
+
+              {/* Contenido de las tabs */}
+              <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+                {infoModalTab === 0 && (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {currentCustomerInfo.sales.length === 0 ? (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <ReceiptIcon
+                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                        />
+                        <Typography color="text.secondary">
+                          No hay cuentas corrientes registradas
+                        </Typography>
+                      </Box>
+                    ) : (
+                      currentCustomerInfo.sales
+                        .sort(
+                          (a, b) =>
+                            new Date(b.date).getTime() -
+                            new Date(a.date).getTime()
+                        )
+                        .map((sale) => (
+                          <SaleCard
+                            key={sale.id}
+                            sale={sale}
+                            payments={payments}
+                            rubro={rubro}
+                            onPayment={(sale) => {
+                              setCurrentCreditSale(sale);
+                              setIsPaymentModalOpen(true);
+                            }}
+                            isExpanded={expandedSale === sale.id}
+                            onToggleExpand={handleExpandSale}
+                          />
+                        ))
+                    )}
+                  </Box>
+                )}
+
+                {infoModalTab === 1 && (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {ventasPendientes.length === 0 ? (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <CheckCircleIcon
+                          sx={{ fontSize: 64, color: "success.main", mb: 2 }}
+                        />
+                        <Typography color="text.secondary">
+                          No hay ventas pendientes de pago
+                        </Typography>
+                      </Box>
+                    ) : (
+                      ventasPendientes
+                        .sort((a, b) => {
+                          const balanceA = calculateRemainingBalance(a);
+                          const balanceB = calculateRemainingBalance(b);
+                          return balanceB - balanceA;
+                        })
+                        .map((sale) => (
+                          <SaleCard
+                            key={sale.id}
+                            sale={sale}
+                            payments={payments}
+                            rubro={rubro}
+                            onPayment={(sale) => {
+                              setCurrentCreditSale(sale);
+                              setIsPaymentModalOpen(true);
+                            }}
+                            isExpanded={expandedSale === sale.id}
+                            onToggleExpand={handleExpandSale}
+                          />
+                        ))
+                    )}
+                  </Box>
+                )}
+
+                {infoModalTab === 2 && (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {ventasPagadas.length === 0 ? (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <HistoryIcon
+                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                        />
+                        <Typography color="text.secondary">
+                          No hay ventas completamente pagadas
+                        </Typography>
+                      </Box>
+                    ) : (
+                      ventasPagadas
+                        .sort(
+                          (a, b) =>
+                            new Date(b.date).getTime() -
+                            new Date(a.date).getTime()
+                        )
+                        .map((sale) => (
+                          <SaleCard
+                            key={sale.id}
+                            sale={sale}
+                            payments={payments}
+                            rubro={rubro}
+                            onPayment={(sale) => {
+                              setCurrentCreditSale(sale);
+                              setIsPaymentModalOpen(true);
+                            }}
+                            isExpanded={expandedSale === sale.id}
+                            onToggleExpand={handleExpandSale}
+                          />
+                        ))
+                    )}
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          </Modal>
+        );
+      },
+    [
+      isInfoModalOpen,
+      currentCustomerInfo,
+      payments,
+      rubro,
+      calculateRemainingBalance,
+      handleExportCustomerPDF,
+      isGeneratingPDF,
+      handleOpenChequesModal,
+      expandedSale,
+      handleExpandSale,
+      infoModalTab,
+    ]
+  );
+
+  // Los demás componentes de modal se mantienen igual...
+  const ChequesModalComponent = useMemo(
+    () =>
+      function ChequesModalComponent() {
+        return (
+          <Modal
+            isOpen={isChequesModalOpen}
+            onClose={() => setIsChequesModalOpen(false)}
+            title={`Cheques de ${currentCustomerInfo?.name || "Cliente"}`}
+            bgColor="bg-white dark:bg-gray-800"
+            buttons={
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+                <Button
+                  variant="text"
+                  onClick={() => setIsChequesModalOpen(false)}
+                  sx={{
+                    color: "text.secondary",
+                    borderColor: "text.secondary",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                      borderColor: "text.primary",
+                    },
+                  }}
+                >
+                  Cerrar
+                </Button>
+              </Box>
+            }
+          >
+            {currentCustomerCheques.length === 0 ? (
+              <Box sx={{ textAlign: "center", py: 4 }}>
+                <WalletIcon
+                  sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                />
+                <Typography color="text.secondary">
+                  El cliente no tiene cheques registrados
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ mb: 2 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
+                >
+                  <Typography variant="body2" fontWeight="medium">
+                    Filtrar por estado:
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <Select
+                      label="Estado"
+                      value={chequeFilter}
+                      options={[
+                        { value: "todos", label: "Todos" },
+                        { value: "pendiente", label: "Pendientes" },
+                        { value: "cobrado", label: "Cobrados" },
+                      ]}
+                      onChange={(value: string | number) =>
+                        setChequeFilter(value as ChequeFilter)
+                      }
+                      size="small"
+                    />
+                  </FormControl>
+                </Box>
+
+                <TableContainer component={Paper} sx={{ maxHeight: "55vh" }}>
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                        >
+                          Monto
+                        </TableCell>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                          align="center"
+                        >
+                          Fecha
+                        </TableCell>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                          align="center"
+                        >
+                          Estado
+                        </TableCell>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                        >
+                          Productos
+                        </TableCell>
+                        <TableCell
+                          sx={{ bgcolor: "primary.main", color: "white" }}
+                          align="center"
+                        >
+                          Acciones
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {currentCustomerCheques
+                        .filter(
+                          (cheque) =>
+                            chequeFilter === "todos" ||
+                            cheque.checkStatus === chequeFilter
+                        )
+                        .map((cheque) => (
+                          <TableRow
+                            key={cheque.id}
+                            hover
+                            sx={{
+                              border: "1px solid",
+                              borderColor: "divider",
+                              "&:hover": { backgroundColor: "action.hover" },
+                              transition: "all 0.3s",
+                            }}
+                          >
+                            <TableCell>
+                              {cheque.amount.toLocaleString("es-AR", {
+                                style: "currency",
+                                currency: "ARS",
+                              })}
+                            </TableCell>
+                            <TableCell align="center">
+                              {format(new Date(cheque.date), "dd/MM/yyyy")}
+                            </TableCell>
+                            <TableCell align="center">
+                              <Chip
+                                label={cheque.checkStatus || "pendiente"}
+                                color={
+                                  cheque.checkStatus === "cobrado"
+                                    ? "success"
+                                    : cheque.checkStatus === "pendiente"
+                                    ? "warning"
+                                    : "error"
+                                }
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ maxHeight: 80, overflow: "auto" }}>
+                                {cheque.products?.map((product, idx) => (
+                                  <Box
+                                    key={idx}
+                                    sx={{
+                                      py: 0.5,
+                                      borderBottom:
+                                        idx < cheque.products.length - 1
+                                          ? "1px solid"
+                                          : "none",
+                                      borderColor: "divider",
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        fontSize: "0.75rem",
+                                      }}
+                                    >
+                                      <Typography variant="caption">
+                                        {getDisplayProductName(
+                                          {
+                                            name: product.productName,
+                                            size: product.size,
+                                            color: product.color,
+                                            rubro: product.rubro,
+                                          },
+                                          rubro,
+                                          true
+                                        )}
+                                      </Typography>
+                                      <Typography variant="caption">
+                                        {product.quantity} {product.unit}
+                                      </Typography>
+                                      <Typography variant="caption">
+                                        {product.price.toLocaleString("es-AR", {
+                                          style: "currency",
+                                          currency: "ARS",
+                                        })}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                ))}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                {cheque.checkStatus === "pendiente" && (
+                                  <IconButton
+                                    onClick={() =>
+                                      handleMarkCheckAsPaid(cheque.id)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "success.main",
+                                      "&:hover": {
+                                        backgroundColor: "success.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                    title="Marcar como cobrado"
+                                  >
+                                    <CheckCircleIcon fontSize="small" />
+                                  </IconButton>
+                                )}
+                                <IconButton
+                                  onClick={() => handleDeleteCheck(cheque.id)}
+                                  size="small"
+                                  sx={{
+                                    borderRadius: "4px",
+                                    color: "error.main",
+                                    "&:hover": {
+                                      backgroundColor: "error.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                  title="Eliminar cheque"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )}
+          </Modal>
+        );
+      },
+    [
+      isChequesModalOpen,
+      currentCustomerInfo?.name,
+      currentCustomerCheques,
+      chequeFilter,
+      rubro,
+      handleMarkCheckAsPaid,
+      handleDeleteCheck,
+    ]
+  );
+
+  const PaymentModalComponent = useMemo(
+    () =>
+      function PaymentModalComponent() {
+        return (
+          <Modal
+            isOpen={isPaymentModalOpen}
+            onClose={() => setIsPaymentModalOpen(false)}
+            title={`Registrar Pago - ${
+              currentCreditSale?.customerName || "Cliente"
+            }`}
+            bgColor="bg-white dark:bg-gray-800"
+            buttons={
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+                <Button
+                  variant="text"
+                  onClick={() => {
+                    setIsPaymentModalOpen(false);
+                    setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+                  }}
+                  sx={{
+                    color: "text.secondary",
+                    borderColor: "text.secondary",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                      borderColor: "text.primary",
+                    },
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handlePayment}
+                  disabled={
+                    paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
+                    isFirstGreater(
+                      paymentMethods.reduce((sum, m) => sum + m.amount, 0),
+                      calculateRemainingBalance(currentCreditSale!)
+                    )
+                  }
+                  sx={{
+                    bgcolor: "primary.main",
+                    "&:hover": { bgcolor: "primary.dark" },
+                    "&:disabled": { bgcolor: "action.disabled" },
+                  }}
+                >
+                  Registrar Pago
+                </Button>
+              </Box>
+            }
+          >
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="body1" fontWeight="medium">
+                    Deuda pendiente:
+                  </Typography>
+                  <Chip
+                    label={calculateRemainingBalance(
+                      currentCreditSale!
+                    ).toLocaleString("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                    })}
+                    color="primary"
+                    variant="filled"
+                  />
+                </Box>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => {
+                    const remaining = calculateRemainingBalance(
+                      currentCreditSale!
+                    );
+                    setPaymentMethods([
+                      { method: "EFECTIVO", amount: remaining },
+                    ]);
+                  }}
+                  sx={{
+                    bgcolor: "primary.main",
+                    "&:hover": { bgcolor: "primary.dark" },
+                  }}
+                >
+                  Pagar todo
+                </Button>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle1" fontWeight="medium" mb={2}>
+                  Métodos de Pago
+                </Typography>
+
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {paymentMethods.map((method, index) => (
+                    <Box
+                      key={index}
+                      sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                    >
+                      <FormControl sx={{ minWidth: 140 }}>
+                        <Select
+                          label="Método"
+                          value={method.method}
+                          options={[
+                            { value: "EFECTIVO", label: "Efectivo" },
+                            { value: "TRANSFERENCIA", label: "Transferencia" },
+                            { value: "TARJETA", label: "Tarjeta" },
+                          ]}
+                          onChange={(value) =>
+                            handlePaymentMethodChange(
+                              index,
+                              "method",
+                              value as PaymentMethod
+                            )
+                          }
+                        />
+                      </FormControl>
+
+                      <Input
+                        type="number"
+                        value={method.amount}
+                        onRawChange={(e) =>
+                          handlePaymentMethodChange(
+                            index,
+                            "amount",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        placeholder="0.00"
+                        step="0.01"
+                      />
+
+                      {paymentMethods.length > 1 && (
+                        <IconButton
+                          onClick={() => removePaymentMethod(index)}
+                          size="small"
+                          sx={{
+                            color: "error.main",
+                            "&:hover": {
+                              backgroundColor: "error.main",
+                              color: "white",
+                            },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+
+                {paymentMethods.length < CUENTAS_CONFIG.MAX_PAYMENT_METHODS && (
+                  <Button
+                    variant="text"
+                    startIcon={<Add />}
+                    onClick={addPaymentMethod}
+                    sx={{ mt: 1 }}
+                  >
+                    Agregar otro método
+                  </Button>
+                )}
+              </Box>
+
+              <Card
+                sx={{
+                  backgroundColor: "primary.main",
+                  color: "white",
+                  textAlign: "center",
+                }}
+              >
+                <CardContent>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Total a pagar
+                  </Typography>
+                  <Typography variant="h5" fontWeight="bold">
+                    {paymentMethods
+                      .reduce((sum, m) => sum + m.amount, 0)
+                      .toLocaleString("es-AR", {
+                        style: "currency",
+                        currency: "ARS",
+                      })}
+                  </Typography>
+
+                  {isFirstGreater(
+                    paymentMethods.reduce((sum, m) => sum + m.amount, 0),
+                    calculateRemainingBalance(currentCreditSale!)
+                  ) && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mt: 1,
+                        color: "warning.main",
+                        fontWeight: "medium",
+                      }}
+                    >
+                      El monto total excede la deuda pendiente
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Box>
+          </Modal>
+        );
+      },
+    [
+      isPaymentModalOpen,
+      currentCreditSale,
+      paymentMethods,
+      handlePayment,
+      isFirstGreater,
+      calculateRemainingBalance,
+      handlePaymentMethodChange,
+      removePaymentMethod,
+      addPaymentMethod,
+    ]
+  );
 
   return (
     <ProtectedRoute>
       <Box
         sx={{
-          px: 2,
+          px: 4,
           py: 2,
           height: "calc(100vh - 80px)",
           display: "flex",
@@ -1531,12 +2431,28 @@ const CuentasCorrientesPage = () => {
         }}
       >
         <Typography variant="h5" fontWeight="semibold" mb={2}>
-          Cuentas corrientes
+          Cuentas Corrientes
         </Typography>
 
         {/* Barra de búsqueda */}
-        <Box sx={{ mb: 2 }}>
-          <SearchBar onSearch={handleSearch} />
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 2,
+            width: "100%",
+          }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <SearchBar onSearch={handleSearch} />
+          </Box>
         </Box>
 
         {/* Tabla de cuentas corrientes */}
@@ -1551,7 +2467,7 @@ const CuentasCorrientesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "59vh", flex: 1 }}
+              sx={{ maxHeight: "calc(100vh - 250px)", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -1596,20 +2512,49 @@ const CuentasCorrientesPage = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {totalCustomers > 0 ? (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={rubro !== "Todos los rubros" ? 4 : 3}
+                        align="center"
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            py: 4,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              animation: "spin 1s linear infinite",
+                              width: "32px",
+                              height: "32px",
+                              border: "2px solid",
+                              borderColor: "primary.main transparent",
+                              borderRadius: "50%",
+                            }}
+                          />
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ) : totalCustomers > 0 ? (
                     currentCustomers.map((customerName) => {
-                      const sales = salesByCustomer[customerName];
-                      const customerBalance =
-                        calculateCustomerBalance(customerName);
-                      const sortedSales = [...sales].sort(
-                        (a, b) =>
-                          new Date(a.date).getTime() -
-                          new Date(b.date).getTime()
-                      );
-                      const oldestSale = sortedSales[0];
+                      const customerBalance = customerBalanceMap[customerName];
+                      const oldestSale = oldestSaleMap[customerName];
 
                       return (
-                        <TableRow key={customerName} hover>
+                        <TableRow
+                          key={customerName}
+                          hover
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            "&:hover": { backgroundColor: "action.hover" },
+                            transition: "all 0.3s",
+                          }}
+                        >
                           <TableCell>
                             <Typography fontWeight="bold">
                               {customerName}
@@ -1641,79 +2586,83 @@ const CuentasCorrientesPage = () => {
                                 sx={{
                                   display: "flex",
                                   justifyContent: "center",
-                                  gap: 1,
+                                  gap: 0.5,
                                 }}
                               >
-                                <IconButton
-                                  onClick={() =>
-                                    handleExportCustomerPDF(customerName)
-                                  }
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Descargar PDF"
-                                  disabled={isGeneratingPDF}
-                                >
-                                  <DownloadIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() =>
-                                    handleOpenChequesModal(customerName)
-                                  }
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Ver cheques"
-                                >
-                                  <WalletIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() =>
-                                    handleOpenInfoModal(oldestSale)
-                                  }
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Ver información"
-                                >
-                                  <InfoIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() => {
-                                    setCustomerToDelete(customerName);
-                                    setIsDeleteModalOpen(true);
-                                  }}
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "error.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Eliminar cuentas"
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
+                                <Tooltip title="Ver información detallada">
+                                  <IconButton
+                                    onClick={() =>
+                                      handleOpenInfoModal(oldestSale)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "secondary.main",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <InfoIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Descargar PDF">
+                                  <IconButton
+                                    onClick={() =>
+                                      handleExportCustomerPDF(customerName)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                    disabled={isGeneratingPDF}
+                                  >
+                                    <DownloadIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Ver cheques">
+                                  <IconButton
+                                    onClick={() =>
+                                      handleOpenChequesModal(customerName)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <WalletIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Eliminar cuentas">
+                                  <IconButton
+                                    onClick={() => {
+                                      setCustomerToDelete(customerName);
+                                      setIsDeleteModalOpen(true);
+                                    }}
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "error.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
                             </TableCell>
                           )}
@@ -1735,7 +2684,13 @@ const CuentasCorrientesPage = () => {
                             py: 4,
                           }}
                         >
-                          <WalletIcon sx={{ fontSize: 64, mb: 2 }} />
+                          <WalletIcon
+                            sx={{
+                              marginBottom: 2,
+                              color: "#9CA3AF",
+                              fontSize: 64,
+                            }}
+                          />
                           <Typography>
                             No hay cuentas corrientes registradas.
                           </Typography>
@@ -1757,75 +2712,59 @@ const CuentasCorrientesPage = () => {
           )}
         </Box>
 
-        {/* Modales personalizados */}
-        <ChequesModal />
-        <InfoModal />
+        {/* Modales */}
+        <InfoModalComponent />
+        <ChequesModalComponent />
+        <PaymentModalComponent />
 
-        {/* Modales existentes (manteniendo tu estructura) */}
+        {/* Modal de eliminación */}
         <Modal
-          isOpen={isPaymentModalOpen}
-          onClose={() => setIsPaymentModalOpen(false)}
-          title={`Registrar Pago - ${
-            currentCreditSale?.customerName || "Cliente"
-          }`}
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Eliminar Cuentas Corrientes"
+          bgColor="bg-white dark:bg-gray-800"
           buttons={
-            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                onClick={handlePayment}
-                disabled={
-                  paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
-                  isFirstGreater(
-                    paymentMethods.reduce((sum, m) => sum + m.amount, 0),
-                    calculateRemainingBalance(currentCreditSale!)
-                  )
-                }
-              >
-                Registrar
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  setIsPaymentModalOpen(false);
-                  setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+                variant="text"
+                onClick={() => setIsDeleteModalOpen(false)}
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
                 }}
               >
                 Cancelar
               </Button>
-            </Box>
-          }
-        >
-          <PaymentModal />
-        </Modal>
-
-        <Modal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          title="Eliminar Cuentas corrientes"
-          buttons={
-            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
               <Button
                 variant="contained"
-                color="error"
                 onClick={handleDeleteCustomerCredits}
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
               >
-                Si
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setIsDeleteModalOpen(false)}
-              >
-                No
+                Si, Eliminar
               </Button>
             </Box>
           }
         >
-          <Box sx={{ spaceY: 6 }}>
-            <Typography>
-              ¿Está seguro que desea eliminar TODAS las cuentas corrientes de{" "}
-              {customerToDelete}?
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <DeleteIcon
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro que desea eliminar las cuentas corrientes?
             </Typography>
-            <Typography fontWeight="bold" color="error.main">
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              Todas las cuentas corrientes de {customerToDelete} serán
+              eliminadas permanentemente.
+            </Typography>
+
+            <Typography fontWeight="bold" color="error.main" sx={{ mt: 2 }}>
               Deuda pendiente:{" "}
               {calculateCustomerBalance(customerToDelete || "").toLocaleString(
                 "es-AR",
@@ -1838,12 +2777,11 @@ const CuentasCorrientesPage = () => {
           </Box>
         </Modal>
 
-        {/* Notification personalizada */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
-          onClose={() => setIsNotificationOpen(false)}
+          onClose={closeNotification}
         />
       </Box>
     </ProtectedRoute>

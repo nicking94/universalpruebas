@@ -38,41 +38,7 @@ import Pagination from "@/app/components/Pagination";
 import Select from "@/app/components/Select";
 import Button from "@/app/components/Button";
 import Modal from "@/app/components/Modal";
-
-// Constantes de configuración
-const CAJA_CONFIG = {
-  NOTIFICATION_DURATION: 2500,
-} as const;
-
-// Custom hooks para consistencia
-const useNotification = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [type, setType] = useState<"success" | "error" | "info">("success");
-
-  const showNotification = useCallback(
-    (
-      notificationMessage: string,
-      notificationType: "success" | "error" | "info"
-    ) => {
-      setType(notificationType);
-      setMessage(notificationMessage);
-      setIsOpen(true);
-
-      setTimeout(() => {
-        setIsOpen(false);
-      }, CAJA_CONFIG.NOTIFICATION_DURATION);
-    },
-    []
-  );
-
-  return {
-    isNotificationOpen: isOpen,
-    notificationMessage: message,
-    notificationType: type,
-    showNotification,
-  };
-};
+import { useNotification } from "@/app/hooks/useNotification";
 
 const CajaDiariaPage = () => {
   const { rubro } = useRubro();
@@ -86,6 +52,7 @@ const CajaDiariaPage = () => {
     notificationMessage,
     notificationType,
     showNotification,
+    closeNotification,
   } = useNotification();
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -1085,6 +1052,7 @@ const CajaDiariaPage = () => {
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
+          onClose={closeNotification}
         />
       </Box>
     </ProtectedRoute>

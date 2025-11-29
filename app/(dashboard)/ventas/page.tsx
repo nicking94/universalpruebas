@@ -65,6 +65,7 @@ import {
   UnitOption,
   Option,
   PaymentMethod,
+  Payment,
 } from "@/app/lib/types/types";
 import Select from "@/app/components/Select";
 import { AttachMoney, Settings } from "@mui/icons-material";
@@ -74,6 +75,8 @@ import Button from "@/app/components/Button";
 import Notification from "@/app/components/Notification";
 import Modal from "@/app/components/Modal";
 import Checkbox from "@/app/components/Checkbox";
+// Importar el hook useNotification
+import { useNotification } from "@/app/hooks/useNotification";
 
 type SelectOption = {
   value: number;
@@ -108,11 +111,14 @@ const VentasPage = () => {
 
   const router = useRouter();
   const ticketRef = useRef<PrintableTicketHandle>(null);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<
-    "success" | "error" | "info"
-  >("success");
+  // REEMPLAZADO: Usar el hook personalizado en lugar del estado local
+  const {
+    isNotificationOpen,
+    notificationMessage,
+    notificationType,
+    showNotification,
+    closeNotification,
+  } = useNotification();
   const { currentPage, itemsPerPage } = usePagination();
   const [selectedMonth, setSelectedMonth] = useState<number>(
     () => new Date().getMonth() + 1
@@ -243,14 +249,8 @@ const VentasPage = () => {
     }));
   };
 
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setNotificationType(type);
-    setNotificationMessage(message);
-    setIsNotificationOpen(true);
-  };
+  // ELIMINADO: La función showNotification local ya no es necesaria
+  // ya que usamos showNotification del hook personalizado
 
   const calculateFinalTotal = (
     products: Product[],
@@ -403,7 +403,7 @@ const VentasPage = () => {
         };
       });
     },
-    []
+    [showNotification]
   );
 
   const removePromotion = () => {
@@ -828,6 +828,7 @@ const VentasPage = () => {
         };
 
         if (isCredit && !customerId && customerName) {
+          // Cliente nuevo
           const newCustomer: Customer = {
             id: generateCustomerId(customerName),
             name: customerName.toUpperCase().trim(),
@@ -848,7 +849,18 @@ const VentasPage = () => {
           customerId = newCustomer.id;
           finalCustomerName = customerName.toUpperCase().trim();
           finalCustomerPhone = customerPhone;
+        } else if (isCredit && selectedCustomer) {
+          // ✅ CORRECCIÓN: Cliente existente seleccionado en venta con cheque
+          const customer = customers.find(
+            (c) => c.id === selectedCustomer.value
+          );
+          if (customer) {
+            customerId = customer.id;
+            finalCustomerName = customer.name;
+            finalCustomerPhone = customer.phone || "";
+          }
         } else if (selectedCustomer && !isCredit) {
+          // Cliente existente en venta normal
           const customer = customers.find(
             (c) => c.id === selectedCustomer.value
           );
@@ -871,23 +883,14 @@ const VentasPage = () => {
           manualAmount: newSale.manualAmount,
           manualProfitPercentage: newSale.manualProfitPercentage || 0,
           credit: isCredit,
-          customerName: isCredit
-            ? customerName.toUpperCase().trim()
-            : finalCustomerName,
-          customerPhone: isCredit ? customerPhone : finalCustomerPhone,
+          customerName: finalCustomerName, // ✅ Usar finalCustomerName que ahora incluye cliente existente
+          customerPhone: finalCustomerPhone,
           customerId: customerId || "",
           paid: !isCredit,
           concept: newSale.concept || "",
           appliedPromotion: selectedPromotions || undefined,
         };
 
-        // Registrar en caja diaria si no es crédito
-        if (!isCredit) {
-          await addIncomeToDailyCash(saleToSave);
-          setSelectedSale(saleToSave);
-        }
-
-        // Manejar cheques si es crédito con cheque
         if (isCredit && registerCheck) {
           saleToSave.chequeInfo = {
             amount: newSale.total,
@@ -895,11 +898,34 @@ const VentasPage = () => {
             date: new Date().toISOString(),
           };
 
+          // Crear el pago del cheque - CORREGIDO
+          const chequePayment: Payment = {
+            id: Date.now(),
+            saleId: saleToSave.id,
+            saleDate: saleToSave.date,
+            amount: newSale.total,
+            date: new Date().toISOString(),
+            method: "CHEQUE",
+            checkStatus: "pendiente",
+            customerName: finalCustomerName,
+            customerId: customerId,
+          };
+
+          // ✅ AÑADIR ESTO: Guardar el pago del cheque
+          await db.payments.add(chequePayment);
+          console.log("✅ Cheque guardado en payments:", chequePayment);
+
           await addIncomeToDailyCash({
             ...saleToSave,
             paymentMethods: [{ method: "CHEQUE", amount: newSale.total }],
-            customerName: customerName.toUpperCase().trim(),
+            customerName: finalCustomerName,
           });
+        }
+
+        // Registrar en caja diaria si no es crédito
+        if (!isCredit) {
+          await addIncomeToDailyCash(saleToSave);
+          setSelectedSale(saleToSave);
         }
 
         // Guardar la venta
@@ -3179,11 +3205,12 @@ const VentasPage = () => {
         <PromotionSelectionModal />
         <PaymentModal />
 
+        {/* REEMPLAZADO: Usar closeNotification del hook en lugar de la función local */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
-          onClose={() => setIsNotificationOpen(false)}
+          onClose={closeNotification}
         />
 
         {/* Modal de Datos del Negocio */}

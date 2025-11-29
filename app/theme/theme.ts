@@ -31,57 +31,57 @@ export const lightTheme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: colors.blue_m, // #268ed4
-      dark: colors.blue_b, // #2d78b9
-      light: colors.blue_l, // #85c1e9
+      main: colors.blue_m,
+      dark: colors.blue_b,
+      light: colors.blue_l,
     },
     secondary: {
-      main: colors.gray_m, // #4c4c4c
-      dark: colors.gray_b, // #2c2c2c
-      light: colors.gray_l, // #7c7c7c
+      main: colors.gray_m,
+      dark: colors.gray_b,
+      light: colors.gray_l,
     },
     success: {
-      main: colors.green_m, // #2ecc71
-      dark: colors.green_b, // #1e8449
-      light: colors.green_l, // #a3e4d7
+      main: colors.green_m,
+      dark: colors.green_b,
+      light: colors.green_l,
     },
     error: {
-      main: colors.red_m, // #e74c3c
-      dark: colors.red_b, // #c0392b
-      light: colors.red_l, // #f2dede
+      main: colors.red_m,
+      dark: colors.red_b,
+      light: colors.red_l,
     },
     warning: {
-      main: colors.yellow_m, // #f1c40f
-      dark: colors.yellow_b, // #f39c12
-      light: colors.yellow_l, // #fff9c4
+      main: colors.yellow_m,
+      dark: colors.yellow_b,
+      light: colors.yellow_l,
     },
     background: {
-      default: colors.gray_xxl, // #f3f4f6
+      default: colors.gray_xxl,
       paper: "#ffffff",
     },
     text: {
-      primary: colors.gray_b, // #2c2c2c
-      secondary: colors.gray_m, // #4c4c4c
+      primary: colors.gray_b,
+      secondary: colors.gray_m,
     },
     grey: {
-      50: colors.gray_xxl, // #f3f4f6
-      100: colors.gray_xl, // #d1d5db
-      500: colors.gray_l, // #7c7c7c
-      700: colors.gray_m, // #4c4c4c
-      900: colors.gray_b, // #2c2c2c
+      50: colors.gray_xxl,
+      100: colors.gray_xl,
+      500: colors.gray_l,
+      700: colors.gray_m,
+      900: colors.gray_b,
     },
 
     profit: {
-      main: "#8b5cf6", // Violeta vibrante
-      light: "#a78bfa", // Violeta claro
-      dark: "#7c3aed", // Violeta oscuro
+      main: "#8b5cf6",
+      light: "#a78bfa",
+      dark: "#7c3aed",
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
   },
   shape: {
-    borderRadius: 10, // Coherente con --radius: 0.625rem (10px)
+    borderRadius: 10,
   },
   components: {
     MuiCard: {
@@ -114,57 +114,57 @@ export const darkTheme = createTheme({
   palette: {
     mode: "dark",
     primary: {
-      main: colors.blue_m, // #268ed4
-      dark: colors.blue_b, // #2d78b9
-      light: colors.blue_l, // #85c1e9
+      main: colors.blue_m,
+      dark: colors.blue_b,
+      light: colors.blue_l,
     },
     secondary: {
-      main: colors.gray_xl, // #d1d5db
-      dark: colors.gray_l, // #7c7c7c
-      light: colors.gray_xxl, // #f3f4f6
+      main: colors.gray_xl,
+      dark: colors.gray_l,
+      light: colors.gray_xxl,
     },
     success: {
-      main: colors.green_m, // #2ecc71
-      dark: colors.green_b, // #1e8449
-      light: colors.green_l, // #a3e4d7
+      main: colors.green_m,
+      dark: colors.green_b,
+      light: colors.green_l,
     },
     error: {
-      main: colors.red_m, // #e74c3c
-      dark: colors.red_b, // #c0392b
-      light: colors.red_l, // #f2dede
+      main: colors.red_m,
+      dark: colors.red_b,
+      light: colors.red_l,
     },
     warning: {
-      main: colors.yellow_m, // #f1c40f
-      dark: colors.yellow_b, // #f39c12
-      light: colors.yellow_l, // #fff9c4
+      main: colors.yellow_m,
+      dark: colors.yellow_b,
+      light: colors.yellow_l,
     },
     background: {
-      default: colors.black, // #141414
-      paper: colors.gray_b, // #2c2c2c
+      default: colors.black,
+      paper: colors.gray_b,
     },
     text: {
-      primary: colors.gray_xxl, // #f3f4f6
-      secondary: colors.gray_xl, // #d1d5db
+      primary: colors.gray_xxl,
+      secondary: colors.gray_xl,
     },
     grey: {
-      50: colors.gray_b, // #2c2c2c
-      100: colors.gray_m, // #4c4c4c
-      500: colors.gray_l, // #7c7c7c
-      700: colors.gray_xl, // #d1d5db
-      900: colors.gray_xxl, // #f3f4f6
+      50: colors.gray_b,
+      100: colors.gray_m,
+      500: colors.gray_l,
+      700: colors.gray_xl,
+      900: colors.gray_xxl,
     },
 
     profit: {
-      main: "#a78bfa", // Violeta más claro para dark mode
-      light: "#c4b5fd", // Violeta aún más claro
-      dark: "#8b5cf6", // Violeta original
+      main: "#a78bfa",
+      light: "#c4b5fd",
+      dark: "#8b5cf6",
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
   },
   shape: {
-    borderRadius: 10, // Coherente con --radius: 0.625rem (10px)
+    borderRadius: 10,
   },
   components: {
     MuiCard: {
@@ -172,7 +172,7 @@ export const darkTheme = createTheme({
         root: {
           boxShadow:
             "0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3)",
-          backgroundColor: colors.gray_b, // #2c2c2c
+          backgroundColor: colors.gray_b,
         },
       },
     },
@@ -195,8 +195,8 @@ export const darkTheme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiTableCell-head": {
-            backgroundColor: colors.gray_m, // #4c4c4c
-            color: colors.gray_xxl, // #f3f4f6
+            backgroundColor: colors.gray_m,
+            color: colors.gray_xxl,
             fontWeight: "bold",
           },
         },
@@ -205,7 +205,6 @@ export const darkTheme = createTheme({
   },
 });
 
-// Extender la paleta de Material-UI para incluir el color profit
 declare module "@mui/material/styles" {
   interface Palette {
     profit: Palette["primary"];

@@ -58,6 +58,7 @@ import {
 } from "@mui/material";
 import Input from "@/app/components/Input";
 import Button from "@/app/components/Button";
+import { useNotification } from "@/app/hooks/useNotification";
 
 // Constantes de configuración
 const PRODUCT_CONFIG = {
@@ -206,35 +207,6 @@ const useProductValidation = () => {
   }, []);
 
   return { validateProduct };
-};
-
-const useNotification = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [type, setType] = useState<"success" | "error" | "info">("success");
-
-  const showNotification = useCallback(
-    (
-      notificationMessage: string,
-      notificationType: "success" | "error" | "info"
-    ) => {
-      setType(notificationType);
-      setMessage(notificationMessage);
-      setIsOpen(true);
-
-      setTimeout(() => {
-        setIsOpen(false);
-      }, PRODUCT_CONFIG.NOTIFICATION_DURATION);
-    },
-    []
-  );
-
-  return {
-    isNotificationOpen: isOpen,
-    notificationMessage: message,
-    notificationType: type,
-    showNotification,
-  };
 };
 
 // Componente para filas de productos
@@ -518,6 +490,7 @@ const ProductsPage = () => {
     notificationMessage,
     notificationType,
     showNotification,
+    closeNotification,
   } = useNotification();
 
   // Estados
@@ -1911,17 +1884,6 @@ const ProductsPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                color="error"
-                onClick={handleConfirmDeleteSize}
-                sx={{
-                  bgcolor: "error.main",
-                  "&:hover": { bgcolor: "error.dark" },
-                }}
-              >
-                Confirmar
-              </Button>
-              <Button
                 variant="text"
                 onClick={() => setIsSizeDeleteModalOpen(false)}
                 sx={{
@@ -1934,6 +1896,17 @@ const ProductsPage = () => {
                 }}
               >
                 Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={handleConfirmDeleteSize}
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
+              >
+                Confirmar
               </Button>
             </Box>
           }
@@ -2239,18 +2212,6 @@ const ProductsPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                onClick={handleConfirmAddProduct}
-                disabled={isSaveDisabled}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                  "&:disabled": { bgcolor: "action.disabled" },
-                }}
-              >
-                {editingProduct ? "Actualizar" : "Guardar"}
-              </Button>
-              <Button
                 variant="text"
                 onClick={handleCloseModal}
                 sx={{
@@ -2263,6 +2224,18 @@ const ProductsPage = () => {
                 }}
               >
                 Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmAddProduct}
+                disabled={isSaveDisabled}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  "&:disabled": { bgcolor: "action.disabled" },
+                }}
+              >
+                {editingProduct ? "Actualizar" : "Guardar"}
               </Button>
             </Box>
           }
@@ -2727,25 +2700,8 @@ const ProductsPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                color="error"
-                onClick={(e) => {
-                  e?.preventDefault();
-                  handleConfirmDeleteCategory();
-                }}
-                sx={{
-                  bgcolor: "error.main",
-                  "&:hover": { bgcolor: "error.dark" },
-                }}
-              >
-                Confirmar
-              </Button>
-              <Button
                 variant="text"
-                onClick={(e) => {
-                  e?.preventDefault();
-                  setIsCategoryDeleteModalOpen(false);
-                }}
+                onClick={() => setIsCategoryDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
                   borderColor: "text.secondary",
@@ -2757,24 +2713,39 @@ const ProductsPage = () => {
               >
                 Cancelar
               </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDeleteCategory}
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
+              >
+                Sí, eliminar
+              </Button>
             </Box>
           }
         >
-          <div className="space-y-4">
-            <p>
-              ¿Está seguro que desea eliminar la categoría{" "}
-              <span className="font-bold">{categoryToDelete?.name}</span>?
-            </p>
-
-            {categoryToDelete && (
-              <div className="bg-yellow-50 dark:bg-gray_b p-3 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  <Info className="inline mr-2" fontSize="small" />
-                  Esta acción afectará a todos los productos con esta categoría.
-                </p>
-              </div>
-            )}
-          </div>
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro que desea eliminar la categoría?
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              {categoryToDelete?.name} será eliminada permanentemente.
+            </Typography>
+            <Box className="bg-yellow-50 dark:bg-gray_b p-3 rounded-lg border border-yellow-200">
+              <Typography
+                variant="body2"
+                className="text-yellow-800 dark:text-yellow-200"
+              >
+                <Warning className="inline mr-2" fontSize="small" />
+                Esta acción afectará a todos los productos con esta categoría.
+              </Typography>
+            </Box>
+          </Box>
         </Modal>
 
         <Modal
@@ -2782,20 +2753,8 @@ const ProductsPage = () => {
           onClose={() => setIsConfirmModalOpen(false)}
           title="Eliminar Producto"
           bgColor="bg-white dark:bg-gray_b"
-          onConfirm={handleConfirmDelete}
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={handleConfirmDelete}
-                sx={{
-                  bgcolor: "error.main",
-                  "&:hover": { bgcolor: "error.dark" },
-                }}
-              >
-                Sí
-              </Button>
               <Button
                 variant="text"
                 onClick={() => setIsConfirmModalOpen(false)}
@@ -2808,12 +2767,32 @@ const ProductsPage = () => {
                   },
                 }}
               >
-                No
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDelete}
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
+              >
+                Sí, eliminar
               </Button>
             </Box>
           }
         >
-          <p>¿Desea eliminar el producto {productToDelete?.name}?</p>
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro que desea eliminar el producto?
+            </Typography>
+            <Typography color="text.secondary">
+              {productToDelete?.name} será eliminado permanentemente.
+            </Typography>
+          </Box>
         </Modal>
 
         <Modal
@@ -2935,6 +2914,7 @@ const ProductsPage = () => {
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
+          onClose={closeNotification}
         />
       </Box>
     </ProtectedRoute>

@@ -21,27 +21,31 @@ import {
   Chip,
   IconButton,
   FormControl,
+  useTheme,
 } from "@mui/material";
 import Modal from "@/app/components/Modal";
 import Input from "@/app/components/Input";
 import Select from "@/app/components/Select";
 import Button from "@/app/components/Button";
 import Notification from "@/app/components/Notification";
+// Importar el hook useNotification
+import { useNotification } from "@/app/hooks/useNotification";
 
 // Importar iconos de Material UI
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  Email as EmailIcon,
-  Badge as BadgeIcon,
-  Groups as GroupsIcon,
-  Assignment as AssignmentIcon,
+  Add,
+  Edit,
+  Delete,
+  Visibility,
+  Email,
+  Badge,
+  Groups,
+  Assignment,
 } from "@mui/icons-material";
 
 const ClientesPage = () => {
   const { rubro } = useRubro();
+  const theme = useTheme();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,11 +75,14 @@ const ClientesPage = () => {
   const [isDeleteBudgetModalOpen, setIsDeleteBudgetModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<
-    "success" | "error" | "info"
-  >("success");
+  // REEMPLAZADO: Usar el hook personalizado en lugar del estado local
+  const {
+    isNotificationOpen,
+    notificationMessage,
+    notificationType,
+    showNotification,
+    closeNotification,
+  } = useNotification();
   const { currentPage, itemsPerPage, setCurrentPage } = usePagination();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
@@ -83,6 +90,12 @@ const ClientesPage = () => {
   const [customerBalances, setCustomerBalances] = useState<
     Record<string, number>
   >({});
+
+  // Función para obtener colores según el tema (consistente con otras páginas)
+  const getTableHeaderStyle = () => ({
+    bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
+    color: "primary.contrastText",
+  });
 
   // Opciones para el select de estado
   const statusOptions = [
@@ -184,7 +197,9 @@ const ClientesPage = () => {
       const searched = filtered.filter(
         (customer) =>
           customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+          customer.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.cuitDni?.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
       setCustomers(sortedCustomers);
@@ -201,14 +216,8 @@ const ClientesPage = () => {
     indexOfLastCustomer
   );
 
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setIsNotificationOpen(true);
-  };
+  // ELIMINADO: La función showNotification local ya no es necesaria
+  // ya que usamos showNotification del hook personalizado
 
   const handleAddCustomer = async () => {
     if (!newCustomer.name.trim()) {
@@ -474,22 +483,35 @@ const ClientesPage = () => {
           ? "Detalles del Presupuesto"
           : `Presupuestos de ${selectedCustomer?.name || ""}`
       }
+      bgColor="bg-white dark:bg-gray_b"
       buttons={
-        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
           {selectedBudget ? (
             <>
               <Button
                 variant="contained"
                 onClick={() => setSelectedBudget(null)}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
               >
                 Volver
               </Button>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => {
                   setIsBudgetsModalOpen(false);
                   setSelectedCustomer(null);
                   setSelectedBudget(null);
+                }}
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
                 }}
               >
                 Cerrar
@@ -497,11 +519,19 @@ const ClientesPage = () => {
             </>
           ) : (
             <Button
-              variant="outlined"
+              variant="text"
               onClick={() => {
                 setIsBudgetsModalOpen(false);
                 setSelectedCustomer(null);
                 setSelectedBudget(null);
+              }}
+              sx={{
+                color: "text.secondary",
+                borderColor: "text.secondary",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                  borderColor: "text.primary",
+                },
               }}
             >
               Cerrar
@@ -697,7 +727,7 @@ const ClientesPage = () => {
                           }}
                           title="Ver detalles"
                         >
-                          <VisibilityIcon fontSize="small" />
+                          <Visibility fontSize="small" />
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -707,7 +737,7 @@ const ClientesPage = () => {
             </TableContainer>
           ) : (
             <Box sx={{ textAlign: "center", py: 4 }}>
-              <AssignmentIcon sx={{ fontSize: 64, color: "grey.400", mb: 2 }} />
+              <Assignment sx={{ fontSize: 64, color: "grey.400", mb: 2 }} />
               <Typography color="text.secondary">
                 No hay presupuestos para este cliente
               </Typography>
@@ -727,13 +757,22 @@ const ClientesPage = () => {
         setCustomerSales([]);
       }}
       title={`Historial de Compras - ${selectedCustomer?.name || ""}`}
+      bgColor="bg-white dark:bg-gray_b"
       buttons={
-        <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
           <Button
-            variant="outlined"
+            variant="text"
             onClick={() => {
               setIsSalesModalOpen(false);
               setSelectedCustomer(null);
+            }}
+            sx={{
+              color: "text.secondary",
+              borderColor: "text.secondary",
+              "&:hover": {
+                backgroundColor: "action.hover",
+                borderColor: "text.primary",
+              },
             }}
           >
             Cerrar
@@ -797,7 +836,7 @@ const ClientesPage = () => {
           </TableContainer>
         ) : (
           <Box sx={{ textAlign: "center", py: 4 }}>
-            <AssignmentIcon sx={{ fontSize: 48, color: "grey.400", mb: 2 }} />
+            <Assignment sx={{ fontSize: 48, color: "grey.400", mb: 2 }} />
             <Typography color="text.secondary">
               No hay compras registradas para este cliente
             </Typography>
@@ -807,11 +846,115 @@ const ClientesPage = () => {
     </Modal>
   );
 
+  // Modal de confirmación para eliminar presupuesto - CORREGIDO
+  const DeleteBudgetModal = () => (
+    <Modal
+      isOpen={isDeleteBudgetModalOpen}
+      onClose={() => setIsDeleteBudgetModalOpen(false)}
+      title="Eliminar Presupuesto"
+      bgColor="bg-white dark:bg-gray_b"
+      buttons={
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+          <Button
+            variant="text"
+            onClick={() => setIsDeleteBudgetModalOpen(false)}
+            sx={{
+              color: "text.secondary",
+              borderColor: "text.secondary",
+              "&:hover": {
+                backgroundColor: "action.hover",
+                borderColor: "text.primary",
+              },
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDeleteBudget}
+            sx={{
+              bgcolor: "error.main",
+              "&:hover": { bgcolor: "error.dark" },
+            }}
+          >
+            Eliminar
+          </Button>
+        </Box>
+      }
+    >
+      <Box sx={{ textAlign: "center", py: 2 }}>
+        <Delete sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }} />
+        <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+          ¿Está seguro que desea eliminar el presupuesto?
+        </Typography>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          {budgetToDelete?.date &&
+            `Del ${new Date(budgetToDelete.date).toLocaleDateString("es-AR")}`}
+          {budgetToDelete && (
+            <Typography sx={{ mt: 1, fontWeight: "semibold" }}>
+              Total: ${budgetToDelete.total.toFixed(2)}
+            </Typography>
+          )}
+        </Typography>
+      </Box>
+    </Modal>
+  );
+
+  // Modal de confirmación para eliminar cliente - CORREGIDO
+  const DeleteCustomerModal = () => (
+    <Modal
+      isOpen={isDeleteModalOpen}
+      onClose={() => setIsDeleteModalOpen(false)}
+      title="Eliminar Cliente"
+      bgColor="bg-white dark:bg-gray_b"
+      buttons={
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+          <Button
+            variant="text"
+            onClick={() => setIsDeleteModalOpen(false)}
+            sx={{
+              color: "text.secondary",
+              borderColor: "text.secondary",
+              "&:hover": {
+                backgroundColor: "action.hover",
+                borderColor: "text.primary",
+              },
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDelete}
+            sx={{
+              bgcolor: "error.main",
+              "&:hover": { bgcolor: "error.dark" },
+            }}
+          >
+            Si, Eliminar
+          </Button>
+        </Box>
+      }
+    >
+      <Box sx={{ textAlign: "center", py: 2 }}>
+        <Delete sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }} />
+        <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+          ¿Está seguro que desea eliminar el cliente?
+        </Typography>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          {customerToDelete?.name} será eliminado permanentemente.
+        </Typography>
+      </Box>
+    </Modal>
+  );
+
   return (
     <ProtectedRoute>
       <Box
         sx={{
-          px: 2,
+          px: 4,
           py: 2,
           height: "calc(100vh - 80px)",
           display: "flex",
@@ -822,20 +965,44 @@ const ClientesPage = () => {
           Clientes
         </Typography>
 
-        {/* Header con búsqueda y acciones */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-          <Box sx={{ width: "100%", maxWidth: "400px" }}>
+        {/* Header con búsqueda y acciones - Estilo consistente */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2,
+            width: "100%",
+          }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: "400px",
+            }}
+          >
             <SearchBar onSearch={handleSearch} />
           </Box>
-          {rubro !== "Todos los rubros" && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              width: "100%",
+              visibility: rubro === "Todos los rubros" ? "hidden" : "visible",
+            }}
+          >
             <Button
               variant="contained"
-              startIcon={<AddIcon />}
+              startIcon={<Add />}
               onClick={() => setIsModalOpen(true)}
+              sx={{
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
             >
               Nuevo Cliente
             </Button>
-          )}
+          </Box>
         </Box>
 
         {/* Tabla de clientes */}
@@ -850,63 +1017,26 @@ const ClientesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "59vh", flex: 1 }}
+              sx={{ maxHeight: "calc(100vh - 350px)", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                    >
-                      Nombre
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()}>Nombre</TableCell>
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Contacto
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Estado
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Saldo Pendiente
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                      }}
-                      align="center"
-                    >
+                    <TableCell sx={getTableHeaderStyle()} align="center">
                       Fecha de Registro
                     </TableCell>
                     {rubro !== "Todos los rubros" && (
-                      <TableCell
-                        sx={{
-                          bgcolor: "primary.main",
-                          color: "primary.contrastText",
-                        }}
-                        align="center"
-                      >
+                      <TableCell sx={getTableHeaderStyle()} align="center">
                         Acciones
                       </TableCell>
                     )}
@@ -920,7 +1050,15 @@ const ClientesPage = () => {
                       const hasPendingBalance = pendingBalance > 0;
 
                       return (
-                        <TableRow key={customer.id} hover>
+                        <TableRow
+                          key={customer.id}
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            "&:hover": { backgroundColor: "action.hover" },
+                            transition: "all 0.3s",
+                          }}
+                        >
                           <TableCell>
                             <Box>
                               <Typography fontWeight="bold">
@@ -934,7 +1072,7 @@ const ClientesPage = () => {
                                     mt: 0.5,
                                   }}
                                 >
-                                  <BadgeIcon sx={{ fontSize: 12, mr: 0.5 }} />
+                                  <Badge sx={{ fontSize: 12, mr: 0.5 }} />
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
@@ -964,7 +1102,7 @@ const ClientesPage = () => {
                                     justifyContent: "center",
                                   }}
                                 >
-                                  <EmailIcon sx={{ fontSize: 12, mr: 0.5 }} />
+                                  <Email sx={{ fontSize: 12, mr: 0.5 }} />
                                   <Typography variant="caption">
                                     {customer.email}
                                   </Typography>
@@ -1025,7 +1163,7 @@ const ClientesPage = () => {
                                   size="small"
                                   sx={{
                                     borderRadius: "4px",
-                                    color: "text.gray_b",
+                                    color: "text.secondary",
                                     "&:hover": {
                                       backgroundColor: "primary.main",
                                       color: "white",
@@ -1033,7 +1171,7 @@ const ClientesPage = () => {
                                   }}
                                   title="Ver presupuestos"
                                 >
-                                  <AssignmentIcon fontSize="small" />
+                                  <Assignment fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   onClick={() =>
@@ -1042,7 +1180,7 @@ const ClientesPage = () => {
                                   size="small"
                                   sx={{
                                     borderRadius: "4px",
-                                    color: "text.gray_b",
+                                    color: "text.secondary",
                                     "&:hover": {
                                       backgroundColor: "primary.main",
                                       color: "white",
@@ -1050,14 +1188,14 @@ const ClientesPage = () => {
                                   }}
                                   title="Ver historial de compras"
                                 >
-                                  <VisibilityIcon fontSize="small" />
+                                  <Visibility fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   onClick={() => handleEditClick(customer)}
                                   size="small"
                                   sx={{
                                     borderRadius: "4px",
-                                    color: "text.gray_b",
+                                    color: "text.secondary",
                                     "&:hover": {
                                       backgroundColor: "primary.main",
                                       color: "white",
@@ -1065,14 +1203,14 @@ const ClientesPage = () => {
                                   }}
                                   title="Editar cliente"
                                 >
-                                  <EditIcon fontSize="small" />
+                                  <Edit fontSize="small" />
                                 </IconButton>
                                 <IconButton
                                   onClick={() => handleDeleteClick(customer)}
                                   size="small"
                                   sx={{
                                     borderRadius: "4px",
-                                    color: "text.gray_b",
+                                    color: "text.secondary",
                                     "&:hover": {
                                       backgroundColor: "error.main",
                                       color: "white",
@@ -1081,7 +1219,7 @@ const ClientesPage = () => {
                                   title="Eliminar cliente"
                                   disabled={hasPendingBalance}
                                 >
-                                  <DeleteIcon fontSize="small" />
+                                  <Delete fontSize="small" />
                                 </IconButton>
                               </Box>
                             </TableCell>
@@ -1104,7 +1242,7 @@ const ClientesPage = () => {
                             py: 4,
                           }}
                         >
-                          <GroupsIcon
+                          <Groups
                             sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                           />
                           <Typography>
@@ -1130,7 +1268,7 @@ const ClientesPage = () => {
           )}
         </Box>
 
-        {/* Modal para agregar/editar cliente */}
+        {/* Modal para agregar/editar cliente - Botones corregidos */}
         <Modal
           isOpen={isModalOpen}
           onClose={() => {
@@ -1147,18 +1285,11 @@ const ClientesPage = () => {
             });
           }}
           title={editingCustomer ? "Editar Cliente" : "Nuevo Cliente"}
+          bgColor="bg-white dark:bg-gray_b"
           buttons={
-            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                onClick={
-                  editingCustomer ? handleUpdateCustomer : handleAddCustomer
-                }
-              >
-                {editingCustomer ? "Actualizar" : "Agregar"}
-              </Button>
-              <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingCustomer(null);
@@ -1172,8 +1303,28 @@ const ClientesPage = () => {
                     pendingBalance: 0,
                   });
                 }}
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
+                }}
               >
                 Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={
+                  editingCustomer ? handleUpdateCustomer : handleAddCustomer
+                }
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                {editingCustomer ? "Actualizar" : "Agregar"}
               </Button>
             </Box>
           }
@@ -1252,79 +1403,20 @@ const ClientesPage = () => {
           </Box>
         </Modal>
 
-        {/* Modales de confirmación */}
-        <Modal
-          isOpen={isDeleteBudgetModalOpen}
-          onClose={() => setIsDeleteBudgetModalOpen(false)}
-          title="Confirmar Eliminación de Presupuesto"
-          buttons={
-            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={handleConfirmDeleteBudget}
-              >
-                Eliminar
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setIsDeleteBudgetModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-            </Box>
-          }
-        >
-          <Typography>
-            ¿Está seguro que desea eliminar el presupuesto del{" "}
-            {budgetToDelete?.date &&
-              new Date(budgetToDelete.date).toLocaleDateString("es-AR")}
-            ?
-          </Typography>
-          {budgetToDelete && (
-            <Typography sx={{ mt: 1, fontWeight: "semibold" }}>
-              Total: ${budgetToDelete.total.toFixed(2)}
-            </Typography>
-          )}
-        </Modal>
-
-        <Modal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          title="Confirmar Eliminación"
-          buttons={
-            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={handleConfirmDelete}
-              >
-                Eliminar
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setIsDeleteModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-            </Box>
-          }
-        >
-          <Typography>
-            ¿Está seguro que desea eliminar al cliente {customerToDelete?.name}?
-          </Typography>
-        </Modal>
+        {/* Modales de confirmación - CORREGIDOS para ser consistentes */}
+        <DeleteBudgetModal />
+        <DeleteCustomerModal />
 
         {/* Modales de Material-UI */}
         <BudgetsModal />
         <SalesModal />
 
-        {/* Notification personalizada */}
+        {/* REEMPLAZADO: Usar closeNotification del hook en lugar de la función local */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
-          onClose={() => setIsNotificationOpen(false)}
+          onClose={closeNotification}
         />
       </Box>
     </ProtectedRoute>
