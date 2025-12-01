@@ -119,8 +119,8 @@ export const darkTheme = createTheme({
       light: colors.blue_l,
     },
     secondary: {
-      main: colors.gray_xl,
-      dark: colors.gray_l,
+      main: colors.gray_m,
+      dark: colors.gray_b,
       light: colors.gray_xxl,
     },
     success: {

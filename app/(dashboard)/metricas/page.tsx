@@ -163,19 +163,6 @@ const MetricCard = ({
     }
   };
 
-  const getPeriodColor = () => {
-    switch (period) {
-      case "week":
-        return theme.palette.info.main;
-      case "month":
-        return theme.palette.warning.main;
-      case "year":
-        return theme.palette.secondary.main;
-      default:
-        return theme.palette.primary.main;
-    }
-  };
-
   return (
     <Card
       elevation={2}
@@ -199,7 +186,7 @@ const MetricCard = ({
           left: 0,
           right: 0,
           height: 4,
-          background: `linear-gradient(90deg, ${getColor()}, ${getPeriodColor()})`,
+          background: `${getColor()}`,
         },
       }}
     >
@@ -242,9 +229,9 @@ const MetricCard = ({
               variant="outlined"
               sx={{
                 fontSize: "0.7rem",
-                borderColor: getPeriodColor(),
-                color: getPeriodColor(),
-                backgroundColor: alpha(getPeriodColor(), 0.1),
+
+                color: theme.palette.background.paper,
+                backgroundColor: theme.palette.primary.main,
               }}
             />
           </Stack>
@@ -273,7 +260,6 @@ const MetricCard = ({
   );
 };
 
-// Componente para el ranking de productos - Estilo coherente
 interface ProductRankingProps {
   title: string;
   products: Array<{
@@ -299,7 +285,6 @@ const ProductRanking = ({
   onUnitChange,
   unidadLegible,
   rubro,
-  period,
 }: ProductRankingProps) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -328,19 +313,6 @@ const ProductRanking = ({
     { value: "W", label: "Watts" },
   ];
 
-  const getPeriodColor = () => {
-    switch (period) {
-      case "week":
-        return theme.palette.info.main;
-      case "month":
-        return theme.palette.warning.main;
-      case "year":
-        return theme.palette.secondary.main;
-      default:
-        return theme.palette.primary.main;
-    }
-  };
-
   return (
     <Card
       elevation={2}
@@ -350,7 +322,7 @@ const ProductRanking = ({
           transform: "translateY(-2px)",
           boxShadow: theme.shadows[4],
         },
-        height: "100%", // ✅ Ocupa toda la altura disponible
+        height: "100%",
         display: "flex",
         flexDirection: "column",
       }}
@@ -361,26 +333,39 @@ const ProductRanking = ({
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          minHeight: 0, // ✅ Permite scroll interno
+          minHeight: 0,
         }}
       >
         <Stack
-          direction={isMobile ? "column" : "row"}
-          alignItems={isMobile ? "flex-start" : "center"}
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
           spacing={2}
           sx={{
-            background: `linear-gradient(135deg, ${getPeriodColor()}, ${
-              theme.palette.primary.main
-            })`,
+            background: theme.palette.primary.main,
             color: "white",
             p: 2,
-            flexShrink: 0, // ✅ No se reduce
+            flexShrink: 0,
+            flexWrap: isMobile ? "wrap" : "nowrap",
           }}
         >
-          <Typography variant="h6" sx={{ flex: 1, fontWeight: "bold" }}>
+          <Typography
+            variant="h6"
+            sx={{
+              flex: 1,
+              fontWeight: "bold",
+              minWidth: 0,
+              mr: isMobile ? 0 : 2,
+              mb: isMobile ? 1 : 0,
+              textAlign: isMobile ? "center" : "left",
+              width: isMobile ? "100%" : "auto",
+            }}
+          >
             {title}
             {unit !== "General" && ` por ${unidadLegible[unit]}`}
           </Typography>
+
+          {/* Selector siempre alineado a la derecha */}
           <Select
             label="Unidad"
             options={unitOptions}
@@ -392,7 +377,9 @@ const ProductRanking = ({
             sx={{
               backgroundColor: "white",
               borderRadius: 1,
-              minWidth: 120,
+              minWidth: isMobile ? "100%" : 120, // Ancho completo en móvil
+              maxWidth: isMobile ? "100%" : 150, // Ancho máximo en móvil
+              alignSelf: isMobile ? "stretch" : "auto", // Estirar en móvil
             }}
           />
         </Stack>
@@ -402,7 +389,7 @@ const ProductRanking = ({
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: "auto", // ✅ Scroll interno
+            overflow: "auto",
             px: 2,
             pb: 2,
           }}
@@ -428,7 +415,7 @@ const ProductRanking = ({
                         width: 32,
                         height: 32,
                         borderRadius: "50%",
-                        backgroundColor: getPeriodColor(),
+                        backgroundColor: theme.palette.primary.main,
                         color: "white",
                         display: "flex",
                         alignItems: "center",

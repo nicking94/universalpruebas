@@ -9,47 +9,100 @@ import {
   SelectProps as MuiSelectProps,
   SelectChangeEvent,
   useTheme,
+  IconButton,
+  Box,
+  ListItemText,
+  ListItemIcon,
 } from "@mui/material";
+import { Delete } from "@mui/icons-material";
 
-export interface SelectOption<T = string | number> {
+// Interfaz genérica para metadata con tipos específicos
+export interface SelectOptionMetadata {
+  id?: string | number;
+  [key: string]: unknown; // Permite propiedades adicionales sin usar 'any'
+}
+
+export interface SelectOption<T = string | number, M = SelectOptionMetadata> {
   value: T;
   label: string;
   disabled?: boolean;
+  deletable?: boolean;
+  metadata?: M; // Metadata tipada
 }
 
-export interface SelectProps<T = string | number>
+export interface SelectProps<T = string | number, M = SelectOptionMetadata>
   extends Omit<MuiSelectProps, "onChange" | "value"> {
   label: string;
-  options: SelectOption<T>[];
+  options: SelectOption<T, M>[];
   value: T;
   onChange: (value: T) => void;
+  onDeleteOption?: (option: SelectOption<T, M>) => void;
   helperText?: string;
   error?: boolean;
   fullWidth?: boolean;
   size?: "small" | "medium";
   variant?: "outlined" | "filled" | "standard";
+  showDeleteButton?: boolean;
+  getOptionId?: (option: SelectOption<T, M>) => string | number | undefined; // Función para obtener ID
 }
 
-function Select<T = string | number>({
+function Select<T = string | number, M = SelectOptionMetadata>({
   label,
   options,
   value,
   onChange,
+  onDeleteOption,
   helperText,
   error = false,
   fullWidth = true,
   size = "small",
   variant = "outlined",
+  showDeleteButton = false,
+  getOptionId,
   sx,
   ...props
-}: SelectProps<T>): React.JSX.Element {
+}: SelectProps<T, M>): React.JSX.Element {
   const theme = useTheme();
 
   const handleChange = (event: SelectChangeEvent<unknown>) => {
     onChange(event.target.value as T);
   };
 
+  const handleDelete = (
+    event: React.MouseEvent,
+    option: SelectOption<T, M>
+  ) => {
+    event.stopPropagation();
+    if (onDeleteOption) {
+      onDeleteOption(option);
+    }
+  };
+
   const labelId = `${label}-label`;
+
+  const shouldShowDeleteButton = (option: SelectOption<T, M>) => {
+    return showDeleteButton && onDeleteOption && option.deletable !== false;
+  };
+
+  // Función para generar una key única para cada opción
+  const getOptionKey = (option: SelectOption<T, M>) => {
+    if (getOptionId) {
+      const id = getOptionId(option);
+      if (id !== undefined) return `${id}`;
+    }
+
+    // Si la opción tiene metadata con ID, úsalo
+    if (
+      option.metadata &&
+      typeof option.metadata === "object" &&
+      "id" in option.metadata
+    ) {
+      return `${option.metadata.id}`;
+    }
+
+    // Si no, usa el valor como fallback
+    return String(option.value);
+  };
 
   return (
     <FormControl
@@ -117,14 +170,48 @@ function Select<T = string | number>({
       >
         {options.map((option) => (
           <MenuItem
-            key={String(option.value)}
+            key={getOptionKey(option)}
             value={option.value as string | number}
             disabled={option.disabled}
             sx={{
               color: theme.palette.text.primary,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingRight: shouldShowDeleteButton(option) ? "8px" : "16px",
+              "& .delete-button": {
+                opacity: 0,
+                transition: "opacity 0.2s",
+              },
+              "&:hover .delete-button": {
+                opacity: 1,
+              },
             }}
           >
-            {option.label}
+            <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
+              <ListItemText primary={option.label} />
+            </Box>
+
+            {shouldShowDeleteButton(option) && (
+              <ListItemIcon sx={{ minWidth: "auto", marginLeft: 1 }}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => handleDelete(e, option)}
+                  className="delete-button"
+                  sx={{
+                    color: theme.palette.error.main,
+                    "&:hover": {
+                      backgroundColor: theme.palette.error.light,
+                      color: theme.palette.error.dark,
+                    },
+                    padding: "4px",
+                  }}
+                  title="Eliminar"
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </ListItemIcon>
+            )}
           </MenuItem>
         ))}
       </MuiSelect>

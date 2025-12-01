@@ -172,8 +172,9 @@ const Input: React.FC<InputProps> = ({
         transform: "translate(14px, -6px) scale(0.75)",
       },
     },
+
     "& .MuiOutlinedInput-input": {
-      paddingLeft: icon ? "8px" : undefined,
+      paddingLeft: icon ? "4px" : undefined,
       color: theme.palette.text.primary,
       "&::placeholder": {
         color: theme.palette.text.secondary,

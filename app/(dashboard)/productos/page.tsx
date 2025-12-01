@@ -122,7 +122,78 @@ const seasonOptions = [
   { value: "verano", label: "Verano" },
 ];
 
-// Custom hooks
+// Custom hooks optimizados
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+const getDefaultProduct = (rubro: Rubro): Product => ({
+  id: Date.now(),
+  name: "",
+  stock: 0,
+  costPrice: 0,
+  price: 0,
+  hasIvaIncluded: true,
+  expiration: "",
+  quantity: 0,
+  unit: PRODUCT_CONFIG.DEFAULT_UNIT,
+  barcode: "",
+  category: "",
+  brand: "",
+  color: "",
+  size: "",
+  rubro: rubro,
+  lot: "",
+  location: "",
+  customCategory: "",
+  customCategories: [],
+  setMinStock: false,
+  minStock: 0,
+});
+
+const useProductForm = (rubro: Rubro, initialProduct?: Product) => {
+  const [formData, setFormData] = useState<Product>(
+    () => initialProduct || getDefaultProduct(rubro)
+  );
+
+  const updateField = useCallback(
+    (
+      field: keyof Product,
+      value:
+        | string
+        | number
+        | boolean
+        | { name: string; rubro: Rubro }[]
+        | Product["unit"]
+    ) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const resetForm = useCallback(() => {
+    setFormData(getDefaultProduct(rubro));
+  }, [rubro]);
+
+  const setForm = useCallback((product: Product) => {
+    setFormData(product);
+  }, []);
+
+  return { formData, updateField, resetForm, setForm };
+};
+
 const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -209,7 +280,186 @@ const useProductValidation = () => {
   return { validateProduct };
 };
 
-// Componente para filas de productos
+const useSortedProducts = (
+  products: Product[],
+  filters: UnifiedFilter[],
+  sortConfig: { field: keyof Product; direction: "asc" | "desc" },
+  rubro: Rubro,
+  searchQuery: string
+) => {
+  return useMemo(() => {
+    let filtered = [...products];
+
+    if (rubro !== "Todos los rubros") {
+      filtered = filtered.filter((product) => product.rubro === rubro);
+    }
+
+    if (searchQuery) {
+      filtered = filtered.filter((product) => {
+        const productName = getDisplayProductName(
+          product,
+          rubro,
+          false
+        ).toLowerCase();
+        return productName.includes(searchQuery.toLowerCase());
+      });
+    }
+
+    if (filters.length > 0) {
+      filtered = filtered.filter((product) => {
+        return filters.every((filter) => {
+          const fieldValue =
+            filter.field === "customCategories"
+              ? product.customCategories?.[0]?.name
+              : product[filter.field as keyof Product];
+
+          if (fieldValue === undefined || fieldValue === null) return false;
+          return (
+            String(fieldValue).toLowerCase() ===
+            String(filter.value).toLowerCase()
+          );
+        });
+      });
+    }
+
+    filtered.sort((a, b) => {
+      const getExpirationStatus = (product: Product) => {
+        if (!product.expiration) return 3; // Sin vencimiento - última prioridad
+
+        const today = startOfDay(new Date());
+        const expDate = startOfDay(parseISO(product.expiration));
+        const diffDays = differenceInDays(expDate, today);
+
+        if (diffDays < 0) return 0; // Vencido - máxima prioridad
+        if (diffDays === 0) return 1; // Vence hoy
+        if (diffDays <= 7) return 2; // Por vencer (7 días)
+        return 3; // Normal
+      };
+
+      const statusA = getExpirationStatus(a);
+      const statusB = getExpirationStatus(b);
+
+      if (statusA !== statusB) {
+        return statusA - statusB;
+      }
+
+      let compareResult = 0;
+      const field = sortConfig.field;
+      const direction = sortConfig.direction;
+
+      switch (field) {
+        case "name":
+          compareResult = a.name.localeCompare(b.name);
+          break;
+        case "price":
+          compareResult = Number(a.price) - Number(b.price);
+          break;
+        case "stock":
+          compareResult = a.stock - b.stock;
+          break;
+        case "expiration":
+          if (!a.expiration && !b.expiration) compareResult = 0;
+          else if (!a.expiration) compareResult = 1;
+          else if (!b.expiration) compareResult = -1;
+          else {
+            const dateA = parseISO(a.expiration);
+            const dateB = parseISO(b.expiration);
+            compareResult = dateA.getTime() - dateB.getTime();
+          }
+          break;
+        default:
+          const valueA = String(a[field] || "");
+          const valueB = String(b[field] || "");
+          compareResult = valueA.localeCompare(valueB);
+      }
+
+      return direction === "asc" ? compareResult : -compareResult;
+    });
+
+    return filtered;
+  }, [products, rubro, searchQuery, filters, sortConfig]);
+};
+
+const getRowStyles = (expirationStatus: string, hasLowStock: boolean) => {
+  const baseStyles = {
+    border: "1px solid",
+    borderColor: "divider",
+    "&:hover": {
+      backgroundColor: "action.hover",
+      transform: "translateY(-1px)",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    },
+    transition: "all 0.3s ease-in-out",
+  };
+
+  switch (expirationStatus) {
+    case "expired":
+      return {
+        ...baseStyles,
+        borderLeft: "4px solid",
+        borderLeftColor: "error.dark",
+        backgroundColor: "grey.50",
+        "&:hover": {
+          backgroundColor: "grey.100",
+        },
+        "& .MuiTableCell-root": {
+          color: "inherit",
+        },
+      };
+    case "expiresToday":
+      return {
+        ...baseStyles,
+        borderLeft: "4px solid",
+        borderLeftColor: "error.main",
+        backgroundColor: "error.main",
+        "&:hover": {
+          backgroundColor: "error.main",
+          color: "text.primary",
+        },
+        "& .MuiTableCell-root": {
+          color: "inherit",
+          fontWeight: "bold",
+        },
+      };
+    case "expiringSoon":
+      return {
+        ...baseStyles,
+        borderLeft: "4px solid",
+        borderLeftColor: "error.light",
+        backgroundColor: "grey.50",
+        "&:hover": {
+          backgroundColor: "grey.100",
+        },
+        "& .MuiTableCell-root": {
+          color: "inherit",
+        },
+      };
+    default:
+      return hasLowStock
+        ? {
+            ...baseStyles,
+            borderLeft: "4px solid",
+            borderLeftColor: "info.main",
+            backgroundColor: "info.light",
+            "&:hover": {
+              backgroundColor: "info.main",
+              color: "white",
+            },
+          }
+        : baseStyles;
+  }
+};
+
+// Interfaces para props
+interface ProductRowProps {
+  product: Product;
+  rubro: Rubro;
+  onEdit: (product: Product) => void;
+  onDelete: (product: Product) => void;
+  onGenerateBarcode: (product: Product) => void;
+  supplierName?: string;
+}
+
 const ProductRow = React.memo(
   ({
     product,
@@ -218,64 +468,74 @@ const ProductRow = React.memo(
     onDelete,
     onGenerateBarcode,
     supplierName,
-  }: {
-    product: Product;
-    rubro: Rubro;
-    onEdit: (product: Product) => void;
-    onDelete: (product: Product) => void;
-    onGenerateBarcode: (product: Product) => void;
-    supplierName?: string;
-  }) => {
-    const expirationDate = product.expiration
-      ? startOfDay(parseISO(product.expiration))
-      : null;
-    const today = startOfDay(new Date());
+  }: ProductRowProps) => {
+    const displayName = useMemo(
+      () => getDisplayProductName(product, rubro, false),
+      [product, rubro]
+    );
 
-    let daysUntilExpiration = null;
-    if (expirationDate) {
-      daysUntilExpiration = differenceInDays(expirationDate, today);
-    }
+    const { expirationDate, expirationStatus } = useMemo(() => {
+      const expDate = product.expiration
+        ? startOfDay(parseISO(product.expiration))
+        : null;
+      const today = startOfDay(new Date());
+      const daysUntilExp = expDate ? differenceInDays(expDate, today) : null;
 
-    const expiredToday = daysUntilExpiration === 0;
-    const isExpired = daysUntilExpiration !== null && daysUntilExpiration < 0;
-    const isExpiringSoon =
-      daysUntilExpiration !== null &&
-      daysUntilExpiration > 0 &&
-      daysUntilExpiration <= 7;
+      let status = "normal";
+      if (daysUntilExp !== null) {
+        if (daysUntilExp < 0) status = "expired";
+        else if (daysUntilExp === 0) status = "expiresToday";
+        else if (daysUntilExp <= 7) status = "expiringSoon";
+      }
 
-    const displayName = getDisplayProductName(product, rubro, false);
-    const hasLowStock =
-      product.setMinStock &&
-      product.minStock &&
-      product.stock < product.minStock;
+      return { expirationDate: expDate, expirationStatus: status };
+    }, [product.expiration]);
+
+    const hasLowStock = useMemo(
+      () =>
+        Boolean(
+          product.setMinStock &&
+            product.minStock &&
+            product.stock < product.minStock
+        ),
+      [product.setMinStock, product.minStock, product.stock]
+    );
+
+    const rowStyles = useMemo(
+      () => getRowStyles(expirationStatus, hasLowStock),
+      [expirationStatus, hasLowStock]
+    );
+
+    const stockCellStyles = useMemo(
+      () => ({
+        textAlign: "center" as const,
+        ...(!isNaN(Number(product.stock)) && Number(product.stock) > 0
+          ? hasLowStock
+            ? {
+                color: "white",
+                fontWeight: "bold",
+                backgroundColor: "primary.main",
+              }
+            : {}
+          : { color: "error.main" }),
+      }),
+      [product.stock, hasLowStock]
+    );
+
+    const handleEdit = useCallback(() => {
+      onEdit(product);
+    }, [onEdit, product]);
+
+    const handleDelete = useCallback(() => {
+      onDelete(product);
+    }, [onDelete, product]);
+
+    const handleGenerateBarcode = useCallback(() => {
+      onGenerateBarcode(product);
+    }, [onGenerateBarcode, product]);
 
     return (
-      <TableRow
-        sx={{
-          border: "1px solid",
-          borderColor: "divider",
-          "&:hover": { backgroundColor: "action.hover" },
-          transition: "all 0.3s",
-          ...(isExpired && {
-            borderLeft: "2px solid",
-            borderLeftColor: "error.main",
-            animation: "pulse 2s infinite",
-          }),
-          ...(expiredToday && {
-            borderLeft: "2px solid",
-            borderLeftColor: "error.main",
-            backgroundColor: "error.main",
-            color: "white",
-            "&:hover": { backgroundColor: "error.dark" },
-          }),
-          ...(isExpiringSoon && {
-            borderLeft: "2px solid",
-            borderLeftColor: "error.main",
-            backgroundColor: "error.light",
-            "&:hover": { backgroundColor: "error.light" },
-          }),
-        }}
-      >
+      <TableRow sx={rowStyles}>
         <TableCell
           sx={{
             fontWeight: "bold",
@@ -291,14 +551,17 @@ const ProductRow = React.memo(
               height: "100%",
             }}
           >
-            {(expiredToday || isExpiringSoon || isExpired) && (
+            {(expirationStatus === "expiresToday" ||
+              expirationStatus === "expiringSoon" ||
+              expirationStatus === "expired") && (
               <Warning
                 sx={{
-                  color: expiredToday
-                    ? "warning.main"
-                    : isExpiringSoon
-                    ? "warning.dark"
-                    : "error.main",
+                  color:
+                    expirationStatus === "expiresToday"
+                      ? "warning.main"
+                      : expirationStatus === "expiringSoon"
+                      ? "warning.dark"
+                      : "error.main",
                 }}
                 fontSize="small"
               />
@@ -308,20 +571,7 @@ const ProductRow = React.memo(
             </Typography>
           </Box>
         </TableCell>
-        <TableCell
-          sx={{
-            textAlign: "center",
-            ...(!isNaN(Number(product.stock)) && Number(product.stock) > 0
-              ? hasLowStock
-                ? {
-                    color: "white",
-                    fontWeight: "bold",
-                    backgroundColor: "primary.main",
-                  }
-                : {}
-              : { color: "error.main" }),
-          }}
-        >
+        <TableCell sx={stockCellStyles}>
           <Box sx={{ display: "flex", flexDirection: "column" }}>
             <Typography
               variant="body2"
@@ -383,23 +633,27 @@ const ProductRow = React.memo(
                   locale: es,
                 })
               : "-"}
-            {isExpiringSoon && (
+            {expirationStatus === "expiringSoon" && (
               <Typography
                 component="span"
-                sx={{ ml: 0.5, color: "error.main" }}
+                sx={{ ml: 0.5, color: "text.primary" }}
               >
                 (Por vencer)
               </Typography>
             )}
-            {expirationDate && expiredToday && (
+            {expirationDate && expirationStatus === "expiresToday" && (
               <Typography
                 component="span"
-                sx={{ ml: 0.5, color: "white", animation: "pulse 1s infinite" }}
+                sx={{
+                  ml: 0.5,
+                  color: "text.primary",
+                  animation: "pulse 1s infinite",
+                }}
               >
                 (Vence Hoy)
               </Typography>
             )}
-            {expirationDate && isExpired && (
+            {expirationDate && expirationStatus === "expired" && (
               <Typography
                 component="span"
                 sx={{ ml: 0.5, color: "error.main" }}
@@ -416,7 +670,7 @@ const ProductRow = React.memo(
           <TableCell sx={{ textAlign: "center" }}>
             <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
               <IconButton
-                onClick={() => onGenerateBarcode(product)}
+                onClick={handleGenerateBarcode}
                 size="small"
                 sx={{
                   borderRadius: "4px",
@@ -431,7 +685,7 @@ const ProductRow = React.memo(
                 <QrCode fontSize="small" />
               </IconButton>
               <IconButton
-                onClick={() => onEdit(product)}
+                onClick={handleEdit}
                 size="small"
                 sx={{
                   borderRadius: "4px",
@@ -446,7 +700,7 @@ const ProductRow = React.memo(
                 <Edit fontSize="small" />
               </IconButton>
               <IconButton
-                onClick={() => onDelete(product)}
+                onClick={handleDelete}
                 size="small"
                 sx={{
                   borderRadius: "4px",
@@ -469,6 +723,430 @@ const ProductRow = React.memo(
 );
 
 ProductRow.displayName = "ProductRow";
+
+interface ProductFormProps {
+  formData: Product;
+  onFieldChange: (
+    field: keyof Product,
+    value:
+      | string
+      | number
+      | boolean
+      | { name: string; rubro: Rubro }[]
+      | Product["unit"]
+  ) => void;
+  rubro: Rubro;
+  editingProduct: Product | null;
+  globalCustomCategories: Array<{ name: string; rubro: Rubro }>;
+  onAddCategory: () => void;
+  onIvaChange: (hasIvaIncluded: boolean) => void;
+  onGenerateAutoBarcode: () => void;
+  unitOptions: UnitOption[];
+  seasonOptions: typeof seasonOptions;
+  clothingSizes: ClothingSizeOption[];
+  newBrand: string;
+  newColor: string;
+  newSize: string;
+  onBrandChange: (value: string | number) => void;
+  onColorChange: (value: string | number) => void;
+  onSizeChange: (value: string | number) => void;
+  onSizeBlur: () => void;
+  onCategoryDelete: (category: { name: string; rubro: Rubro }) => void;
+}
+
+const ProductForm = React.memo(
+  ({
+    formData,
+    onFieldChange,
+    rubro,
+    editingProduct,
+    globalCustomCategories,
+    onAddCategory,
+    onIvaChange,
+    onGenerateAutoBarcode,
+    unitOptions,
+    seasonOptions,
+
+    newBrand,
+    newColor,
+    newSize,
+    onBrandChange,
+    onColorChange,
+    onSizeChange,
+    onSizeBlur,
+    onCategoryDelete,
+  }: ProductFormProps) => {
+    const selectedUnit = useMemo(
+      () => unitOptions.find((opt) => opt.value === formData.unit) ?? null,
+      [formData.unit, unitOptions]
+    );
+
+    return (
+      <form
+        className="flex flex-col gap-4 overflow-y-auto"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        {/* Sección 1: Información Básica */}
+        <div className=" space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 bg-blue_m rounded-full"></div>
+            <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
+              Información Básica
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Nombre del Producto */}
+            <div className="space-y-2 lg:col-span-2">
+              <Input
+                label="Nombre del Producto"
+                value={formData.name}
+                onChange={(value) => onFieldChange("name", value.toString())}
+                placeholder="Ingrese el nombre del producto"
+                required
+              />
+            </div>
+
+            {/* Código de Barras */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
+                Código de Barras
+              </label>
+              <BarcodeScanner
+                value={formData.barcode || ""}
+                onChange={(value) => onFieldChange("barcode", value)}
+                onScanComplete={(code) => onFieldChange("barcode", code)}
+                placeholder="Escanear código"
+                onButtonClick={onGenerateAutoBarcode}
+                buttonTitle="Generar código de barras"
+              />
+            </div>
+
+            {/* Lote */}
+            <div className="flex items-end space-y-2">
+              <Input
+                label="Lote/Número de Serie"
+                value={formData.lot || ""}
+                onChange={(value) => onFieldChange("lot", value.toString())}
+                placeholder="Número de lote"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Sección 2: Categorización */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 bg-blue_m rounded-full"></div>
+            <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
+              Categorización
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Categoría */}
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
+                Categoría <span className="text-red-500">*</span>
+              </label>
+              <Select
+                options={[
+                  {
+                    value: "",
+                    label: "Seleccionar categoría",
+                    deletable: false,
+                  },
+                  ...globalCustomCategories
+                    .filter(
+                      (cat) =>
+                        cat.rubro === rubro || cat.rubro === "Todos los rubros"
+                    )
+                    .map((cat) => ({
+                      value: cat.name,
+                      label: cat.name,
+                      deletable: true,
+                      metadata: cat,
+                    })),
+                ]}
+                value={formData.customCategories?.[0]?.name || ""}
+                onChange={(value) => {
+                  const selectedCategory = globalCustomCategories.find(
+                    (cat) => cat.name === value
+                  );
+                  onFieldChange(
+                    "customCategories",
+                    selectedCategory ? [selectedCategory] : []
+                  );
+                }}
+                onDeleteOption={(option) => {
+                  onCategoryDelete(
+                    option.metadata as { name: string; rubro: Rubro }
+                  );
+                }}
+                showDeleteButton={true}
+                label="Categoría"
+                size="small"
+              />
+            </div>
+
+            {/* Nueva Categoría */}
+            {editingProduct ? (
+              <div className=" flex items-end space-y-2">
+                <div className="w-full bg-white dark:bg-gray_b p-2.5 rounded-lg border border-blue_l">
+                  <p className="text-sm text-blue_b dark:text-blue-200">
+                    <Info className="inline mr-2" fontSize="small" />
+                    Para cambiar la categoría, seleccione una existente de la
+                    lista.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-end space-y-2">
+                <Input
+                  label="Crear Nueva Categoría"
+                  value={formData.customCategory || ""}
+                  onChange={(value) =>
+                    onFieldChange("customCategory", value.toString())
+                  }
+                  placeholder="Nombre de nueva categoría"
+                  buttonIcon={<Add fontSize="small" />}
+                  onButtonClick={onAddCategory}
+                  buttonTitle="Crear categoría"
+                  buttonDisabled={!formData.customCategory?.trim()}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sección 3: Precios y Stock */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 bg-blue_m rounded-full"></div>
+            <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
+              Precios y Stock
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Precio de Costo */}
+            <div className="space-y-2">
+              <InputCash
+                label="Precio de Costo"
+                value={formData.costPrice}
+                onChange={(value) => onFieldChange("costPrice", value)}
+              />
+            </div>
+
+            {/* Precio de Venta */}
+            <div className="space-y-2">
+              <InputCash
+                label="Precio de Venta"
+                value={formData.price}
+                onChange={(value) => onFieldChange("price", value)}
+              />
+            </div>
+
+            {/* Stock Actual */}
+            <div className="flex items-end space-y-2">
+              <Input
+                label="Stock Actual"
+                value={formData.stock !== 0 ? formData.stock : ""}
+                onChange={(value) => onFieldChange("stock", Number(value))}
+                type="number"
+              />
+            </div>
+          </div>
+
+          {/* Configuración de IVA y Stock Mínimo */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Configuración de IVA */}
+            <div className="space-y-2">
+              <div className="bg-gray-50 dark:bg-gray_b p-4 rounded-lg border border-gray-200">
+                <Checkbox
+                  label="Incluir IVA 21%"
+                  checked={formData.hasIvaIncluded || false}
+                  onChange={onIvaChange}
+                  helperText={
+                    formData.hasIvaIncluded
+                      ? "Precios incluyen IVA"
+                      : "Precios sin IVA"
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Stock Mínimo */}
+            <div className="space-y-2">
+              <div className="bg-gray_xxl dark:bg-gray_b p-4 rounded-lg border border-gray_xxl">
+                <div className="flex items-center justify-between">
+                  <Checkbox
+                    label="Establecer stock mínimo"
+                    checked={formData.setMinStock || false}
+                    onChange={(checked) => {
+                      onFieldChange("setMinStock", checked);
+                      onFieldChange(
+                        "minStock",
+                        checked ? formData.minStock || 1 : 0
+                      );
+                    }}
+                  />
+                </div>
+                {formData.setMinStock && (
+                  <div className="flex items-center gap-3">
+                    <InputCash
+                      label="Stock mínimo"
+                      value={formData.minStock || 0}
+                      onChange={(value) => onFieldChange("minStock", value)}
+                      placeholder="1"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sección 4: Configuración Adicional */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 bg-blue_m rounded-full"></div>
+            <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
+              Configuración Adicional
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Unidad de Medida */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
+                Unidad de Medida <span className="text-red-500">*</span>
+              </label>
+              <Autocomplete
+                options={unitOptions}
+                value={selectedUnit}
+                onChange={(event, selectedOption) => {
+                  onFieldChange(
+                    "unit",
+                    selectedOption?.value as Product["unit"]
+                  );
+                }}
+                renderInput={(params) => (
+                  <Input
+                    {...params}
+                    placeholder="Seleccionar unidad"
+                    size="small"
+                  />
+                )}
+              />
+            </div>
+
+            {/* Ubicación */}
+            <div className=" flex items-end space-y-2">
+              <Input
+                label="Ubicación en Almacén"
+                value={formData.location || ""}
+                onChange={(value) =>
+                  onFieldChange("location", value.toString())
+                }
+                placeholder="Ej: Estante A-2"
+              />
+            </div>
+
+            {/* Temporada */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
+                Temporada
+              </label>
+              <Autocomplete
+                options={seasonOptions}
+                value={
+                  formData.season
+                    ? seasonOptions.find((opt) => opt.value === formData.season)
+                    : null
+                }
+                onChange={(event, selectedOption) => {
+                  onFieldChange("season", selectedOption?.value || "");
+                }}
+                renderInput={(params) => (
+                  <Input
+                    {...params}
+                    placeholder="Seleccionar temporada"
+                    size="small"
+                  />
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Fecha de Vencimiento */}
+          {rubro !== "indumentaria" && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
+                Fecha de Vencimiento
+              </label>
+              <CustomDatePicker
+                value={formData.expiration || ""}
+                onChange={(newDate) => {
+                  onFieldChange("expiration", newDate);
+                }}
+                isClearable={true}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Sección 5: Especificaciones de Indumentaria */}
+        {rubro === "indumentaria" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-6 bg-pink-500 rounded-full"></div>
+              <h3 className="text-base font-semibold text-gray_m dark:text-white">
+                Especificaciones de Indumentaria
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Talle */}
+              <div className="space-y-2">
+                <Input
+                  label="Talle/Medida"
+                  value={newSize}
+                  onChange={onSizeChange}
+                  onBlur={onSizeBlur}
+                  placeholder="Crear nuevo talle"
+                />
+              </div>
+
+              {/* Color */}
+              <div className="space-y-2">
+                <Input
+                  label="Color"
+                  value={newColor}
+                  onChange={onColorChange}
+                  placeholder="Crear nuevo color"
+                />
+              </div>
+
+              {/* Marca */}
+              <div className="space-y-2">
+                <Input
+                  label="Marca"
+                  value={newBrand}
+                  onChange={onBrandChange}
+                  placeholder="Crear nueva marca"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </form>
+    );
+  }
+);
+
+ProductForm.displayName = "ProductForm";
 
 const ProductsPage = () => {
   const { rubro } = useRubro();
@@ -495,29 +1173,12 @@ const ProductsPage = () => {
 
   // Estados
   const [isOpenModal, setIsOpenModal] = useState(false);
-  const [newProduct, setNewProduct] = useState<Product>({
-    id: Date.now(),
-    name: "",
-    stock: 0,
-    costPrice: 0,
-    price: 0,
-    hasIvaIncluded: true,
-    expiration: "",
-    quantity: 0,
-    unit: PRODUCT_CONFIG.DEFAULT_UNIT,
-    barcode: "",
-    category: "",
-    brand: "",
-    color: "",
-    size: "",
-    rubro: rubro,
-    lot: "",
-    location: "",
-    customCategory: "",
-    customCategories: [],
-    setMinStock: false,
-    minStock: 0,
-  });
+  const {
+    formData: newProduct,
+    updateField,
+    resetForm,
+    setForm,
+  } = useProductForm(rubro);
   const [sortConfig, setSortConfig] = useState<{
     field: keyof Product;
     direction: "asc" | "desc";
@@ -535,6 +1196,7 @@ const ProductsPage = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -566,7 +1228,7 @@ const ProductsPage = () => {
   const [sizeToDelete, setSizeToDelete] = useState<string | null>(null);
   const [isSizeDeleteModalOpen, setIsSizeDeleteModalOpen] = useState(false);
 
-  // Funciones de utilidad
+  // Funciones de utilidad memoizadas
   const calculatePriceWithIva = useCallback((price: number): number => {
     return price * (1 + PRODUCT_CONFIG.IVA_PERCENTAGE / 100);
   }, []);
@@ -606,29 +1268,32 @@ const ProductsPage = () => {
 
   const handleIvaCheckboxChange = useCallback(
     (hasIvaIncluded: boolean) => {
-      setNewProduct((prev) => {
-        let newCostPrice = prev.costPrice;
-        let newPrice = prev.price;
+      let newCostPrice = newProduct.costPrice;
+      let newPrice = newProduct.price;
 
-        if (hasIvaIncluded && !prev.hasIvaIncluded) {
-          newCostPrice = calculatePriceWithIva(prev.costPrice);
-          newPrice = calculatePriceWithIva(prev.price);
-        } else if (!hasIvaIncluded && prev.hasIvaIncluded) {
-          newCostPrice = calculatePriceWithoutIva(prev.costPrice);
-          newPrice = calculatePriceWithoutIva(prev.price);
-        }
+      // Asegurar que currentHasIvaIncluded sea siempre booleano
+      const currentHasIvaIncluded = newProduct.hasIvaIncluded ?? true;
 
-        return {
-          ...prev,
-          hasIvaIncluded,
-          costPrice: newCostPrice,
-          price: newPrice,
-          costPriceWithIva: hasIvaIncluded ? newCostPrice : prev.costPrice,
-          priceWithIva: hasIvaIncluded ? newPrice : prev.price,
-        };
-      });
+      if (hasIvaIncluded && !currentHasIvaIncluded) {
+        newCostPrice = calculatePriceWithIva(newProduct.costPrice);
+        newPrice = calculatePriceWithIva(newProduct.price);
+      } else if (!hasIvaIncluded && currentHasIvaIncluded) {
+        newCostPrice = calculatePriceWithoutIva(newProduct.costPrice);
+        newPrice = calculatePriceWithoutIva(newProduct.price);
+      }
+
+      updateField("hasIvaIncluded", hasIvaIncluded);
+      updateField("costPrice", newCostPrice);
+      updateField("price", newPrice);
     },
-    [calculatePriceWithIva, calculatePriceWithoutIva]
+    [
+      newProduct.costPrice,
+      newProduct.price,
+      newProduct.hasIvaIncluded,
+      calculatePriceWithIva,
+      calculatePriceWithoutIva,
+      updateField,
+    ]
   );
 
   const loadCustomCategories = useCallback(async () => {
@@ -758,7 +1423,7 @@ const ProductsPage = () => {
     [rubro]
   );
 
-  // Funciones principales
+  // Funciones principales memoizadas
   const handleReturnProduct = useCallback(async () => {
     if (!selectedReturnProduct) {
       showNotification("Por favor seleccione un producto", "error");
@@ -890,10 +1555,7 @@ const ProductsPage = () => {
 
   const handleSizeInputBlur = useCallback(() => {
     if (newSize.trim() && newSize !== newProduct.size) {
-      setNewProduct({
-        ...newProduct,
-        size: newSize.trim(),
-      });
+      updateField("size", newSize.trim());
 
       if (
         !clothingSizes.some(
@@ -911,7 +1573,7 @@ const ProductsPage = () => {
         );
       }
     }
-  }, [newSize, newProduct, clothingSizes]);
+  }, [newSize, newProduct.size, clothingSizes, updateField]);
 
   const handleDeleteCategoryClick = useCallback(
     async (category: { name: string; rubro: Rubro }) => {
@@ -1002,14 +1664,14 @@ const ProductsPage = () => {
           )
         );
 
-        setNewProduct((prev) => ({
-          ...prev,
-          customCategories: (prev.customCategories || []).filter(
+        updateField(
+          "customCategories",
+          (newProduct.customCategories || []).filter(
             (cat) =>
               cat.name.toLowerCase() !== categoryToDelete.name.toLowerCase() ||
               cat.rubro !== categoryToDelete.rubro
-          ),
-        }));
+          )
+        );
 
         showNotification(
           `Categoría "${categoryToDelete.name}" eliminada correctamente`,
@@ -1023,52 +1685,13 @@ const ProductsPage = () => {
         setCategoryToDelete(null);
       }
     },
-    [categoryToDelete, showNotification, setProducts]
-  );
-
-  const renderCategoryOption = useCallback(
-    (
-      props: React.HTMLAttributes<HTMLLIElement>,
-      option: { value: { name: string; rubro: Rubro }; label: string }
-    ) => {
-      return (
-        <Box component="li" {...props}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              width: "100%",
-            }}
-          >
-            <div>
-              <span>{option.label}</span>
-            </div>
-            <IconButton
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDeleteCategoryClick(option.value);
-              }}
-              size="small"
-              sx={{
-                borderRadius: "4px",
-                color: "error.main",
-                "&:hover": {
-                  color: "error.dark",
-                },
-                marginLeft: "8px",
-                padding: "4px",
-              }}
-              title="Eliminar categoría"
-            >
-              <Delete fontSize="small" />
-            </IconButton>
-          </Box>
-        </Box>
-      );
-    },
-    [handleDeleteCategoryClick]
+    [
+      categoryToDelete,
+      showNotification,
+      setProducts,
+      newProduct.customCategories,
+      updateField,
+    ]
   );
 
   const handleSearch = useCallback((query: string) => {
@@ -1077,11 +1700,8 @@ const ProductsPage = () => {
 
   const generateAutoBarcode = useCallback(() => {
     const ean13Code = generateValidEAN13();
-    setNewProduct({
-      ...newProduct,
-      barcode: ean13Code,
-    });
-  }, [generateValidEAN13, newProduct]);
+    updateField("barcode", ean13Code);
+  }, [generateValidEAN13, updateField]);
 
   const handleGenerateBarcode = useCallback((product: Product) => {
     setSelectedProductForBarcode(product);
@@ -1151,11 +1771,8 @@ const ProductsPage = () => {
 
       setGlobalCustomCategories((prev) => [...prev, newCategory]);
 
-      setNewProduct((prev) => ({
-        ...prev,
-        customCategories: [newCategory],
-        customCategory: "",
-      }));
+      updateField("customCategories", [newCategory]);
+      updateField("customCategory", "");
 
       showNotification("Categoría agregada correctamente", "success");
     } catch (error) {
@@ -1167,21 +1784,10 @@ const ProductsPage = () => {
     globalCustomCategories,
     rubro,
     showNotification,
+    updateField,
   ]);
 
   const handleConfirmAddProduct = useCallback(async () => {
-    const authData = await db.auth.get(1);
-    if (authData?.userId === 1) {
-      const isLimitReached = await checkProductLimit(rubro);
-      if (isLimitReached) {
-        showNotification(
-          `Límite alcanzado: máximo ${PRODUCT_CONFIG.MAX_PRODUCTS_PER_CATEGORY} productos por rubro para el administrador`,
-          "error"
-        );
-        return;
-      }
-    }
-
     const validationErrors = validateProduct(newProduct);
     if (validationErrors.length > 0) {
       showNotification(validationErrors.join(", "), "error");
@@ -1278,28 +1884,9 @@ const ProductsPage = () => {
     setNewBrand("");
     setNewSize("");
     setNewColor("");
-    setNewProduct({
-      id: Date.now(),
-      name: "",
-      stock: 0,
-      costPrice: 0,
-      price: 0,
-      expiration: "",
-      quantity: 0,
-      unit: PRODUCT_CONFIG.DEFAULT_UNIT,
-      barcode: "",
-      category: "",
-      brand: "",
-      color: "",
-      size: "",
-      rubro: rubro,
-      lot: "",
-      location: "",
-      customCategory: "",
-      customCategories: [],
-    });
+    resetForm();
     setEditingProduct(null);
-  }, [rubro]);
+  }, [resetForm]);
 
   const handleEditProduct = useCallback(
     async (product: Product) => {
@@ -1327,7 +1914,7 @@ const ProductsPage = () => {
       const hasIvaIncluded =
         product.hasIvaIncluded !== undefined ? product.hasIvaIncluded : true;
 
-      setNewProduct({
+      setForm({
         ...product,
         hasIvaIncluded,
         customCategories: categoriesToSet,
@@ -1341,7 +1928,7 @@ const ProductsPage = () => {
 
       setIsOpenModal(true);
     },
-    [rubro, loadCustomCategories]
+    [rubro, loadCustomCategories, setForm]
   );
 
   const handleDeleteProduct = useCallback((product: Product) => {
@@ -1349,7 +1936,24 @@ const ProductsPage = () => {
     setIsConfirmModalOpen(true);
   }, []);
 
-  // Efectos
+  // Cálculos memoizados
+  const sortedProducts = useSortedProducts(
+    products,
+    filters,
+    sortConfig,
+    rubro,
+    debouncedSearchQuery
+  );
+
+  // Paginación
+  const indexOfLastProduct = currentPage * itemsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - itemsPerPage;
+  const currentProducts = sortedProducts.slice(
+    indexOfFirstProduct,
+    indexOfLastProduct
+  );
+
+  // Efectos optimizados
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "F3") {
@@ -1363,17 +1967,15 @@ const ProductsPage = () => {
   }, []);
 
   useEffect(() => {
-    if (editingProduct) {
-      setIsSaveDisabled(!hasChanges(editingProduct, newProduct));
-    } else {
-      setIsSaveDisabled(
-        !newProduct.name ||
-          !newProduct.stock ||
-          !newProduct.costPrice ||
-          !newProduct.price ||
-          !newProduct.unit
-      );
-    }
+    const shouldDisableSave = editingProduct
+      ? !hasChanges(editingProduct, newProduct)
+      : !newProduct.name ||
+        !newProduct.stock ||
+        !newProduct.costPrice ||
+        !newProduct.price ||
+        !newProduct.unit;
+
+    setIsSaveDisabled(shouldDisableSave);
   }, [newProduct, editingProduct, hasChanges]);
 
   useEffect(() => {
@@ -1435,23 +2037,12 @@ const ProductsPage = () => {
     const initialize = async () => {
       await loadCustomCategories();
       if (!editingProduct) {
-        setNewProduct((prev) => ({
-          ...prev,
-          rubro: rubro,
-          customCategories: (prev.customCategories || [])
-            .filter(
-              (cat) => cat.rubro === rubro || cat.rubro === "Todos los rubros"
-            )
-            .map((cat) => ({
-              name: cat.name,
-              rubro: cat.rubro || rubro,
-            })),
-        }));
+        resetForm();
       }
     };
 
     initialize();
-  }, [rubro, isOpenModal, loadCustomCategories, editingProduct]);
+  }, [rubro, isOpenModal, loadCustomCategories, editingProduct, resetForm]);
 
   useEffect(() => {
     if (rubro === "indumentaria") {
@@ -1461,109 +2052,36 @@ const ProductsPage = () => {
     }
   }, [rubro, products, loadClothingSizes]);
 
-  // Cálculos memoizados
-  const sortedProducts = useMemo(() => {
-    let filtered = [...products];
-
-    if (rubro !== "Todos los rubros") {
-      filtered = filtered.filter((product) => product.rubro === rubro);
-    }
-
-    if (searchQuery) {
-      filtered = filtered.filter((product) => {
-        const productName = getDisplayProductName(
-          product,
-          rubro,
-          false
-        ).toLowerCase();
-        return productName.includes(searchQuery.toLowerCase());
-      });
-    }
-
-    if (filters.length > 0) {
-      filtered = filtered.filter((product) => {
-        return filters.every((filter) => {
-          const fieldValue =
-            filter.field === "customCategories"
-              ? product.customCategories?.[0]?.name
-              : product[filter.field as keyof Product];
-
-          if (fieldValue === undefined || fieldValue === null) return false;
-          return (
-            String(fieldValue).toLowerCase() ===
-            String(filter.value).toLowerCase()
-          );
-        });
-      });
-    }
-
-    filtered.sort((a, b) => {
-      const today = startOfDay(new Date());
-
-      const getExpirationStatus = (product: Product) => {
-        if (!product.expiration) return 3;
-        const expDate = startOfDay(parseISO(product.expiration));
-        const diffDays = differenceInDays(expDate, today);
-
-        if (diffDays < 0) return 0;
-        if (diffDays === 0) return 1;
-        if (diffDays <= 7) return 2;
-        return 3;
-      };
-
-      const statusA = getExpirationStatus(a);
-      const statusB = getExpirationStatus(b);
-
-      if (statusA !== statusB) {
-        return statusA - statusB;
+  const handleBrandChange = useCallback(
+    (value: string | number) => {
+      const stringValue = value.toString();
+      setNewBrand(stringValue);
+      if (stringValue) {
+        updateField("brand", stringValue);
       }
-
-      let compareResult = 0;
-      const field = sortConfig.field;
-      const direction = sortConfig.direction;
-
-      switch (field) {
-        case "name":
-          compareResult = a.name.localeCompare(b.name);
-          break;
-        case "price":
-          compareResult = Number(a.price) - Number(b.price);
-          break;
-        case "stock":
-          compareResult = a.stock - b.stock;
-          break;
-        case "expiration":
-          if (!a.expiration && !b.expiration) compareResult = 0;
-          else if (!a.expiration) compareResult = 1;
-          else if (!b.expiration) compareResult = -1;
-          else {
-            const dateA = parseISO(a.expiration);
-            const dateB = parseISO(b.expiration);
-            compareResult = dateA.getTime() - dateB.getTime();
-          }
-          break;
-        default:
-          const valueA = String(a[field] || "");
-          const valueB = String(b[field] || "");
-          compareResult = valueA.localeCompare(valueB);
-      }
-
-      return direction === "asc" ? compareResult : -compareResult;
-    });
-
-    return filtered;
-  }, [products, rubro, searchQuery, filters, sortConfig]);
-
-  // Paginación
-  const indexOfLastProduct = currentPage * itemsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - itemsPerPage;
-  const currentProducts = sortedProducts.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct
+    },
+    [updateField]
   );
 
-  const selectedUnit =
-    unitOptions.find((opt) => opt.value === newProduct.unit) ?? null;
+  const handleColorChange = useCallback(
+    (value: string | number) => {
+      const stringValue = value.toString();
+      setNewColor(stringValue);
+      if (stringValue) {
+        updateField("color", stringValue);
+      }
+    },
+    [updateField]
+  );
+
+  const handleSizeChange = useCallback(
+    (value: string | number) => {
+      const stringValue = value.toString();
+      setNewSize(stringValue);
+      updateField("size", stringValue);
+    },
+    [updateField]
+  );
 
   return (
     <ProtectedRoute>
@@ -1662,7 +2180,7 @@ const ProductsPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(100vh - 250px)", flex: 1 }}
+              sx={{ maxHeight: "60vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -1916,13 +2434,6 @@ const ProductsPage = () => {
               ¿Está seguro que desea eliminar el talle{" "}
               <span className="font-bold">{sizeToDelete}</span>?
             </p>
-            <div className="bg-yellow-50 dark:bg-gray_b p-3 rounded-lg">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <Warning className="inline mr-2" fontSize="small" />
-                Solo se pueden eliminar talles que no estén siendo utilizados
-                por ningún producto.
-              </p>
-            </div>
           </div>
         </Modal>
 
@@ -2066,16 +2577,6 @@ const ProductsPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                onClick={handleReturnProduct}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                Confirmar Devolución
-              </Button>
-              <Button
                 variant="text"
                 onClick={() => {
                   setIsReturnModalOpen(false);
@@ -2092,6 +2593,16 @@ const ProductsPage = () => {
                 }}
               >
                 Volver
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleReturnProduct}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Confirmar Devolución
               </Button>
             </Box>
           }
@@ -2240,456 +2751,27 @@ const ProductsPage = () => {
             </Box>
           }
         >
-          <form
-            className="flex flex-col gap-4 overflow-y-auto"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            {/* Sección 1: Información Básica */}
-            <div className=" space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-6 bg-blue_m rounded-full"></div>
-                <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
-                  Información Básica
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Nombre del Producto */}
-                <div className="space-y-2 lg:col-span-2">
-                  <Input
-                    label="Nombre del Producto"
-                    value={newProduct.name}
-                    onChange={(value) =>
-                      setNewProduct({ ...newProduct, name: value.toString() })
-                    }
-                    placeholder="Ingrese el nombre del producto"
-                    required
-                  />
-                </div>
-
-                {/* Código de Barras */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
-                    Código de Barras
-                  </label>
-                  <BarcodeScanner
-                    value={newProduct.barcode || ""}
-                    onChange={(value) => {
-                      setNewProduct({ ...newProduct, barcode: value });
-                    }}
-                    onScanComplete={(code) => {
-                      const existingProduct = products.find(
-                        (p) => p.barcode === code
-                      );
-                      if (existingProduct) {
-                        setNewProduct({
-                          ...existingProduct,
-                          id: editingProduct ? existingProduct.id : Date.now(),
-                          barcode: existingProduct.barcode,
-                        });
-                        setEditingProduct(existingProduct);
-                        showNotification("Producto encontrado", "success");
-                      } else if (editingProduct) {
-                        setNewProduct({
-                          ...newProduct,
-                          barcode: code,
-                        });
-                      }
-                    }}
-                    placeholder="Escanear código"
-                    onButtonClick={generateAutoBarcode}
-                    buttonTitle="Generar código de barras"
-                  />
-                </div>
-
-                {/* Lote */}
-                <div className="flex items-end space-y-2">
-                  <Input
-                    label="Lote/Número de Serie"
-                    value={newProduct.lot || ""}
-                    onChange={(value) =>
-                      setNewProduct({ ...newProduct, lot: value.toString() })
-                    }
-                    placeholder="Número de lote"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Sección 2: Categorización */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-6 bg-blue_m rounded-full"></div>
-                <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
-                  Categorización
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Categoría */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
-                    Categoría <span className="text-red-500">*</span>
-                  </label>
-                  <Autocomplete
-                    options={[
-                      ...globalCustomCategories
-                        .filter(
-                          (cat) =>
-                            cat.rubro === rubro ||
-                            cat.rubro === "Todos los rubros"
-                        )
-                        .map((cat) => ({
-                          value: cat,
-                          label: cat.name,
-                        })),
-                      ...(editingProduct?.category &&
-                      !globalCustomCategories.some(
-                        (c) =>
-                          c.name.toLowerCase() ===
-                            editingProduct.category?.toLowerCase() &&
-                          c.rubro === (editingProduct.rubro || rubro)
-                      )
-                        ? [
-                            {
-                              value: {
-                                name: editingProduct.category,
-                                rubro: editingProduct.rubro || rubro,
-                              },
-                              label: `${editingProduct.category}`,
-                            },
-                          ]
-                        : []),
-                    ]}
-                    value={
-                      newProduct.customCategories?.[0]
-                        ? {
-                            value: newProduct.customCategories[0],
-                            label: newProduct.customCategories[0].name,
-                          }
-                        : editingProduct?.category
-                        ? {
-                            value: {
-                              name: editingProduct.category,
-                              rubro: editingProduct.rubro || rubro,
-                            },
-                            label: `${editingProduct.category}`,
-                          }
-                        : null
-                    }
-                    onChange={(event, selectedOption) => {
-                      setNewProduct((prev) => ({
-                        ...prev,
-                        customCategories: selectedOption
-                          ? [selectedOption.value]
-                          : [],
-                        category: "",
-                      }));
-                    }}
-                    renderInput={(params) => (
-                      <Input
-                        {...params}
-                        placeholder="Buscar o seleccionar categoría"
-                        size="small"
-                      />
-                    )}
-                    renderOption={renderCategoryOption}
-                  />
-                </div>
-
-                {/* Nueva Categoría */}
-                {editingProduct ? (
-                  <div className=" flex items-end space-y-2">
-                    <div className="w-full bg-white dark:bg-gray_b p-2.5 rounded-lg border border-blue_l">
-                      <p className="text-sm text-blue_b dark:text-blue-200">
-                        <Info className="inline mr-2" fontSize="small" />
-                        Para cambiar la categoría, seleccione una existente de
-                        la lista.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-end space-y-2">
-                    <Input
-                      label="Crear Nueva Categoría"
-                      value={newProduct.customCategory || ""}
-                      onChange={(value) =>
-                        setNewProduct({
-                          ...newProduct,
-                          customCategory: value.toString(),
-                        })
-                      }
-                      placeholder="Nombre de nueva categoría"
-                      buttonIcon={<Add fontSize="small" />}
-                      onButtonClick={handleAddCategory}
-                      buttonTitle="Crear categoría"
-                      buttonDisabled={!newProduct.customCategory?.trim()}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Sección 3: Precios y Stock */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-6 bg-blue_m rounded-full"></div>
-                <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
-                  Precios y Stock
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Precio de Costo */}
-                <div className="space-y-2">
-                  <InputCash
-                    label="Precio de Costo"
-                    value={newProduct.costPrice}
-                    onChange={(value) =>
-                      setNewProduct({ ...newProduct, costPrice: value })
-                    }
-                  />
-                </div>
-
-                {/* Precio de Venta */}
-                <div className="space-y-2">
-                  <InputCash
-                    label="Precio de Venta"
-                    value={newProduct.price}
-                    onChange={(value) =>
-                      setNewProduct({ ...newProduct, price: value })
-                    }
-                  />
-                </div>
-
-                {/* Stock Actual */}
-                <div className="flex items-end space-y-2">
-                  <Input
-                    label="Stock Actual"
-                    value={newProduct.stock !== 0 ? newProduct.stock : ""}
-                    onChange={(value) =>
-                      setNewProduct({ ...newProduct, stock: Number(value) })
-                    }
-                    type="number"
-                  />
-                </div>
-              </div>
-
-              {/* Configuración de IVA y Stock Mínimo */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Configuración de IVA */}
-                <div className="space-y-2">
-                  <div className="bg-gray-50 dark:bg-gray_b p-4 rounded-lg border border-gray-200">
-                    <Checkbox
-                      label="Incluir IVA 21%"
-                      checked={newProduct.hasIvaIncluded || false}
-                      onChange={handleIvaCheckboxChange}
-                      helperText={
-                        newProduct.hasIvaIncluded
-                          ? "Precios incluyen IVA"
-                          : "Precios sin IVA"
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* Stock Mínimo */}
-                <div className="space-y-2">
-                  <div className="bg-gray_xxl dark:bg-gray_b p-4 rounded-lg border border-gray_xxl">
-                    <div className="flex items-center justify-between">
-                      <Checkbox
-                        label="Establecer stock mínimo"
-                        checked={newProduct.setMinStock || false}
-                        onChange={(checked) => {
-                          setNewProduct({
-                            ...newProduct,
-                            setMinStock: checked,
-                            minStock: checked ? newProduct.minStock || 1 : 0,
-                          });
-                        }}
-                      />
-                    </div>
-                    {newProduct.setMinStock && (
-                      <div className="flex items-center gap-3">
-                        <InputCash
-                          label="Stock mínimo"
-                          value={newProduct.minStock || 0}
-                          onChange={(value) =>
-                            setNewProduct({ ...newProduct, minStock: value })
-                          }
-                          placeholder="1"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sección 4: Configuración Adicional */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-6 bg-blue_m rounded-full"></div>
-                <h3 className="text-base font-semibold text-gray_m dark:text-white border-b border-blue_l">
-                  Configuración Adicional
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Unidad de Medida */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
-                    Unidad de Medida <span className="text-red-500">*</span>
-                  </label>
-                  <Autocomplete
-                    options={unitOptions}
-                    value={selectedUnit}
-                    onChange={(event, selectedOption) => {
-                      setNewProduct({
-                        ...newProduct,
-                        unit: selectedOption?.value as Product["unit"],
-                      });
-                    }}
-                    renderInput={(params) => (
-                      <Input
-                        {...params}
-                        placeholder="Seleccionar unidad"
-                        size="small"
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Ubicación */}
-                <div className=" flex items-end space-y-2">
-                  <Input
-                    label="Ubicación en Almacén"
-                    value={newProduct.location || ""}
-                    onChange={(value) =>
-                      setNewProduct({
-                        ...newProduct,
-                        location: value.toString(),
-                      })
-                    }
-                    placeholder="Ej: Estante A-2"
-                  />
-                </div>
-
-                {/* Temporada */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
-                    Temporada
-                  </label>
-                  <Autocomplete
-                    options={seasonOptions}
-                    value={
-                      newProduct.season
-                        ? seasonOptions.find(
-                            (opt) => opt.value === newProduct.season
-                          )
-                        : null
-                    }
-                    onChange={(event, selectedOption) => {
-                      setNewProduct({
-                        ...newProduct,
-                        season: selectedOption?.value || "",
-                      });
-                    }}
-                    renderInput={(params) => (
-                      <Input
-                        {...params}
-                        placeholder="Seleccionar temporada"
-                        size="small"
-                      />
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* Fecha de Vencimiento */}
-              {rubro !== "indumentaria" && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray_m dark:text-gray_xl">
-                    Fecha de Vencimiento
-                  </label>
-                  <CustomDatePicker
-                    value={newProduct.expiration || ""}
-                    onChange={(newDate) => {
-                      setNewProduct({ ...newProduct, expiration: newDate });
-                    }}
-                    isClearable={true}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Sección 5: Especificaciones de Indumentaria */}
-            {rubro === "indumentaria" && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-1 h-6 bg-pink-500 rounded-full"></div>
-                  <h3 className="text-base font-semibold text-gray_m dark:text-white">
-                    Especificaciones de Indumentaria
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Talle */}
-                  <div className="space-y-2">
-                    <Input
-                      label="Talle/Medida"
-                      value={newSize}
-                      onChange={(value) => {
-                        setNewSize(value.toString());
-                        setNewProduct({
-                          ...newProduct,
-                          size: value.toString(),
-                        });
-                      }}
-                      onBlur={handleSizeInputBlur}
-                      placeholder="Crear nuevo talle"
-                    />
-                  </div>
-
-                  {/* Color */}
-                  <div className="space-y-2">
-                    <Input
-                      label="Color"
-                      value={newColor}
-                      onChange={(value) => {
-                        setNewColor(value.toString());
-                        if (value.toString()) {
-                          setNewProduct({
-                            ...newProduct,
-                            color: value.toString(),
-                          });
-                        }
-                      }}
-                      placeholder="Crear nuevo color"
-                    />
-                  </div>
-
-                  {/* Marca */}
-                  <div className="space-y-2">
-                    <Input
-                      label="Marca"
-                      value={newBrand}
-                      onChange={(value) => {
-                        setNewBrand(value.toString());
-                        if (value.toString()) {
-                          setNewProduct({
-                            ...newProduct,
-                            brand: value.toString(),
-                          });
-                        }
-                      }}
-                      placeholder="Crear nueva marca"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </form>
+          <ProductForm
+            formData={newProduct}
+            onFieldChange={updateField}
+            rubro={rubro}
+            editingProduct={editingProduct}
+            globalCustomCategories={globalCustomCategories}
+            onAddCategory={handleAddCategory}
+            onIvaChange={handleIvaCheckboxChange}
+            onGenerateAutoBarcode={generateAutoBarcode}
+            unitOptions={unitOptions}
+            seasonOptions={seasonOptions}
+            clothingSizes={clothingSizes}
+            newBrand={newBrand}
+            newColor={newColor}
+            newSize={newSize}
+            onBrandChange={handleBrandChange}
+            onColorChange={handleColorChange}
+            onSizeChange={handleSizeChange}
+            onSizeBlur={handleSizeInputBlur}
+            onCategoryDelete={handleDeleteCategoryClick}
+          />
         </Modal>
 
         <Modal
@@ -2733,18 +2815,6 @@ const ProductsPage = () => {
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
               ¿Está seguro que desea eliminar la categoría?
             </Typography>
-            <Typography color="text.secondary" sx={{ mb: 2 }}>
-              {categoryToDelete?.name} será eliminada permanentemente.
-            </Typography>
-            <Box className="bg-yellow-50 dark:bg-gray_b p-3 rounded-lg border border-yellow-200">
-              <Typography
-                variant="body2"
-                className="text-yellow-800 dark:text-yellow-200"
-              >
-                <Warning className="inline mr-2" fontSize="small" />
-                Esta acción afectará a todos los productos con esta categoría.
-              </Typography>
-            </Box>
           </Box>
         </Modal>
 
@@ -2788,9 +2858,6 @@ const ProductsPage = () => {
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
               ¿Está seguro que desea eliminar el producto?
-            </Typography>
-            <Typography color="text.secondary">
-              {productToDelete?.name} será eliminado permanentemente.
             </Typography>
           </Box>
         </Modal>

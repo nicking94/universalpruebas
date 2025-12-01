@@ -13,6 +13,7 @@ import Pagination from "@/app/components/Pagination";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { useRubro } from "@/app/context/RubroContext";
 import { usePagination } from "@/app/context/PaginationContext";
+import { useNotification } from "@/app/hooks/useNotification";
 import {
   IconButton,
   Box,
@@ -37,6 +38,14 @@ import Button from "@/app/components/Button";
 
 const ProveedoresPage = () => {
   const { rubro } = useRubro();
+  const {
+    isNotificationOpen,
+    notificationMessage,
+    notificationType,
+    showNotification,
+    closeNotification,
+  } = useNotification();
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,11 +54,7 @@ const ProveedoresPage = () => {
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(
     null
   );
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<
-    "success" | "error" | "info"
-  >("success");
+
   const { currentPage, itemsPerPage } = usePagination();
   const [companyName, setCompanyName] = useState("");
   const [contacts, setContacts] = useState<SupplierContact[]>([
@@ -241,16 +246,6 @@ const ProveedoresPage = () => {
     updateCounts();
   }, [suppliers, rubro, fetchSupplierProductCounts]);
 
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setIsNotificationOpen(true);
-    setTimeout(() => setIsNotificationOpen(false), 2500);
-  };
-
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
@@ -395,11 +390,38 @@ const ProveedoresPage = () => {
           Proveedores
         </Typography>
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-          <Box sx={{ width: "100%", maxWidth: "400px" }}>
-            <SearchBar onSearch={handleSearch} />
+        {/* Header con búsqueda y acciones */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 2,
+            width: "100%",
+          }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <Box sx={{ width: "100%", maxWidth: "400px" }}>
+              <SearchBar onSearch={handleSearch} />
+            </Box>
           </Box>
-          {rubro !== "Todos los rubros" && (
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              mt: 1,
+              gap: 2,
+              visibility: rubro === "Todos los rubros" ? "hidden" : "visible",
+            }}
+          >
             <Button
               variant="contained"
               startIcon={<Add />}
@@ -414,7 +436,7 @@ const ProveedoresPage = () => {
             >
               Nuevo Proveedor
             </Button>
-          )}
+          </Box>
         </Box>
 
         <Box
@@ -428,7 +450,7 @@ const ProveedoresPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(100vh - 250px)", flex: 1 }}
+              sx={{ maxHeight: "71vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -493,7 +515,19 @@ const ProveedoresPage = () => {
                 <TableBody>
                   {currentItems.length > 0 ? (
                     currentItems.map((supplier) => (
-                      <TableRow key={supplier.id} hover>
+                      <TableRow
+                        key={supplier.id}
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          "&:hover": {
+                            backgroundColor: "action.hover",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                          },
+                          transition: "all 0.3s ease-in-out",
+                        }}
+                      >
                         <TableCell className="capitalize font-semibold">
                           {supplier.companyName}
                         </TableCell>
@@ -599,6 +633,7 @@ const ProveedoresPage = () => {
                                   openProductAssignmentModal(supplier)
                                 }
                                 sx={{
+                                  borderRadius: "4px",
                                   color: "text.secondary",
                                   "&:hover": {
                                     backgroundColor: "primary.main",
@@ -609,10 +644,12 @@ const ProveedoresPage = () => {
                               >
                                 <Inventory fontSize="small" />
                               </IconButton>
+
                               <IconButton
                                 size="small"
                                 onClick={() => handleEdit(supplier)}
                                 sx={{
+                                  borderRadius: "4px",
                                   color: "text.secondary",
                                   "&:hover": {
                                     backgroundColor: "primary.main",
@@ -623,10 +660,12 @@ const ProveedoresPage = () => {
                               >
                                 <Edit fontSize="small" />
                               </IconButton>
+
                               <IconButton
                                 size="small"
                                 onClick={() => openDeleteModal(supplier)}
                                 sx={{
+                                  borderRadius: "4px",
                                   color: "text.secondary",
                                   "&:hover": {
                                     backgroundColor: "error.main",
@@ -692,6 +731,7 @@ const ProveedoresPage = () => {
           title={`Productos de ${
             selectedSupplierForProducts?.companyName || ""
           }`}
+          bgColor="bg-white dark:bg-gray_b"
           minheight="min-h-[75vh]"
           buttons={
             <Button
@@ -714,6 +754,7 @@ const ProveedoresPage = () => {
           }
         >
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+            {/* Columna izquierda: Buscar productos */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Typography variant="h6" fontWeight="medium">
                 Buscar Productos
@@ -722,6 +763,7 @@ const ProveedoresPage = () => {
                 placeholder="Buscar por nombre o código de barras"
                 value={productSearchQuery}
                 onRawChange={(e) => setProductSearchQuery(e.target.value)}
+                fullWidth
               />
 
               <Box
@@ -843,9 +885,10 @@ const ProveedoresPage = () => {
               </Box>
             </Box>
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            {/* Columna derecha: Productos asignados */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Typography variant="h6" fontWeight="medium">
-                Productos asignados
+                Productos asignados ({assignedProducts.length})
               </Typography>
               <Box
                 sx={{
@@ -937,18 +980,9 @@ const ProveedoresPage = () => {
             resetForm();
           }}
           title={editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}
+          bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                {editingSupplier ? "Actualizar" : "Guardar"}
-              </Button>
               <Button
                 variant="text"
                 onClick={() => {
@@ -966,6 +1000,16 @@ const ProveedoresPage = () => {
               >
                 Cancelar
               </Button>
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                {editingSupplier ? "Actualizar" : "Guardar"}
+              </Button>
             </Box>
           }
         >
@@ -975,21 +1019,20 @@ const ProveedoresPage = () => {
               value={companyName}
               onRawChange={(e) => setCompanyName(e.target.value)}
               placeholder="Ej: Distribuidora S.A."
+              required
             />
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {contacts.map((contact, index) => (
                 <Box
                   key={index}
                   sx={{
-                    background:
-                      "linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)",
+                    backgroundColor: "primary.main",
                     borderRadius: 1,
                     border: "1px solid",
                     borderColor: "primary.light",
                     boxShadow: 1,
-                    p: 3,
-                    mb: 2,
+                    p: 2,
                   }}
                 >
                   <Box
@@ -1001,7 +1044,7 @@ const ProveedoresPage = () => {
                     }}
                   >
                     <Chip
-                      label={`Proveedor #${index + 1}`}
+                      label={`Contacto #${index + 1}`}
                       color="primary"
                       variant="filled"
                       sx={{ color: "white" }}
@@ -1029,32 +1072,36 @@ const ProveedoresPage = () => {
                       onRawChange={(e) =>
                         handleContactChange(index, "name", e.target.value)
                       }
-                      placeholder="Nombre del proveedor"
+                      placeholder="Nombre del contacto"
+                      required
                     />
                     <Input
                       label="Teléfono"
-                      value={contact.phone}
+                      value={contact.phone || ""}
                       onRawChange={(e) =>
                         handleContactChange(index, "phone", e.target.value)
                       }
-                      placeholder="Teléfono del proveedor"
+                      placeholder="Teléfono del contacto"
                     />
                   </Box>
                 </Box>
               ))}
               <Button
+                variant="text"
                 startIcon={<Add />}
                 onClick={handleAddContact}
                 sx={{
                   color: "primary.main",
+                  borderColor: "primary.main",
                   "&:hover": {
                     color: "primary.dark",
-                    backgroundColor: "transparent",
+                    backgroundColor: "action.hover",
+                    borderColor: "primary.dark",
                   },
                   alignSelf: "flex-start",
                 }}
               >
-                Agregar otro proveedor
+                Agregar contacto
               </Button>
             </Box>
 
@@ -1083,21 +1130,11 @@ const ProveedoresPage = () => {
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
           title="Eliminar Proveedor"
+          bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                color="error"
-                onClick={handleDelete}
-                sx={{
-                  bgcolor: "error.main",
-                  "&:hover": { bgcolor: "error.dark" },
-                }}
-              >
-                Eliminar
-              </Button>
-              <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
@@ -1110,22 +1147,35 @@ const ProveedoresPage = () => {
               >
                 Cancelar
               </Button>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={handleDelete}
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
+              >
+                Si, Eliminar
+              </Button>
             </Box>
           }
         >
-          <Typography color="text.secondary">
-            ¿Está seguro de que desea eliminar el proveedor{" "}
-            <Typography component="span" fontWeight="semibold">
-              {supplierToDelete?.companyName}
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro que desea eliminar el proveedor?
             </Typography>
-            ? Esta acción no se puede deshacer.
-          </Typography>
+          </Box>
         </Modal>
 
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
           type={notificationType}
+          onClose={closeNotification}
         />
       </Box>
     </ProtectedRoute>

@@ -151,7 +151,6 @@ const Pagination: React.FC<
       spacing={2}
       alignItems="center"
       justifyContent="space-between"
-      sx={{ p: 1 }}
     >
       {/* Selector de items por página */}
       <Stack direction="row" alignItems="center" spacing={1}>

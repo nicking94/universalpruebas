@@ -10,7 +10,6 @@ import {
   Supplier,
   UnifiedFilter,
 } from "@/app/lib/types/types";
-import { FileText } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { db } from "@/app/database/db";
 import {
@@ -64,11 +63,12 @@ import {
   CardContent,
 } from "@mui/material";
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Description as DescriptionIcon,
-  Analytics as AnalyticsIcon,
+  Add,
+  Delete,
+  Edit,
+  Description,
+  Analytics,
+  InsertDriveFile,
 } from "@mui/icons-material";
 
 // Componentes personalizados
@@ -98,7 +98,8 @@ const MovimientosPage = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isCategoryDeleteModalOpen, setIsCategoryDeleteModalOpen] =
     useState(false);
-  const [categoryToDelete] = useState<ExpenseCategory | null>(null);
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<ExpenseCategory | null>(null);
 
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [shouldRedirectToCash, setShouldRedirectToCash] = useState(false);
@@ -720,7 +721,7 @@ const MovimientosPage = () => {
           height: "calc(100vh - 80px)",
         }}
       >
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 600, mb: 2 }}>
+        <Typography variant="h5" fontWeight="semibold" mb={2}>
           Movimientos
         </Typography>
 
@@ -772,7 +773,7 @@ const MovimientosPage = () => {
             >
               <Button
                 variant="contained"
-                startIcon={<AnalyticsIcon />}
+                startIcon={<Analytics />}
                 onClick={() => setIsStatsModalOpen(true)}
                 sx={{
                   backgroundColor: theme.palette.primary.main,
@@ -786,7 +787,7 @@ const MovimientosPage = () => {
 
               <Button
                 variant="contained"
-                startIcon={<AddIcon />}
+                startIcon={<Add />}
                 onClick={handleOpenModal}
                 sx={{
                   backgroundColor: theme.palette.primary.main,
@@ -806,11 +807,19 @@ const MovimientosPage = () => {
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            height: "calc(100vh - 200px)",
+            height: "calc(100vh - 220px)",
           }}
         >
-          <Box sx={{ maxHeight: "calc(100vh - 250px)", overflow: "auto" }}>
-            <TableContainer component={Paper}>
+          <Box
+            sx={{
+              maxHeight: "calc(96vh - 250px)",
+              overflow: "auto",
+            }}
+          >
+            <TableContainer
+              component={Paper}
+              sx={{ maxHeight: "71vh", flex: 1 }}
+            >
               <Table sx={{ minWidth: 650 }} size="small">
                 <TableHead>
                   <TableRow
@@ -897,12 +906,13 @@ const MovimientosPage = () => {
                         key={expense.id}
                         sx={{
                           "&:hover": {
-                            backgroundColor:
-                              theme.palette.mode === "dark"
-                                ? "primary.light"
-                                : "grey.100",
+                            backgroundColor: theme.palette.action.hover,
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                           },
-                          transition: "all 0.3s",
+                          transition: "all 0.3s ease-in-out",
+                          border: "1px solid",
+                          borderColor: "divider",
                         }}
                       >
                         <TableCell>
@@ -967,7 +977,7 @@ const MovimientosPage = () => {
                                     },
                                   }}
                                 >
-                                  <DescriptionIcon fontSize="small" />
+                                  <Description fontSize="small" />
                                 </IconButton>
                               )}
                               <IconButton
@@ -990,7 +1000,7 @@ const MovimientosPage = () => {
                                   },
                                 }}
                               >
-                                <EditIcon fontSize="small" />
+                                <Edit fontSize="small" />
                               </IconButton>
                               <IconButton
                                 size="small"
@@ -1007,7 +1017,7 @@ const MovimientosPage = () => {
                                   },
                                 }}
                               >
-                                <DeleteIcon fontSize="small" />
+                                <Delete fontSize="small" />
                               </IconButton>
                             </Box>
                           </TableCell>
@@ -1028,10 +1038,10 @@ const MovimientosPage = () => {
                             color: "text.disabled",
                           }}
                         >
-                          <FileText
-                            size={64}
-                            style={{
-                              marginBottom: 16,
+                          <InsertDriveFile
+                            sx={{
+                              fontSize: 64,
+                              mb: 2,
                               color: theme.palette.text.disabled,
                             }}
                           />
@@ -1061,23 +1071,7 @@ const MovimientosPage = () => {
           onClose={() => setIsCategoryDeleteModalOpen(false)}
           title="Eliminar Categoría"
           buttons={
-            <>
-              <Button
-                variant="contained"
-                onClick={() => {
-                  if (categoryToDelete) {
-                    handleDeleteCategory(categoryToDelete);
-                  }
-                }}
-                sx={{
-                  backgroundColor: "error.main",
-                  "&:hover": {
-                    backgroundColor: "error.dark",
-                  },
-                }}
-              >
-                Confirmar
-              </Button>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
                 variant="outlined"
                 onClick={() => setIsCategoryDeleteModalOpen(false)}
@@ -1092,14 +1086,34 @@ const MovimientosPage = () => {
               >
                 Cancelar
               </Button>
-            </>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  if (categoryToDelete) {
+                    handleDeleteCategory(categoryToDelete);
+                    setIsCategoryDeleteModalOpen(false);
+                  }
+                }}
+                sx={{
+                  backgroundColor: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.dark",
+                  },
+                }}
+              >
+                Si, Eliminar
+              </Button>
+            </Box>
           }
         >
-          <Typography>
-            ¿Está seguro que desea eliminar la categoría{" "}
-            <span style={{ fontWeight: "bold" }}>{categoryToDelete?.name}</span>
-            ?
-          </Typography>
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro que desea eliminar la categoría?
+            </Typography>
+          </Box>
         </Modal>
 
         {/* Modal para nuevo/editar movimiento */}
@@ -1112,18 +1126,6 @@ const MovimientosPage = () => {
           title={newExpense.amount ? "Editar Movimiento" : "Nuevo Movimiento"}
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-              <Button
-                variant="contained"
-                onClick={handleAddExpense}
-                sx={{
-                  backgroundColor: theme.palette.primary.main,
-                  "&:hover": {
-                    backgroundColor: theme.palette.primary.dark,
-                  },
-                }}
-              >
-                {newExpense.date ? "Actualizar" : "Guardar"}
-              </Button>
               <Button
                 variant="outlined"
                 onClick={() => {
@@ -1140,6 +1142,18 @@ const MovimientosPage = () => {
                 }}
               >
                 Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleAddExpense}
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.dark,
+                  },
+                }}
+              >
+                {newExpense.date ? "Actualizar" : "Guardar"}
               </Button>
             </Box>
           }
@@ -1186,10 +1200,16 @@ const MovimientosPage = () => {
                 <Select
                   label="Categoría*"
                   options={[
-                    { value: "", label: "Seleccionar categoría" },
+                    {
+                      value: "",
+                      label: "Seleccionar categoría",
+                      deletable: false,
+                    },
                     ...categories.map((category) => ({
                       value: category.name,
                       label: category.name,
+                      deletable: true, // Habilita el botón de eliminar
+                      metadata: category, // Pasamos el objeto completo para poder eliminarlo
                     })),
                   ]}
                   value={newExpense.category}
@@ -1199,6 +1219,19 @@ const MovimientosPage = () => {
                       category: value,
                     });
                   }}
+                  onDeleteOption={(option) => {
+                    // Buscar la categoría completa usando el metadata
+                    const category = categories.find(
+                      (c) =>
+                        c.name === option.value ||
+                        (option.metadata && c.id === option.metadata.id)
+                    );
+                    if (category) {
+                      setCategoryToDelete(category);
+                      setIsCategoryDeleteModalOpen(true);
+                    }
+                  }}
+                  showDeleteButton={true} // Activa los botones de eliminar
                 />
               </Box>
 
@@ -1227,12 +1260,11 @@ const MovimientosPage = () => {
                       name: toCapitalize(e.target.value),
                     })
                   }
-                  helperText="La categoría se agregará y seleccionará automáticamente"
                   fullWidth
                 />
                 <Button
                   variant="contained"
-                  startIcon={<AddIcon />}
+                  startIcon={<Add />}
                   onClick={handleAddCategory}
                   disabled={!newCategory.name.trim()}
                   sx={{
@@ -1631,7 +1663,7 @@ const MovimientosPage = () => {
                     p: 8,
                   }}
                 >
-                  <DescriptionIcon
+                  <Description
                     sx={{ fontSize: 64, color: "primary.main", mb: 2 }}
                   />
                   <Typography

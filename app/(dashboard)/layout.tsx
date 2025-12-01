@@ -11,7 +11,6 @@ import { BusinessDataProvider } from "../context/BusinessDataContext";
 import { PaginationProvider } from "../context/PaginationContext";
 import UpdatesManager from "../components/Notifications/UpdatesManager";
 import PaymentNotification from "../components/PaymentNotification";
-import UpdateModal from "../components/UpdateModal";
 import { useAppVersion } from "../hooks/useAppVersion";
 
 // Material-UI imports
@@ -28,15 +27,7 @@ export default function AppLayout({
   const [theme, setTheme] = useState<string>("light");
 
   // Usar el hook de versión
-  const {
-    showUpdateModal,
-    isUpdating,
-    minLoadTimePassed,
-    forceUpdate,
-    logoutAndUpdate,
-    currentVersion,
-    storedVersion,
-  } = useAppVersion();
+  const { isUpdating, isAutoUpdate } = useAppVersion();
 
   const handleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -94,16 +85,14 @@ export default function AppLayout({
               <PaymentNotification />
               <UpdatesManager />
 
-              {/* Modal de actualización - con alta prioridad */}
-              <UpdateModal
-                isOpen={showUpdateModal}
-                onUpdate={forceUpdate}
-                onLogout={logoutAndUpdate}
-                isUpdating={isUpdating}
-                minLoadTimePassed={minLoadTimePassed}
-                currentVersion={currentVersion}
-                storedVersion={storedVersion}
-              />
+              {isUpdating && isAutoUpdate && (
+                <div className="fixed top-4 right-4 z-50 bg-blue_b text-white px-3 py-2 rounded-lg shadow-lg text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Actualizando...</span>
+                  </div>
+                </div>
+              )}
 
               <Navbar
                 theme={theme}
@@ -111,7 +100,6 @@ export default function AppLayout({
                 handleCloseSession={handleCloseSession}
               />
 
-              {/* Layout principal corregido - SIN flex */}
               <Box
                 sx={{
                   position: "relative",
@@ -132,8 +120,6 @@ export default function AppLayout({
                     transition: muiTheme.transitions.create(["left"], {
                       duration: muiTheme.transitions.duration.standard,
                     }),
-                    p: 2,
-                    bgcolor: "background.default",
                     overflow: "auto",
                     display: "flex",
                     flexDirection: "column",

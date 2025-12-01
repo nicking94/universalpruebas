@@ -160,20 +160,6 @@ const BarcodeGenerator = ({
       buttons={
         <>
           <Button
-            variant="contained"
-            startIcon={<PrintIcon />}
-            onClick={handlePrint}
-            disabled={isPrinting}
-            sx={{
-              backgroundColor: "#3b82f6",
-              "&:hover": {
-                backgroundColor: "#2563eb",
-              },
-            }}
-          >
-            {isPrinting ? "Imprimiendo..." : "Imprimir Etiqueta"}
-          </Button>
-          <Button
             variant="outlined"
             startIcon={<CloseIcon />}
             onClick={onClose}
@@ -188,6 +174,20 @@ const BarcodeGenerator = ({
             }}
           >
             Cerrar
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            disabled={isPrinting}
+            sx={{
+              backgroundColor: "background.primary",
+              "&:hover": {
+                backgroundColor: "#background.primary",
+              },
+            }}
+          >
+            {isPrinting ? "Imprimiendo..." : "Imprimir Etiqueta"}
           </Button>
         </>
       }

@@ -149,6 +149,10 @@ const VentasPage = () => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isBusinessDataModalOpen, setIsBusinessDataModalOpen] = useState(false);
 
+  // ✅ NUEVO: Estado para controlar la apertura del modal de ticket después del pago
+  const [shouldOpenTicketAfterPayment, setShouldOpenTicketAfterPayment] =
+    useState(false);
+
   const CONVERSION_FACTORS = {
     Gr: { base: "Kg", factor: 0.001 },
     Kg: { base: "Kg", factor: 1 },
@@ -212,21 +216,26 @@ const VentasPage = () => {
     return { value: year, label: String(year) };
   });
 
-  // Función para obtener colores según el tema
-  const getTableHeaderStyle = () => ({
-    bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
-    color: "primary.contrastText",
-  });
+  const tableHeaderStyle = useMemo(
+    () => ({
+      bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
+      color: "primary.contrastText",
+    }),
+    [theme.palette.mode]
+  );
 
-  const getCardStyle = (
-    color: "success" | "error" | "primary" | "warning"
-  ) => ({
-    bgcolor: theme.palette.mode === "dark" ? `${color}.dark` : `${color}.main`,
-    color: "white",
-    "& .MuiTypography-root": {
-      color: "white !important",
-    },
-  });
+  // ✅ OPTIMIZADO: Memoizar getCardStyle
+  const getCardStyle = useMemo(
+    () => (color: "success" | "error" | "primary" | "warning") => ({
+      bgcolor:
+        theme.palette.mode === "dark" ? `${color}.dark` : `${color}.main`,
+      color: "white",
+      "& .MuiTypography-root": {
+        color: "white !important",
+      },
+    }),
+    [theme.palette.mode]
+  );
 
   const getCompatibleUnits = (productUnit: string): UnitOption[] => {
     const productUnitInfo =
@@ -248,9 +257,6 @@ const VentasPage = () => {
       label: unit.label,
     }));
   };
-
-  // ELIMINADO: La función showNotification local ya no es necesaria
-  // ya que usamos showNotification del hook personalizado
 
   const calculateFinalTotal = (
     products: Product[],
@@ -435,14 +441,12 @@ const VentasPage = () => {
   const handleCloseBusinessDataModal = () => {
     setIsBusinessDataModalOpen(false);
 
-    // Preguntar si quiere volver al ticket
+    // ✅ MEJORADO: Usar estado en lugar de confirm
     if (selectedSale) {
-      const shouldReturnToTicket = window.confirm(
-        "¿Deseas volver al ticket de la venta?"
-      );
-      if (shouldReturnToTicket) {
+      // Pequeño delay para permitir que el DOM se actualice
+      setTimeout(() => {
         setIsInfoModalOpen(true);
-      }
+      }, 100);
     }
   };
 
@@ -573,7 +577,7 @@ const VentasPage = () => {
           </Box>
         }
       >
-        <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+        <Box sx={{ maxHeight: "61vh", overflow: "auto" }}>
           <Box sx={{ display: "grid", gap: 2 }}>
             {availablePromotions.length > 0 ? (
               availablePromotions.map((promotion) => {
@@ -925,7 +929,6 @@ const VentasPage = () => {
         // Registrar en caja diaria si no es crédito
         if (!isCredit) {
           await addIncomeToDailyCash(saleToSave);
-          setSelectedSale(saleToSave);
         }
 
         // Guardar la venta
@@ -954,17 +957,12 @@ const VentasPage = () => {
 
         showNotification("Venta registrada correctamente", "success");
 
-        // ✅ CORRECCIÓN: Cerrar modales en el orden correcto
+        // ✅ CORRECCIÓN MEJORADA: Cerrar solo el modal de pago y preparar para abrir ticket
         setIsPaymentModalOpen(false);
+        setIsProcessingPayment(false);
 
-        // Pequeño delay para asegurar que el modal de pago se cierre completamente
-        setTimeout(() => {
-          if (!isCredit) {
-            setSelectedSale(saleToSave);
-            setIsInfoModalOpen(true);
-          }
-
-          // Resetear el estado de la nueva venta
+        // Resetear estado
+        const resetSaleState = () => {
           setNewSale({
             products: [],
             paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
@@ -982,7 +980,22 @@ const VentasPage = () => {
           setCustomerPhone("");
           setSelectedPromotions(null);
           setTemporarySelectedPromotion(null);
-        }, 100);
+        };
+
+        if (!isCredit) {
+          // Para ventas no crédito: preparar para mostrar ticket
+          resetSaleState();
+          setSelectedSale(saleToSave);
+          // ✅ NUEVO: Usar un estado intermedio para controlar la apertura del ticket
+          setShouldOpenTicketAfterPayment(true);
+        } else {
+          // Para crédito: solo resetear
+          resetSaleState();
+          showNotification(
+            "Venta a crédito registrada correctamente",
+            "success"
+          );
+        }
       } catch (error) {
         console.error("Error al procesar la venta:", error);
         showNotification("Error al procesar la venta", "error");
@@ -1157,6 +1170,28 @@ const VentasPage = () => {
       </Modal>
     );
   };
+
+  // ✅ NUEVO: useEffect para manejar la apertura del ticket después del pago
+  useEffect(() => {
+    if (shouldOpenTicketAfterPayment && selectedSale) {
+      setIsInfoModalOpen(true);
+      setShouldOpenTicketAfterPayment(false);
+    }
+  }, [shouldOpenTicketAfterPayment, selectedSale]);
+
+  // ✅ NUEVO: Prevenir estados de modal conflictivos
+  useEffect(() => {
+    if (isPaymentModalOpen) {
+      setIsOpenModal(false);
+    }
+  }, [isPaymentModalOpen]);
+
+  useEffect(() => {
+    if (isInfoModalOpen) {
+      setIsOpenModal(false);
+      setIsPaymentModalOpen(false);
+    }
+  }, [isInfoModalOpen]);
 
   const handleOpenPaymentModal = () => {
     // Prevenir múltiples aperturas si ya está procesando
@@ -1652,188 +1687,182 @@ const VentasPage = () => {
     setSelectedSale(null);
   };
 
-  const handleProductSelect = (
-    event: React.SyntheticEvent,
-    selectedOptions: SelectOption[]
-  ) => {
-    setNewSale((prevState) => {
-      const enabledOptions = selectedOptions.filter((opt) => !opt.isDisabled);
+  const handleProductSelect = useCallback(
+    (event: React.SyntheticEvent, selectedOptions: SelectOption[]) => {
+      setNewSale((prevState) => {
+        const enabledOptions = selectedOptions.filter((opt) => !opt.isDisabled);
 
-      const updatedProducts = enabledOptions
-        .map((option) => {
-          const product =
-            option.product || products.find((p) => p.id === option.value);
-          if (!product) return null;
+        const updatedProducts = enabledOptions
+          .map((option) => {
+            const product =
+              option.product || products.find((p) => p.id === option.value);
+            if (!product) return null;
 
-          const stockCheck = checkStockAvailability(product, 1, product.unit);
-          if (!stockCheck.available) {
-            showNotification(
-              `Stock insuficiente para ${getDisplayProductName(
-                product,
-                rubro
-              )}`,
-              "error"
-            );
-            return null;
-          }
-
-          const existingProduct = prevState.products.find(
-            (p) => p.id === product.id
-          );
-
-          return (
-            existingProduct || {
-              ...product,
-              quantity: 1,
-              unit: product.unit,
-              stock: Number(product.stock),
-              price: Number(product.price),
-              basePrice:
-                Number(product.price) / convertToBaseUnit(1, product.unit),
-              costPrice: Number(product.costPrice),
+            const stockCheck = checkStockAvailability(product, 1, product.unit);
+            if (!stockCheck.available) {
+              showNotification(
+                `Stock insuficiente para ${getDisplayProductName(
+                  product,
+                  rubro
+                )}`,
+                "error"
+              );
+              return null;
             }
-          );
-        })
-        .filter(Boolean) as Product[];
 
-      const newTotal = calculateFinalTotal(
-        updatedProducts || [],
-        prevState.manualAmount || 0,
-        selectedPromotions
-      );
+            const existingProduct = prevState.products.find(
+              (p) => p.id === product.id
+            );
 
-      const updatedPaymentMethods = synchronizePaymentMethods(
-        prevState.paymentMethods,
-        newTotal
-      );
+            return (
+              existingProduct || {
+                ...product,
+                quantity: 1,
+                unit: product.unit,
+                stock: Number(product.stock),
+                price: Number(product.price),
+                basePrice:
+                  Number(product.price) / convertToBaseUnit(1, product.unit),
+                costPrice: Number(product.costPrice),
+              }
+            );
+          })
+          .filter(Boolean) as Product[];
 
-      return {
-        ...prevState,
-        products: updatedProducts,
-        total: newTotal,
-        paymentMethods: updatedPaymentMethods,
-      };
-    });
-  };
-
-  const handleQuantityChange = (
-    productId: number,
-    quantity: number,
-    unit: Product["unit"]
-  ) => {
-    setNewSale((prevState) => {
-      const product = products.find((p) => p.id === productId);
-      if (!product) return prevState;
-
-      const stockCheck = checkStockAvailability(product, quantity, unit);
-      if (!stockCheck.available) {
-        showNotification(
-          `No hay suficiente stock para ${
-            product.name
-          }. Stock disponible: ${stockCheck.availableQuantity.toFixed(2)} ${
-            stockCheck.availableUnit
-          }`,
-          "error"
+        const newTotal = calculateFinalTotal(
+          updatedProducts || [],
+          prevState.manualAmount || 0,
+          selectedPromotions
         );
-        return prevState;
-      }
 
-      const updatedProducts = prevState.products.map((p) => {
-        if (p.id === productId) {
-          return { ...p, quantity, unit };
-        }
-        return p;
+        const updatedPaymentMethods = synchronizePaymentMethods(
+          prevState.paymentMethods,
+          newTotal
+        );
+
+        return {
+          ...prevState,
+          products: updatedProducts,
+          total: newTotal,
+          paymentMethods: updatedPaymentMethods,
+        };
       });
+    },
+    [products, rubro, selectedPromotions, showNotification]
+  );
 
-      const newTotal = calculateFinalTotal(
-        updatedProducts,
-        prevState.manualAmount || 0,
-        selectedPromotions
-      );
+  const handleQuantityChange = useCallback(
+    (productId: number, quantity: number, unit: Product["unit"]) => {
+      setNewSale((prevState) => {
+        const product = products.find((p) => p.id === productId);
+        if (!product) return prevState;
 
-      const updatedPaymentMethods = synchronizePaymentMethods(
-        prevState.paymentMethods,
-        newTotal
-      );
-
-      return {
-        ...prevState,
-        products: updatedProducts,
-        paymentMethods: updatedPaymentMethods,
-        total: newTotal,
-      };
-    });
-  };
-
-  const handleUnitChange = (
-    productId: number,
-    selectedValue: string | number,
-    currentQuantity: number
-  ) => {
-    if (!selectedValue) return;
-
-    setNewSale((prevState) => {
-      const updatedProducts = prevState.products.map((p) => {
-        if (p.id === productId) {
-          const compatibleUnits = getCompatibleUnits(p.unit);
-          const isCompatible = compatibleUnits.some(
-            (u) => u.value === selectedValue
+        const stockCheck = checkStockAvailability(product, quantity, unit);
+        if (!stockCheck.available) {
+          showNotification(
+            `No hay suficiente stock para ${
+              product.name
+            }. Stock disponible: ${stockCheck.availableQuantity.toFixed(2)} ${
+              stockCheck.availableUnit
+            }`,
+            "error"
           );
-
-          if (!isCompatible) return p;
-
-          const newUnit = selectedValue as Product["unit"];
-          const basePrice =
-            p.basePrice ?? p.price / convertToBaseUnit(1, p.unit);
-          const newPrice = basePrice * convertToBaseUnit(1, newUnit);
-
-          return {
-            ...p,
-            unit: newUnit,
-            quantity: currentQuantity,
-            price: parseFloat(newPrice.toFixed(2)),
-            basePrice: basePrice,
-          };
+          return prevState;
         }
-        return p;
+
+        const updatedProducts = prevState.products.map((p) => {
+          if (p.id === productId) {
+            return { ...p, quantity, unit };
+          }
+          return p;
+        });
+
+        const newTotal = calculateFinalTotal(
+          updatedProducts,
+          prevState.manualAmount || 0,
+          selectedPromotions
+        );
+
+        const updatedPaymentMethods = synchronizePaymentMethods(
+          prevState.paymentMethods,
+          newTotal
+        );
+
+        return {
+          ...prevState,
+          products: updatedProducts,
+          paymentMethods: updatedPaymentMethods,
+          total: newTotal,
+        };
       });
+    },
+    [products, selectedPromotions, showNotification]
+  );
 
-      const newTotal = calculateFinalTotal(
-        updatedProducts,
-        prevState.manualAmount || 0,
-        selectedPromotions
-      );
+  const handleUnitChange = useCallback(
+    (
+      productId: number,
+      selectedValue: string | number,
+      currentQuantity: number
+    ) => {
+      if (!selectedValue) return;
 
-      return {
-        ...prevState,
-        products: updatedProducts,
-        total: newTotal,
-      };
-    });
-  };
+      setNewSale((prevState) => {
+        const updatedProducts = prevState.products.map((p) => {
+          if (p.id === productId) {
+            const compatibleUnits = getCompatibleUnits(p.unit);
+            const isCompatible = compatibleUnits.some(
+              (u) => u.value === selectedValue
+            );
+
+            if (!isCompatible) return p;
+
+            const newUnit = selectedValue as Product["unit"];
+            const basePrice =
+              p.basePrice ?? p.price / convertToBaseUnit(1, p.unit);
+            const newPrice = basePrice * convertToBaseUnit(1, newUnit);
+
+            return {
+              ...p,
+              unit: newUnit,
+              quantity: currentQuantity,
+              price: parseFloat(newPrice.toFixed(2)),
+              basePrice: basePrice,
+            };
+          }
+          return p;
+        });
+
+        const newTotal = calculateFinalTotal(
+          updatedProducts,
+          prevState.manualAmount || 0,
+          selectedPromotions
+        );
+
+        return {
+          ...prevState,
+          products: updatedProducts,
+          total: newTotal,
+        };
+      });
+    },
+    [selectedPromotions]
+  );
 
   const handleRemoveProduct = (productId: number) => {
-    setNewSale((prevState) => {
-      const updatedProducts = prevState.products.filter(
-        (p) => p.id !== productId
-      );
-
-      const newTotal = calculateFinalTotal(
-        updatedProducts,
-        prevState.manualAmount || 0,
-        selectedPromotions
-      );
-
-      const updatedPaymentMethods = synchronizePaymentMethods(
-        prevState.paymentMethods,
-        newTotal
-      );
+    setNewSale((prev) => {
+      const updatedProducts = prev.products.filter((p) => p.id !== productId);
+      const newTotal =
+        calculateCombinedTotal(updatedProducts) + (prev.manualAmount || 0);
 
       return {
-        ...prevState,
+        ...prev,
         products: updatedProducts,
         total: newTotal,
-        paymentMethods: updatedPaymentMethods,
+        paymentMethods: synchronizePaymentMethods(
+          prev.paymentMethods,
+          newTotal
+        ),
       };
     });
   };
@@ -1994,13 +2023,13 @@ const VentasPage = () => {
     }
   }, [shouldRedirectToCash, router]);
 
-  useEffect(() => {
-    const expectedTotal = calculateFinalTotal(
-      newSale.products,
-      newSale.manualAmount || 0,
-      selectedPromotions
-    );
+  const expectedTotal = calculateFinalTotal(
+    newSale.products,
+    newSale.manualAmount || 0,
+    selectedPromotions
+  );
 
+  useEffect(() => {
     if (Math.abs(newSale.total - expectedTotal) > 0.01 && selectedPromotions) {
       setNewSale((prev) => ({
         ...prev,
@@ -2107,7 +2136,7 @@ const VentasPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(100vh - 250px)", flex: 1 }}
+              sx={{ maxHeight: "70vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -2630,32 +2659,30 @@ const VentasPage = () => {
                   <TableContainer
                     component={Paper}
                     sx={{
-                      maxHeight: "16rem",
+                      maxHeight: "25vh",
                       bgcolor: "background.paper",
                     }}
                   >
                     <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={getTableHeaderStyle()}>
-                            Producto
-                          </TableCell>
-                          <TableCell sx={getTableHeaderStyle()} align="center">
+                          <TableCell sx={tableHeaderStyle}>Producto</TableCell>
+                          <TableCell sx={tableHeaderStyle} align="center">
                             Unidad
                           </TableCell>
-                          <TableCell sx={getTableHeaderStyle()} align="center">
+                          <TableCell sx={tableHeaderStyle} align="center">
                             Cantidad
                           </TableCell>
-                          <TableCell sx={getTableHeaderStyle()} align="center">
+                          <TableCell sx={tableHeaderStyle} align="center">
                             % descuento
                           </TableCell>
-                          <TableCell sx={getTableHeaderStyle()} align="center">
+                          <TableCell sx={tableHeaderStyle} align="center">
                             % recargo
                           </TableCell>
-                          <TableCell sx={getTableHeaderStyle()} align="center">
+                          <TableCell sx={tableHeaderStyle} align="center">
                             Total
                           </TableCell>
-                          <TableCell sx={getTableHeaderStyle()} align="center">
+                          <TableCell sx={tableHeaderStyle} align="center">
                             Acciones
                           </TableCell>
                         </TableRow>

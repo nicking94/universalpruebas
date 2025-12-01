@@ -322,7 +322,7 @@ const PromocionesPage = () => {
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
             gap: 2,
-            mb: 3,
+            mb: 2,
           }}
         >
           <Card sx={getCardStyle("primary")}>
@@ -427,7 +427,7 @@ const PromocionesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(100vh - 350px)", flex: 1 }}
+              sx={{ maxHeight: "60vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -877,9 +877,6 @@ const PromocionesPage = () => {
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
               ¿Está seguro que desea eliminar la promoción?
-            </Typography>
-            <Typography color="text.secondary">
-              {promotionToDelete?.name} será eliminada permanentemente.
             </Typography>
           </Box>
         </Modal>

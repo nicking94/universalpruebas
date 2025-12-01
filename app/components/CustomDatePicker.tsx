@@ -180,14 +180,19 @@ const CustomDatePicker = ({
           InputLabelProps={{
             shrink: true,
             sx: {
-              color: theme.palette.text.primary,
-              fontWeight: "medium",
-              fontSize: "0.875rem",
-              "&.Mui-focused": {
-                color: theme.palette.primary.main,
+              // Estilo consistente con el Select
+              color: disabled
+                ? theme.palette.text.disabled
+                : theme.palette.text.secondary,
+              fontSize: "1rem",
+              transform: "translate(14px, 9px) scale(1)",
+              "&.MuiInputLabel-shrink": {
+                transform: "translate(14px, -9px) scale(0.75)",
               },
-              "&.Mui-disabled": {
-                color: theme.palette.text.disabled,
+              "&.Mui-focused": {
+                color: disabled
+                  ? theme.palette.text.disabled
+                  : theme.palette.primary.main,
               },
             },
           }}
@@ -208,22 +213,23 @@ const CustomDatePicker = ({
                 },
               },
               "& .MuiOutlinedInput-notchedOutline": {
-                borderColor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255, 255, 255, 0.23)"
-                    : "rgba(0, 0, 0, 0.23)",
+                borderColor: disabled
+                  ? theme.palette.action.disabledBackground
+                  : theme.palette.mode === "dark"
+                  ? "rgba(255, 255, 255, 0.23)"
+                  : "rgba(0, 0, 0, 0.23)",
               },
               "&:hover .MuiOutlinedInput-notchedOutline": {
                 borderColor: disabled
-                  ? theme.palette.mode === "dark"
-                    ? "rgba(255, 255, 255, 0.23)"
-                    : "rgba(0, 0, 0, 0.23)"
+                  ? theme.palette.action.disabledBackground
                   : theme.palette.mode === "dark"
                   ? "rgba(255, 255, 255, 0.4)"
                   : "rgba(0, 0, 0, 0.4)",
               },
               "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: theme.palette.primary.main,
+                borderColor: disabled
+                  ? theme.palette.action.disabledBackground
+                  : theme.palette.primary.main,
                 borderWidth: "2px",
               },
               "&.Mui-disabled": {

@@ -551,7 +551,7 @@ const CajaDiariaPage = () => {
           </Box>
         </Box>
 
-        <TableContainer component={Paper} sx={{ maxHeight: "62vh" }}>
+        <TableContainer component={Paper} sx={{ maxHeight: "61vh" }}>
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
@@ -896,7 +896,7 @@ const CajaDiariaPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(87vh - 250px)", flex: 1 }} //altura de la tabla especial para caja diaria ya que es mas chica.
+              sx={{ maxHeight: "61vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>

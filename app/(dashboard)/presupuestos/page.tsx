@@ -1,5 +1,12 @@
 "use client";
-import { useEffect, useState, SyntheticEvent } from "react";
+import {
+  useEffect,
+  useState,
+  SyntheticEvent,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { db } from "@/app/database/db";
 import {
   Budget,
@@ -51,6 +58,8 @@ import {
   Autocomplete,
   TextField,
   Checkbox,
+  Popper,
+  AutocompleteRenderOptionState,
 } from "@mui/material";
 import {
   Add,
@@ -62,8 +71,10 @@ import {
   Description,
   CheckBoxOutlineBlank,
   CheckBox,
+  Search,
 } from "@mui/icons-material";
 import Button from "@/app/components/Button";
+import Select from "@/app/components/Select";
 
 // Definir tipos para las opciones
 interface CustomerOption {
@@ -122,8 +133,13 @@ const PresupuestosPage = () => {
     id: string | null;
     name: string;
   } | null>(null);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
   const router = useRouter();
   const theme = useTheme();
+
+  // Refs para debounce
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const productSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const CONVERSION_FACTORS = {
     A: { base: "A", factor: 1 },
@@ -177,58 +193,96 @@ const PresupuestosPage = () => {
     { value: "rechazado", label: "Rechazado" },
   ];
 
-  const convertToBaseUnit = (quantity: number, fromUnit: string): number => {
-    const unitInfo =
-      CONVERSION_FACTORS[fromUnit as keyof typeof CONVERSION_FACTORS];
-    return unitInfo ? quantity * unitInfo.factor : quantity;
-  };
+  // Iconos memoizados para el Autocomplete de productos múltiples
+  const icon = useMemo(() => <CheckBoxOutlineBlank fontSize="small" />, []);
+  const checkedIcon = useMemo(() => <CheckBox fontSize="small" />, []);
 
-  const convertFromBaseUnit = (quantity: number, toUnit: string): number => {
-    const unitInfo =
-      CONVERSION_FACTORS[toUnit as keyof typeof CONVERSION_FACTORS];
-    return unitInfo ? quantity / unitInfo.factor : quantity;
-  };
+  const convertToBaseUnit = useCallback(
+    (quantity: number, fromUnit: string): number => {
+      const unitInfo =
+        CONVERSION_FACTORS[fromUnit as keyof typeof CONVERSION_FACTORS];
+      return unitInfo ? quantity * unitInfo.factor : quantity;
+    },
+    []
+  );
 
-  const convertUnit = (
-    quantity: number,
-    fromUnit: string,
-    toUnit: string
-  ): number => {
-    if (fromUnit === toUnit) return quantity;
-    const baseQuantity = convertToBaseUnit(quantity, fromUnit);
-    return convertFromBaseUnit(baseQuantity, toUnit);
-  };
+  const convertFromBaseUnit = useCallback(
+    (quantity: number, toUnit: string): number => {
+      const unitInfo =
+        CONVERSION_FACTORS[toUnit as keyof typeof CONVERSION_FACTORS];
+      return unitInfo ? quantity / unitInfo.factor : quantity;
+    },
+    []
+  );
 
-  const getCompatibleUnits = (productUnit: string): UnitOption[] => {
-    if (productUnit === "Unid.") return [];
+  const convertUnit = useCallback(
+    (quantity: number, fromUnit: string, toUnit: string): number => {
+      if (fromUnit === toUnit) return quantity;
+      const baseQuantity = convertToBaseUnit(quantity, fromUnit);
+      return convertFromBaseUnit(baseQuantity, toUnit);
+    },
+    [convertToBaseUnit, convertFromBaseUnit]
+  );
 
-    const productUnitInfo =
-      CONVERSION_FACTORS[productUnit as keyof typeof CONVERSION_FACTORS];
-    if (!productUnitInfo) return unitOptions.filter((u) => !u.convertible);
+  const getCompatibleUnits = useCallback(
+    (productUnit: string): UnitOption[] => {
+      if (productUnit === "Unid.") return [];
 
-    return unitOptions.filter((option) => {
-      if (!option.convertible) return false;
-      const optionInfo =
-        CONVERSION_FACTORS[option.value as keyof typeof CONVERSION_FACTORS];
-      return optionInfo?.base === productUnitInfo.base;
-    });
-  };
+      const productUnitInfo =
+        CONVERSION_FACTORS[productUnit as keyof typeof CONVERSION_FACTORS];
+      if (!productUnitInfo) return unitOptions.filter((u) => !u.convertible);
 
-  const productOptions: ProductOption[] = products
-    .filter((p) => rubro === "Todos los rubros" || p.rubro === rubro)
-    .map((p) => ({
-      value: p.id,
-      label: `${p.name}${p.size ? ` (${p.size})` : ""}${
-        p.color ? ` - ${p.color}` : ""
-      }`,
-      product: p,
-      isDisabled: p.stock <= 0,
-    })) as ProductOption[];
+      return unitOptions.filter((option) => {
+        if (!option.convertible) return false;
+        const optionInfo =
+          CONVERSION_FACTORS[option.value as keyof typeof CONVERSION_FACTORS];
+        return optionInfo?.base === productUnitInfo.base;
+      });
+    },
+    []
+  );
+
+  const productOptions = useMemo(() => {
+    return products
+      .filter((p) => rubro === "Todos los rubros" || p.rubro === rubro)
+      .map((p) => ({
+        value: p.id,
+        label: `${p.name}${p.size ? ` (${p.size})` : ""}${
+          p.color ? ` - ${p.color}` : ""
+        }`,
+        product: p,
+        isDisabled: p.stock <= 0,
+      })) as ProductOption[];
+  }, [products, rubro]);
+
+  const filteredProductOptions = useMemo(() => {
+    if (!productSearchQuery) return productOptions.slice(0, 50); // Limitar a 50 resultados iniciales
+
+    const query = productSearchQuery.toLowerCase();
+    return productOptions
+      .filter(
+        (option) =>
+          option.label.toLowerCase().includes(query) ||
+          option.product?.name.toLowerCase().includes(query)
+      )
+      .slice(0, 50); // Limitar resultados a 50
+  }, [productOptions, productSearchQuery]);
 
   // Función corregida para getOptionDisabled
   const getOptionDisabled = (option: ProductOption): boolean => {
     return option.isDisabled || false;
   };
+
+  const getOptionLabel = useCallback(
+    (option: ProductOption) => option.label,
+    []
+  );
+
+  const isOptionEqualToValue = useCallback(
+    (option: ProductOption, value: ProductOption) =>
+      option.value === value.value,
+    []
+  );
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -287,34 +341,34 @@ const PresupuestosPage = () => {
 
   const indexOfLastBudget = currentPage * itemsPerPage;
   const indexOfFirstBudget = indexOfLastBudget - itemsPerPage;
-  const currentBudgets = filteredBudgets.slice(
-    indexOfFirstBudget,
-    indexOfLastBudget
+  const currentBudgets = useMemo(
+    () => filteredBudgets.slice(indexOfFirstBudget, indexOfLastBudget),
+    [filteredBudgets, indexOfFirstBudget, indexOfLastBudget]
   );
 
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setIsNotificationOpen(true);
-    setTimeout(() => setIsNotificationOpen(false), 2500);
-  };
+  const showNotification = useCallback(
+    (message: string, type: "success" | "error" | "info") => {
+      setNotificationMessage(message);
+      setNotificationType(type);
+      setIsNotificationOpen(true);
+      setTimeout(() => setIsNotificationOpen(false), 2500);
+    },
+    []
+  );
 
-  const calculateTotalAndRemaining = (
-    items: Array<SaleItem & { basePrice?: number }>,
-    deposit: string
-  ) => {
-    const total = items.reduce(
-      (total, item) =>
-        total + item.price * item.quantity * (1 - (item.discount || 0) / 100),
-      0
-    );
-    const depositValue = deposit === "" ? 0 : parseFloat(deposit);
-    const remaining = total - (isNaN(depositValue) ? 0 : depositValue);
-    return { total, remaining };
-  };
+  const calculateTotalAndRemaining = useCallback(
+    (items: Array<SaleItem & { basePrice?: number }>, deposit: string) => {
+      const total = items.reduce(
+        (total, item) =>
+          total + item.price * item.quantity * (1 - (item.discount || 0) / 100),
+        0
+      );
+      const depositValue = deposit === "" ? 0 : parseFloat(deposit);
+      const remaining = total - (isNaN(depositValue) ? 0 : depositValue);
+      return { total, remaining };
+    },
+    []
+  );
 
   const handleNewBudgetClick = async () => {
     const { needsRedirect } = await ensureCashIsOpen();
@@ -327,66 +381,72 @@ const PresupuestosPage = () => {
     setIsModalOpen(true);
   };
 
-  const checkStockAvailability = (
-    product: Product,
-    requestedQuantity: number,
-    requestedUnit: string
-  ): {
-    available: boolean;
-    availableQuantity: number;
-    availableUnit: string;
-  } => {
-    try {
+  const checkStockAvailability = useCallback(
+    (
+      product: Product,
+      requestedQuantity: number,
+      requestedUnit: string
+    ): {
+      available: boolean;
+      availableQuantity: number;
+      availableUnit: string;
+    } => {
+      try {
+        const stockInBase = convertToBaseUnit(
+          Number(product.stock),
+          product.unit
+        );
+        const requestedInBase = convertToBaseUnit(
+          requestedQuantity,
+          requestedUnit
+        );
+
+        if (stockInBase >= requestedInBase) {
+          return {
+            available: true,
+            availableQuantity: requestedQuantity,
+            availableUnit: requestedUnit,
+          };
+        } else {
+          const availableInRequestedUnit = convertFromBaseUnit(
+            stockInBase,
+            requestedUnit
+          );
+          return {
+            available: false,
+            availableQuantity: parseFloat(availableInRequestedUnit.toFixed(3)),
+            availableUnit: requestedUnit,
+          };
+        }
+      } catch (error) {
+        console.error("Error checking stock:", error);
+        return {
+          available: false,
+          availableQuantity: 0,
+          availableUnit: requestedUnit,
+        };
+      }
+    },
+    [convertToBaseUnit, convertFromBaseUnit]
+  );
+
+  const updateStockAfterSale = useCallback(
+    (productId: number, soldQuantity: number, unit: string): number => {
+      const product = products.find((p) => p.id === productId);
+      if (!product)
+        throw new Error(`Producto con ID ${productId} no encontrado`);
+
       const stockInBase = convertToBaseUnit(
         Number(product.stock),
         product.unit
       );
-      const requestedInBase = convertToBaseUnit(
-        requestedQuantity,
-        requestedUnit
-      );
+      const soldInBase = convertToBaseUnit(soldQuantity, unit);
+      const newStockInBase = stockInBase - soldInBase;
 
-      if (stockInBase >= requestedInBase) {
-        return {
-          available: true,
-          availableQuantity: requestedQuantity,
-          availableUnit: requestedUnit,
-        };
-      } else {
-        const availableInRequestedUnit = convertFromBaseUnit(
-          stockInBase,
-          requestedUnit
-        );
-        return {
-          available: false,
-          availableQuantity: parseFloat(availableInRequestedUnit.toFixed(3)),
-          availableUnit: requestedUnit,
-        };
-      }
-    } catch (error) {
-      console.error("Error checking stock:", error);
-      return {
-        available: false,
-        availableQuantity: 0,
-        availableUnit: requestedUnit,
-      };
-    }
-  };
-
-  const updateStockAfterSale = (
-    productId: number,
-    soldQuantity: number,
-    unit: string
-  ): number => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) throw new Error(`Producto con ID ${productId} no encontrado`);
-
-    const stockInBase = convertToBaseUnit(Number(product.stock), product.unit);
-    const soldInBase = convertToBaseUnit(soldQuantity, unit);
-    const newStockInBase = stockInBase - soldInBase;
-
-    return convertFromBaseUnit(newStockInBase, product.unit);
-  };
+      return convertFromBaseUnit(newStockInBase, product.unit);
+    },
+    [products, convertToBaseUnit, convertFromBaseUnit]
+  );
 
   const handleConvertToSale = async (paymentMethods: PaymentSplit[]) => {
     if (!budgetToConvert) return;
@@ -570,182 +630,205 @@ const PresupuestosPage = () => {
     }
   };
 
-  const handleProductSelect = (
-    event: SyntheticEvent,
-    newValue: ProductOption[]
-  ) => {
-    const selectedProducts = Array.from(newValue).map((option) => {
-      const product = products.find((p) => p.id === option.value);
-      return {
-        productId: option.value,
-        productName: product?.name || "",
-        price: product?.price || 0,
-        quantity: 1,
-        unit: product?.unit || "Unid.",
-        discount: 0,
-        size: product?.size,
-        color: product?.color,
-        basePrice: product
-          ? product.price / convertToBaseUnit(1, product.unit)
-          : 0,
-      };
-    });
-
-    const { total, remaining } = calculateTotalAndRemaining(
-      selectedProducts,
-      newBudget.deposit
-    );
-
-    setNewBudget((prev) => ({
-      ...prev,
-      items: selectedProducts,
-      total,
-      remaining,
-    }));
-  };
-
-  const handleQuantityChange = (
-    productId: number,
-    quantity: number,
-    unit: Product["unit"]
-  ) => {
-    setNewBudget((prevState) => {
-      const product = products.find((p) => p.id === productId);
-      if (!product) return prevState;
-
-      const stockCheck = checkStockAvailability(product, quantity, unit);
-      if (!stockCheck.available) {
-        showNotification(
-          `No hay suficiente stock para ${
-            product.name
-          }. Stock disponible: ${stockCheck.availableQuantity.toFixed(2)} ${
-            stockCheck.availableUnit
-          }`,
-          "error"
-        );
-        return prevState;
-      }
-
-      const updatedItems = prevState.items.map((item) => {
-        if (item.productId === productId) {
-          const newPrice = product.price;
-          return {
-            ...item,
-            quantity,
-            unit,
-            price: parseFloat(newPrice.toFixed(2)),
-            basePrice: product.price,
-          };
-        }
-        return item;
+  const handleProductSelect = useCallback(
+    (event: SyntheticEvent, newValue: ProductOption[]) => {
+      const selectedProducts = Array.from(newValue).map((option) => {
+        const product = products.find((p) => p.id === option.value);
+        return {
+          productId: option.value,
+          productName: product?.name || "",
+          price: product?.price || 0,
+          quantity: 1,
+          unit: product?.unit || "Unid.",
+          discount: 0,
+          size: product?.size,
+          color: product?.color,
+          basePrice: product
+            ? product.price / convertToBaseUnit(1, product.unit)
+            : 0,
+        };
       });
 
       const { total, remaining } = calculateTotalAndRemaining(
-        updatedItems,
-        prevState.deposit
+        selectedProducts,
+        newBudget.deposit
       );
 
-      return {
-        ...prevState,
-        items: updatedItems,
+      setNewBudget((prev) => ({
+        ...prev,
+        items: selectedProducts,
         total,
         remaining,
-      };
-    });
-  };
+      }));
+    },
+    [products, newBudget.deposit, convertToBaseUnit, calculateTotalAndRemaining]
+  );
 
-  const handleUnitChange = (
-    productId: number,
-    selectedOption: UnitOption | null,
-    currentQuantity: number
-  ) => {
-    if (!selectedOption) return;
+  const handleQuantityChange = useCallback(
+    (productId: number, quantity: number, unit: Product["unit"]) => {
+      setNewBudget((prevState) => {
+        const product = products.find((p) => p.id === productId);
+        if (!product) return prevState;
 
-    setNewBudget((prev) => {
-      const updatedItems = prev.items.map((item) => {
-        if (item.productId === productId) {
-          const product = products.find((p) => p.id === productId);
-          if (!product) return item;
-
-          const compatibleUnits = getCompatibleUnits(product.unit);
-          const isCompatible = compatibleUnits.some(
-            (u) => u.value === selectedOption.value
+        const stockCheck = checkStockAvailability(product, quantity, unit);
+        if (!stockCheck.available) {
+          showNotification(
+            `No hay suficiente stock para ${
+              product.name
+            }. Stock disponible: ${stockCheck.availableQuantity.toFixed(2)} ${
+              stockCheck.availableUnit
+            }`,
+            "error"
           );
-
-          if (!isCompatible) return item;
-
-          const newUnit = selectedOption.value as Product["unit"];
-          const basePrice =
-            item.basePrice ||
-            product.price / convertToBaseUnit(1, product.unit);
-          const newPrice = basePrice * convertToBaseUnit(1, newUnit);
-          const newQuantity = convertUnit(currentQuantity, item.unit, newUnit);
-
-          return {
-            ...item,
-            unit: newUnit,
-            quantity: parseFloat(newQuantity.toFixed(3)),
-            price: parseFloat(newPrice.toFixed(2)),
-            basePrice: basePrice,
-          };
+          return prevState;
         }
-        return item;
+
+        const updatedItems = prevState.items.map((item) => {
+          if (item.productId === productId) {
+            const newPrice = product.price;
+            return {
+              ...item,
+              quantity,
+              unit,
+              price: parseFloat(newPrice.toFixed(2)),
+              basePrice: product.price,
+            };
+          }
+          return item;
+        });
+
+        const { total, remaining } = calculateTotalAndRemaining(
+          updatedItems,
+          prevState.deposit
+        );
+
+        return {
+          ...prevState,
+          items: updatedItems,
+          total,
+          remaining,
+        };
       });
+    },
+    [
+      products,
+      checkStockAvailability,
+      showNotification,
+      calculateTotalAndRemaining,
+    ]
+  );
 
-      return {
-        ...prev,
-        items: updatedItems,
-        total: calculateTotalAndRemaining(updatedItems, prev.deposit).total,
-      };
-    });
-  };
+  const handleUnitChange = useCallback(
+    (
+      productId: number,
+      selectedOption: UnitOption | null,
+      currentQuantity: number
+    ) => {
+      if (!selectedOption) return;
 
-  const handleDiscountChange = (productId: number, discount: string) => {
-    let discountValue = discount === "" ? 0 : parseInt(discount) || 0;
+      setNewBudget((prev) => {
+        const updatedItems = prev.items.map((item) => {
+          if (item.productId === productId) {
+            const product = products.find((p) => p.id === productId);
+            if (!product) return item;
 
-    if (discountValue < 0) discountValue = 0;
-    if (discountValue > 100) discountValue = 100;
+            const compatibleUnits = getCompatibleUnits(product.unit);
+            const isCompatible = compatibleUnits.some(
+              (u) => u.value === selectedOption.value
+            );
 
-    setNewBudget((prev) => {
-      const updatedItems = prev.items.map((item) =>
-        item.productId === productId
-          ? { ...item, discount: discountValue }
-          : item
-      );
+            if (!isCompatible) return item;
 
-      const { total, remaining } = calculateTotalAndRemaining(
-        updatedItems,
-        prev.deposit
-      );
+            const newUnit = selectedOption.value as Product["unit"];
+            const basePrice =
+              item.basePrice ||
+              product.price / convertToBaseUnit(1, product.unit);
+            const newPrice = basePrice * convertToBaseUnit(1, newUnit);
+            const newQuantity = convertUnit(
+              currentQuantity,
+              item.unit,
+              newUnit
+            );
 
-      return {
-        ...prev,
-        items: updatedItems,
-        total,
-        remaining,
-      };
-    });
-  };
+            return {
+              ...item,
+              unit: newUnit,
+              quantity: parseFloat(newQuantity.toFixed(3)),
+              price: parseFloat(newPrice.toFixed(2)),
+              basePrice: basePrice,
+            };
+          }
+          return item;
+        });
 
-  const handleRemoveProduct = (productId: number) => {
-    setNewBudget((prev) => {
-      const updatedItems = prev.items.filter(
-        (item) => item.productId !== productId
-      );
+        return {
+          ...prev,
+          items: updatedItems,
+          total: calculateTotalAndRemaining(updatedItems, prev.deposit).total,
+        };
+      });
+    },
+    [
+      products,
+      getCompatibleUnits,
+      convertToBaseUnit,
+      convertUnit,
+      calculateTotalAndRemaining,
+    ]
+  );
 
-      const { total, remaining } = calculateTotalAndRemaining(
-        updatedItems,
-        prev.deposit
-      );
+  const handleDiscountChange = useCallback(
+    (productId: number, discount: string) => {
+      let discountValue = discount === "" ? 0 : parseInt(discount) || 0;
 
-      return {
-        ...prev,
-        items: updatedItems,
-        total,
-        remaining,
-      };
-    });
-  };
+      if (discountValue < 0) discountValue = 0;
+      if (discountValue > 100) discountValue = 100;
+
+      setNewBudget((prev) => {
+        const updatedItems = prev.items.map((item) =>
+          item.productId === productId
+            ? { ...item, discount: discountValue }
+            : item
+        );
+
+        const { total, remaining } = calculateTotalAndRemaining(
+          updatedItems,
+          prev.deposit
+        );
+
+        return {
+          ...prev,
+          items: updatedItems,
+          total,
+          remaining,
+        };
+      });
+    },
+    [calculateTotalAndRemaining]
+  );
+
+  const handleRemoveProduct = useCallback(
+    (productId: number) => {
+      setNewBudget((prev) => {
+        const updatedItems = prev.items.filter(
+          (item) => item.productId !== productId
+        );
+
+        const { total, remaining } = calculateTotalAndRemaining(
+          updatedItems,
+          prev.deposit
+        );
+
+        return {
+          ...prev,
+          items: updatedItems,
+          total,
+          remaining,
+        };
+      });
+    },
+    [calculateTotalAndRemaining]
+  );
 
   const handleAddBudget = async () => {
     if (!newBudget.customerName.trim()) {
@@ -862,19 +945,19 @@ const PresupuestosPage = () => {
     }
   };
 
-  const generateBudgetId = (customerName: string): string => {
+  const generateBudgetId = useCallback((customerName: string): string => {
     const cleanName = customerName
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^a-zA-Z0-9-]/g, "");
     const timestamp = Date.now().toString().slice(-5);
     return `${cleanName}-${timestamp}`;
-  };
+  }, []);
 
-  const handleDeleteClick = (budget: Budget) => {
+  const handleDeleteClick = useCallback((budget: Budget) => {
     setBudgetToDelete(budget);
     setIsDeleteModalOpen(true);
-  };
+  }, []);
 
   const handleConfirmDelete = async () => {
     if (!budgetToDelete) return;
@@ -895,42 +978,45 @@ const PresupuestosPage = () => {
     }
   };
 
-  const handleEditClick = (budget: Budget) => {
-    setEditingBudget(budget);
-    setNewBudget({
-      date: budget.date,
-      customerName: budget.customerName,
-      customerPhone: budget.customerPhone || "",
-      customerId: budget.customerId,
-      items: budget.items.map((item) => ({
-        ...item,
-        basePrice:
-          item.basePrice ||
-          (products.find((p) => p.id === item.productId)?.price || 0) /
-            convertToBaseUnit(1, item.unit),
-      })),
-      total: budget.total,
-      deposit: budget.deposit,
-      remaining: budget.remaining,
-      expirationDate: budget.expirationDate || "",
-      notes: budget.notes || "",
-      status: budget.status || "pendiente",
-    });
+  const handleEditClick = useCallback(
+    (budget: Budget) => {
+      setEditingBudget(budget);
+      setNewBudget({
+        date: budget.date,
+        customerName: budget.customerName,
+        customerPhone: budget.customerPhone || "",
+        customerId: budget.customerId,
+        items: budget.items.map((item) => ({
+          ...item,
+          basePrice:
+            item.basePrice ||
+            (products.find((p) => p.id === item.productId)?.price || 0) /
+              convertToBaseUnit(1, item.unit),
+        })),
+        total: budget.total,
+        deposit: budget.deposit,
+        remaining: budget.remaining,
+        expirationDate: budget.expirationDate || "",
+        notes: budget.notes || "",
+        status: budget.status || "pendiente",
+      });
 
-    if (budget.customerId) {
-      const customer = customers.find((c) => c.id === budget.customerId);
-      if (customer) {
-        setSelectedCustomer({
-          value: customer.id,
-          label: customer.name,
-        });
+      if (budget.customerId) {
+        const customer = customers.find((c) => c.id === budget.customerId);
+        if (customer) {
+          setSelectedCustomer({
+            value: customer.id,
+            label: customer.name,
+          });
+        }
+      } else {
+        setSelectedCustomer(null);
       }
-    } else {
-      setSelectedCustomer(null);
-    }
 
-    setIsModalOpen(true);
-  };
+      setIsModalOpen(true);
+    },
+    [products, customers, convertToBaseUnit]
+  );
 
   const handleUpdateBudget = async () => {
     if (!editingBudget || !newBudget.customerName.trim()) {
@@ -993,118 +1079,202 @@ const PresupuestosPage = () => {
     }
   };
 
-  const handleDownloadPDF = (budget: Budget) => {
-    return (
-      <PDFDownloadLink
-        document={
-          <BudgetPDF
-            budget={{
-              ...budget,
-              deposit: budget.deposit || "0",
-              remaining: budget.remaining || budget.total,
-            }}
-            businessData={businessData}
-          />
-        }
-        fileName={`Presupuesto de ${budget.customerName} - ${new Date(
-          budget.createdAt
-        ).toLocaleDateString("es-ES")}.pdf`}
-      >
-        {({ loading }) => (
-          <IconButton
-            size="small"
-            disabled={loading}
-            title="Descargar presupuesto"
-            sx={{
-              color: theme.palette.text.secondary,
-              "&:hover": {
-                backgroundColor: theme.palette.primary.main,
-                color: "white",
-              },
-            }}
-          >
-            <Download fontSize="small" />
-          </IconButton>
-        )}
-      </PDFDownloadLink>
-    );
-  };
+  const handleDownloadPDF = useCallback(
+    (budget: Budget) => {
+      return (
+        <PDFDownloadLink
+          document={
+            <BudgetPDF
+              budget={{
+                ...budget,
+                deposit: budget.deposit || "0",
+                remaining: budget.remaining || budget.total,
+              }}
+              businessData={businessData}
+            />
+          }
+          fileName={`Presupuesto de ${budget.customerName} - ${new Date(
+            budget.createdAt
+          ).toLocaleDateString("es-ES")}.pdf`}
+        >
+          {({ loading }) => (
+            <IconButton
+              size="small"
+              disabled={loading}
+              title="Descargar presupuesto"
+              sx={{
+                color: theme.palette.text.secondary,
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.main,
+                  color: "white",
+                },
+              }}
+            >
+              <Download fontSize="small" />
+            </IconButton>
+          )}
+        </PDFDownloadLink>
+      );
+    },
+    [businessData, theme]
+  );
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-  };
+  const handleSearch = useCallback(
+    (query: string) => {
+      // Limpiar timeout anterior
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
 
-  const handleShowNotes = (budget: Budget) => {
+      // Configurar nuevo timeout
+      searchTimeoutRef.current = setTimeout(() => {
+        setSearchQuery(query);
+        setCurrentPage(1);
+      }, 300);
+    },
+    [setCurrentPage]
+  );
+
+  const handleShowNotes = useCallback((budget: Budget) => {
     setSelectedCustomerForNotes({
       id: budget.customerId || null,
       name: budget.customerName,
     });
     setNotesModalOpen(true);
-  };
+  }, []);
 
-  const handleCustomerSelect = (
-    event: SyntheticEvent,
-    selectedOption: CustomerOption | null
-  ) => {
-    setSelectedCustomer(selectedOption);
-    if (selectedOption) {
-      const customer = customers.find((c) => c.id === selectedOption.value);
-      if (customer) {
+  const handleCustomerSelect = useCallback(
+    (event: SyntheticEvent | null, selectedOption: CustomerOption | null) => {
+      setSelectedCustomer(selectedOption);
+      if (selectedOption) {
+        const customer = customers.find((c) => c.id === selectedOption.value);
+        if (customer) {
+          setNewBudget((prev) => ({
+            ...prev,
+            customerName: customer.name,
+            customerPhone: customer.phone || "",
+          }));
+        }
+      } else {
         setNewBudget((prev) => ({
           ...prev,
-          customerName: customer.name,
-          customerPhone: customer.phone || "",
+          customerName: "",
+          customerPhone: "",
         }));
       }
-    } else {
-      setNewBudget((prev) => ({
-        ...prev,
-        customerName: "",
-        customerPhone: "",
-      }));
-    }
-  };
+    },
+    [customers]
+  );
 
-  // Iconos para el Autocomplete de productos múltiples
-  const icon = <CheckBoxOutlineBlank fontSize="small" />;
-  const checkedIcon = <CheckBox fontSize="small" />;
+  const handleProductSearchChange = useCallback((query: string) => {
+    // Limpiar timeout anterior
+    if (productSearchTimeoutRef.current) {
+      clearTimeout(productSearchTimeoutRef.current);
+    }
+
+    // Configurar nuevo timeout
+    productSearchTimeoutRef.current = setTimeout(() => {
+      setProductSearchQuery(query);
+    }, 200);
+  }, []);
+
+  // Optimizar renderOption con useCallback - Tipos corregidos
+  const renderOption = useCallback(
+    (
+      props: React.HTMLAttributes<HTMLLIElement>,
+      option: ProductOption,
+      { selected }: AutocompleteRenderOptionState
+    ) => (
+      <li {...props}>
+        <Checkbox
+          icon={icon}
+          checkedIcon={checkedIcon}
+          style={{ marginRight: 8 }}
+          checked={selected}
+        />
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
+          <Typography variant="body2">{option.label}</Typography>
+          {option.product && (
+            <Typography variant="caption" color="text.secondary">
+              Stock: {option.product.stock} {option.product.unit} | Precio:{" "}
+              {formatCurrency(option.product.price)}
+            </Typography>
+          )}
+        </Box>
+      </li>
+    ),
+    [icon, checkedIcon]
+  );
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      if (productSearchTimeoutRef.current) {
+        clearTimeout(productSearchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <ProtectedRoute>
       <Box
         sx={{
-          px: 5,
+          px: 4,
           py: 2,
-          color: "text.secondary",
           height: "calc(100vh - 80px)",
           display: "flex",
           flexDirection: "column",
         }}
       >
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 600, mb: 2 }}>
+        <Typography variant="h5" fontWeight="semibold" mb={2}>
           Presupuestos
         </Typography>
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-          <Box sx={{ width: "100%", maxWidth: "400px" }}>
+        {/* Header con búsqueda y acciones */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 2,
+            width: "100%",
+          }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
             <SearchBar onSearch={handleSearch} />
           </Box>
-          {rubro !== "Todos los rubros" && (
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              mt: 1,
+              gap: 2,
+              visibility: rubro === "Todos los rubros" ? "hidden" : "visible",
+            }}
+          >
             <Button
               variant="contained"
-              startIcon={<Add />}
               onClick={handleNewBudgetClick}
               sx={{
-                backgroundColor: theme.palette.primary.main,
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.dark,
-                },
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
               }}
+              startIcon={<Add />}
             >
               Nuevo Presupuesto
             </Button>
-          )}
+          </Box>
         </Box>
 
         <Box
@@ -1118,42 +1288,44 @@ const PresupuestosPage = () => {
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <TableContainer
               component={Paper}
-              sx={{
-                maxHeight: "calc(100vh - 250px)",
-                flex: 1,
-              }}
+              sx={{ maxHeight: "71vh", flex: 1 }}
             >
-              <Table sx={{ minWidth: 650 }} size="small" stickyHeader>
+              <Table stickyHeader>
                 <TableHead>
-                  <TableRow
-                    sx={{
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                    }}
-                  >
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                        fontWeight: "bold",
+                      }}
+                    >
                       Cliente
                     </TableCell>
                     <TableCell
                       sx={{
-                        color: "white",
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
                         fontWeight: "bold",
-                        textAlign: "center",
                       }}
+                      align="center"
                     >
                       Teléfono
                     </TableCell>
                     <TableCell
                       sx={{
-                        color: "white",
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
                         fontWeight: "bold",
-                        textAlign: "center",
                       }}
+                      align="center"
                     >
                       Total
                     </TableCell>
                     <TableCell
                       sx={{
-                        color: "white",
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
                         fontWeight: "bold",
                         textAlign: "center",
                       }}
@@ -1162,7 +1334,8 @@ const PresupuestosPage = () => {
                     </TableCell>
                     <TableCell
                       sx={{
-                        color: "white",
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
                         fontWeight: "bold",
                         textAlign: "center",
                       }}
@@ -1171,7 +1344,8 @@ const PresupuestosPage = () => {
                     </TableCell>
                     <TableCell
                       sx={{
-                        color: "white",
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
                         fontWeight: "bold",
                         textAlign: "center",
                       }}
@@ -1181,10 +1355,10 @@ const PresupuestosPage = () => {
                     {rubro !== "Todos los rubros" && (
                       <TableCell
                         sx={{
-                          color: "white",
+                          bgcolor: "primary.main",
+                          color: "primary.contrastText",
                           fontWeight: "bold",
                           textAlign: "center",
-                          width: 160,
                         }}
                       >
                         Acciones
@@ -1198,13 +1372,14 @@ const PresupuestosPage = () => {
                       <TableRow
                         key={budget.id}
                         sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
                           "&:hover": {
-                            backgroundColor:
-                              theme.palette.mode === "dark"
-                                ? "primary.light"
-                                : "grey.100",
+                            backgroundColor: "action.hover",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                           },
-                          transition: "all 0.3s",
+                          transition: "all 0.3s ease-in-out",
                         }}
                       >
                         <TableCell sx={{ fontWeight: "medium" }}>
@@ -1286,7 +1461,7 @@ const PresupuestosPage = () => {
                               sx={{
                                 display: "flex",
                                 justifyContent: "center",
-                                gap: 1,
+                                gap: 0.5,
                               }}
                             >
                               <IconButton
@@ -1304,6 +1479,7 @@ const PresupuestosPage = () => {
                                     : "Cobrar como venta"
                                 }
                                 sx={{
+                                  borderRadius: "4px",
                                   color:
                                     budget.status === "cobrado"
                                       ? "text.disabled"
@@ -1328,13 +1504,14 @@ const PresupuestosPage = () => {
                                 disabled={!budget.customerId}
                                 title={
                                   !budget.customerId
-                                    ? "No hay presupuesto asociado"
-                                    : "Ver notas del presupuesto"
+                                    ? "No hay cliente asociado"
+                                    : "Ver notas del cliente"
                                 }
                                 sx={{
+                                  borderRadius: "4px",
                                   color: "text.secondary",
                                   "&:hover": {
-                                    backgroundColor: "primary.main",
+                                    backgroundColor: "info.main",
                                     color: "white",
                                   },
                                 }}
@@ -1347,6 +1524,7 @@ const PresupuestosPage = () => {
                                 onClick={() => handleEditClick(budget)}
                                 title="Editar presupuesto"
                                 sx={{
+                                  borderRadius: "4px",
                                   color: "text.secondary",
                                   "&:hover": {
                                     backgroundColor: "primary.main",
@@ -1362,6 +1540,7 @@ const PresupuestosPage = () => {
                                 onClick={() => handleDeleteClick(budget)}
                                 title="Eliminar presupuesto"
                                 sx={{
+                                  borderRadius: "4px",
                                   color: "text.secondary",
                                   "&:hover": {
                                     backgroundColor: "error.main",
@@ -1378,23 +1557,20 @@ const PresupuestosPage = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        sx={{ py: 4, textAlign: "center" }}
-                      >
+                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                         <Box
                           sx={{
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
-                            color: "text.disabled",
+                            color: "text.secondary",
                           }}
                         >
                           <Description
                             sx={{
                               fontSize: 64,
                               mb: 2,
-                              color: theme.palette.text.disabled,
+                              color: "text.disabled",
                             }}
                           />
                           <Typography>
@@ -1447,22 +1623,12 @@ const PresupuestosPage = () => {
               status: "pendiente",
             });
             setSelectedCustomer(null);
+            setProductSearchQuery("");
           }}
           title={editingBudget ? "Editar Presupuesto" : "Nuevo Presupuesto"}
+          bgColor="bg-white dark:bg-gray_b"
           buttons={
-            <>
-              <Button
-                variant="contained"
-                onClick={editingBudget ? handleUpdateBudget : handleAddBudget}
-                sx={{
-                  backgroundColor: theme.palette.primary.main,
-                  "&:hover": {
-                    backgroundColor: theme.palette.primary.dark,
-                  },
-                }}
-              >
-                {editingBudget ? "Actualizar" : "Crear"}
-              </Button>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
                 variant="text"
                 onClick={() => {
@@ -1481,41 +1647,47 @@ const PresupuestosPage = () => {
                     status: "pendiente",
                   });
                   setSelectedCustomer(null);
+                  setProductSearchQuery("");
                 }}
                 sx={{
-                  color: theme.palette.text.secondary,
-                  borderColor: theme.palette.divider,
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
                   "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                    borderColor: theme.palette.text.secondary,
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
                   },
                 }}
               >
                 Cancelar
               </Button>
-            </>
+              <Button
+                variant="contained"
+                onClick={editingBudget ? handleUpdateBudget : handleAddBudget}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                {editingBudget ? "Actualizar" : "Crear"}
+              </Button>
+            </Box>
           }
         >
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Box sx={{ width: "100%" }}>
-              <Typography variant="subtitle1" fontWeight="medium">
-                Cliente existente
-              </Typography>
-              <Autocomplete
+              <Select
+                label="Seleccionar cliente existente"
                 options={customerOptions}
-                value={selectedCustomer}
-                onChange={handleCustomerSelect}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder="Buscar cliente"
-                    size="small"
-                  />
-                )}
-                isOptionEqualToValue={(option, value) =>
-                  option.value === value.value
-                }
-                noOptionsText="Sin opciones"
+                value={selectedCustomer?.value || ""}
+                onChange={(value) => {
+                  const selected = customerOptions.find(
+                    (option) => option.value === value
+                  );
+                  handleCustomerSelect(null, selected || null);
+                }}
+                size="small"
+                variant="outlined"
+                sx={{ mt: 0.5 }}
               />
             </Box>
 
@@ -1559,56 +1731,30 @@ const PresupuestosPage = () => {
                 />
               </Box>
               <Box sx={{ width: "50%" }}>
-                <Typography
-                  variant="subtitle2"
-                  fontWeight="medium"
-                  sx={{ mb: 1 }}
-                >
-                  Estado
-                </Typography>
-                <Autocomplete
-                  options={statusOptions}
-                  value={
-                    newBudget?.status
-                      ? statusOptions.find(
-                          (option) => option.value === newBudget.status
-                        ) || null
-                      : null
-                  }
-                  onChange={(
-                    event: SyntheticEvent,
-                    newValue: StatusOption | null
-                  ) => {
-                    if (newValue) {
-                      setNewBudget({
-                        ...newBudget,
-                        status: newValue.value,
-                      });
-                    }
+                <Select
+                  label="Estado"
+                  options={statusOptions.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  value={newBudget.status}
+                  onChange={(value) => {
+                    setNewBudget({
+                      ...newBudget,
+                      status: value as "pendiente" | "aprobado" | "rechazado",
+                    });
                   }}
-                  renderInput={(params) => (
-                    <TextField {...params} size="small" />
-                  )}
-                  isOptionEqualToValue={(option, value) =>
-                    option.value === value.value
-                  }
-                  noOptionsText="Sin opciones"
+                  size="small"
+                  variant="outlined"
                 />
               </Box>
             </Box>
 
             <Box>
-              <Typography
-                variant="subtitle1"
-                fontWeight="medium"
-                sx={{ mb: 1 }}
-              >
-                Productos
-              </Typography>
               <Box sx={{ mb: 2 }}>
                 <Autocomplete
                   multiple
-                  options={productOptions}
+                  options={filteredProductOptions}
                   value={newBudget.items.map((item) => {
                     const product = products.find(
                       (p) => p.id === item.productId
@@ -1623,31 +1769,42 @@ const PresupuestosPage = () => {
                     } as ProductOption;
                   })}
                   onChange={handleProductSelect}
+                  onInputChange={(event, value) => {
+                    handleProductSearchChange(value);
+                  }}
                   disableCloseOnSelect
-                  getOptionLabel={(option) => option.label}
+                  getOptionLabel={getOptionLabel}
                   getOptionDisabled={getOptionDisabled}
-                  isOptionEqualToValue={(option, value) =>
-                    option.value === value.value
-                  }
-                  renderOption={(props, option, { selected }) => (
-                    <li {...props}>
-                      <Checkbox
-                        icon={icon}
-                        checkedIcon={checkedIcon}
-                        style={{ marginRight: 8 }}
-                        checked={selected}
-                      />
-                      {option.label}
-                    </li>
-                  )}
+                  isOptionEqualToValue={isOptionEqualToValue}
+                  filterOptions={(options) => options} // Desactivar filtrado automático
+                  renderOption={renderOption}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       placeholder="Buscar productos"
                       size="small"
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <>
+                            <Search
+                              fontSize="small"
+                              sx={{ mr: 1, color: "text.secondary" }}
+                            />
+                            {params.InputProps.startAdornment}
+                          </>
+                        ),
+                      }}
                     />
                   )}
-                  noOptionsText="Sin opciones"
+                  noOptionsText="No se encontraron productos"
+                  loading={products.length === 0}
+                  loadingText="Cargando productos..."
+                  PopperComponent={(props) => (
+                    <Popper {...props} placement="bottom-start" />
+                  )}
+                  limitTags={3}
+                  disableListWrap
                 />
               </Box>
 
@@ -1908,7 +2065,13 @@ const PresupuestosPage = () => {
                     <Box sx={{ p: 2, backgroundColor: theme.palette.grey[50] }}>
                       <Box sx={{ display: "flex", alignItems: "center" }}>
                         <Box sx={{ width: "50%" }}>
-                          <Box sx={{ display: "flex", gap: 2 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
+                            }}
+                          >
                             <Box sx={{ width: "50%" }}>
                               <Input
                                 label="Seña en efectivo (opcional)"
@@ -1953,24 +2116,26 @@ const PresupuestosPage = () => {
                               />
                             </Box>
                             <Box sx={{ width: "50%" }}>
-                              <Typography
-                                variant="subtitle2"
-                                fontWeight="medium"
-                                sx={{ mb: 1 }}
-                              >
-                                Saldo restante
-                              </Typography>
-                              <Box
-                                sx={{
-                                  p: 1,
-                                  border: 1,
-                                  borderColor: "divider",
-                                  borderRadius: 1,
-                                  backgroundColor: "background.paper",
+                              <TextField
+                                label="Saldo restante"
+                                value={formatCurrency(newBudget.remaining)}
+                                InputProps={{
+                                  readOnly: true,
+                                  sx: {
+                                    backgroundColor: "background.paper",
+                                    "& .MuiInputBase-input": {
+                                      textAlign: "center",
+                                      fontWeight: "medium",
+                                    },
+                                  },
                                 }}
-                              >
-                                {formatCurrency(newBudget.remaining)}
-                              </Box>
+                                InputLabelProps={{
+                                  shrink: true,
+                                }}
+                                variant="outlined"
+                                fullWidth
+                                size="small"
+                              />
                             </Box>
                           </Box>
                         </Box>
@@ -1995,18 +2160,6 @@ const PresupuestosPage = () => {
           buttons={
             <>
               <Button
-                variant="contained"
-                onClick={handleConfirmDelete}
-                sx={{
-                  backgroundColor: "error.main",
-                  "&:hover": {
-                    backgroundColor: "error.dark",
-                  },
-                }}
-              >
-                Eliminar
-              </Button>
-              <Button
                 variant="text"
                 onClick={() => setIsDeleteModalOpen(false)}
                 sx={{
@@ -2019,6 +2172,18 @@ const PresupuestosPage = () => {
                 }}
               >
                 Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDelete}
+                sx={{
+                  backgroundColor: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.dark",
+                  },
+                }}
+              >
+                Si, Eliminar
               </Button>
             </>
           }

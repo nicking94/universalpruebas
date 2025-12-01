@@ -77,13 +77,12 @@ import {
 } from "@mui/icons-material";
 import { useNotification } from "@/app/hooks/useNotification";
 
-// Constantes de configuración
 const CUENTAS_CONFIG = {
   NOTIFICATION_DURATION: 2500,
   MAX_PAYMENT_METHODS: 3,
 } as const;
 
-// Custom hook para datos de cuentas corrientes
+// Hook personalizado para manejar las ventas a crédito
 const useCreditSales = () => {
   const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -106,6 +105,7 @@ const useCreditSales = () => {
       setCreditSales(sales);
       setPayments(allPayments);
       setCustomers(allCustomers);
+
       return { sales, payments: allPayments, customers: allCustomers };
     } catch (error) {
       console.error("Error loading data:", error);
@@ -126,7 +126,7 @@ const useCreditSales = () => {
   };
 };
 
-// Componente para el resumen financiero del cliente
+// Componente de Resumen Financiero del Cliente
 const CustomerFinancialSummary = ({
   customerInfo,
   payments,
@@ -223,7 +223,6 @@ const CustomerFinancialSummary = ({
         ))}
       </Box>
 
-      {/* Barra de progreso y métricas adicionales */}
       <Card sx={{ mt: 2, p: 2 }}>
         <Box
           sx={{
@@ -281,7 +280,7 @@ const CustomerFinancialSummary = ({
   );
 };
 
-// Componente para el historial de pagos
+// Componente de Historial de Pagos
 const PaymentHistory = ({
   sale,
   payments,
@@ -397,7 +396,7 @@ const PaymentHistory = ({
   );
 };
 
-// Componente para el detalle de productos de una venta
+// Componente de Detalle de Productos
 const SaleProductsDetail = ({
   sale,
   rubro,
@@ -488,7 +487,7 @@ const SaleProductsDetail = ({
   );
 };
 
-// Componente para la tarjeta de venta individual
+// Componente de Tarjeta de Venta
 const SaleCard = ({
   sale,
   payments,
@@ -526,7 +525,6 @@ const SaleCard = ({
       }}
     >
       <CardContent sx={{ p: 2 }}>
-        {/* Header de la venta */}
         <Box
           sx={{
             display: "flex",
@@ -587,7 +585,6 @@ const SaleCard = ({
           </Box>
         </Box>
 
-        {/* Resumen financiero compacto */}
         <Box
           sx={{
             display: "grid",
@@ -647,7 +644,6 @@ const SaleCard = ({
           </Box>
         </Box>
 
-        {/* Barra de progreso de pago */}
         {!isPaid && (
           <Box sx={{ mb: 2 }}>
             <LinearProgress
@@ -672,18 +668,15 @@ const SaleCard = ({
           </Box>
         )}
 
-        {/* Contenido expandible */}
         {isExpanded && (
           <Box sx={{ mt: 2 }}>
             <Divider sx={{ mb: 2 }} />
 
-            {/* Productos */}
             <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
               Detalles de Productos
             </Typography>
             <SaleProductsDetail sale={sale} rubro={rubro} />
 
-            {/* Historial de pagos */}
             <Box sx={{ mt: 2 }}>
               <PaymentHistory sale={sale} payments={payments} />
             </Box>
@@ -694,11 +687,730 @@ const SaleCard = ({
   );
 };
 
+const InfoModal = ({
+  isOpen,
+  currentCustomerInfo,
+  payments,
+  rubro,
+  expandedSale,
+  infoModalTab,
+  onClose,
+  onPayment,
+  onExpandSale,
+  calculateRemainingBalance,
+  onTabChange, // ✅ Agregar esta prop
+}: {
+  isOpen: boolean;
+  currentCustomerInfo: {
+    name: string;
+    balance: number;
+    sales: CreditSale[];
+  } | null;
+  payments: Payment[];
+  rubro: Rubro | undefined;
+  expandedSale: number | null;
+  infoModalTab: number;
+  onClose: () => void;
+  onPayment: (sale: CreditSale) => void;
+  onExpandSale: (saleId: number) => void;
+  calculateRemainingBalance: (sale: CreditSale) => number;
+  onTabChange: (newValue: number) => void; // ✅ Agregar esta prop
+}) => {
+  if (!currentCustomerInfo) return null;
+
+  const ventasPendientes = currentCustomerInfo.sales.filter((sale) => {
+    const remainingBalance = calculateRemainingBalance(sale);
+    return remainingBalance > 0;
+  });
+
+  const ventasPagadas = currentCustomerInfo.sales.filter((sale) => {
+    const remainingBalance = calculateRemainingBalance(sale);
+    return remainingBalance <= 0;
+  });
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Gestión de Cuenta Corriente - ${currentCustomerInfo.name}`}
+      bgColor="bg-white dark:bg-gray-800"
+      buttons={
+        <Box sx={{ display: "flex", justifyContent: "end", width: "100%" }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="text"
+              onClick={onClose}
+              sx={{
+                color: "text.secondary",
+                "&:hover": { backgroundColor: "action.hover" },
+              }}
+            >
+              Cerrar
+            </Button>
+          </Box>
+        </Box>
+      }
+    >
+      <Box sx={{ width: "100%" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+          <Avatar sx={{ bgcolor: "primary.main" }}>
+            <AccountCircleIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="h6" fontWeight="bold">
+              {currentCustomerInfo.name}
+            </Typography>
+          </Box>
+        </Box>
+
+        <CustomerFinancialSummary
+          customerInfo={currentCustomerInfo}
+          payments={payments}
+        />
+
+        <Card sx={{ mb: 2 }}>
+          <Tabs
+            value={infoModalTab}
+            onChange={(_, newValue) => onTabChange(newValue)} // ✅ Agregar el manejador
+            sx={{
+              borderBottom: 1,
+              borderColor: "divider",
+              "& .MuiTab-root": {
+                textTransform: "none",
+                fontWeight: "medium",
+                minHeight: 48,
+              },
+            }}
+          >
+            <Tab
+              icon={<ReceiptIcon />}
+              iconPosition="start"
+              label={
+                <Badge
+                  badgeContent={currentCustomerInfo.sales.length}
+                  color="primary"
+                  sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                >
+                  Todas las Ventas
+                </Badge>
+              }
+            />
+            <Tab
+              icon={<PaymentIcon />}
+              iconPosition="start"
+              label={
+                <Badge
+                  badgeContent={ventasPendientes.length}
+                  color="warning"
+                  sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                >
+                  Pendientes
+                </Badge>
+              }
+            />
+            <Tab
+              icon={<CheckCircleIcon />}
+              iconPosition="start"
+              label={
+                <Badge
+                  badgeContent={ventasPagadas.length}
+                  color="success"
+                  sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                >
+                  Pagadas
+                </Badge>
+              }
+            />
+          </Tabs>
+        </Card>
+
+        <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+          {infoModalTab === 0 && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {currentCustomerInfo.sales.length === 0 ? (
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <ReceiptIcon
+                    sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                  />
+                  <Typography color="text.secondary">
+                    No hay cuentas corrientes registradas
+                  </Typography>
+                </Box>
+              ) : (
+                currentCustomerInfo.sales
+                  .sort(
+                    (a, b) =>
+                      new Date(b.date).getTime() - new Date(a.date).getTime()
+                  )
+                  .map((sale) => (
+                    <SaleCard
+                      key={sale.id}
+                      sale={sale}
+                      payments={payments}
+                      rubro={rubro}
+                      onPayment={onPayment}
+                      isExpanded={expandedSale === sale.id}
+                      onToggleExpand={onExpandSale}
+                    />
+                  ))
+              )}
+            </Box>
+          )}
+
+          {infoModalTab === 1 && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {ventasPendientes.length === 0 ? (
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <CheckCircleIcon
+                    sx={{ fontSize: 64, color: "success.main", mb: 2 }}
+                  />
+                  <Typography color="text.secondary">
+                    No hay ventas pendientes de pago
+                  </Typography>
+                </Box>
+              ) : (
+                ventasPendientes
+                  .sort((a, b) => {
+                    const balanceA = calculateRemainingBalance(a);
+                    const balanceB = calculateRemainingBalance(b);
+                    return balanceB - balanceA;
+                  })
+                  .map((sale) => (
+                    <SaleCard
+                      key={sale.id}
+                      sale={sale}
+                      payments={payments}
+                      rubro={rubro}
+                      onPayment={onPayment}
+                      isExpanded={expandedSale === sale.id}
+                      onToggleExpand={onExpandSale}
+                    />
+                  ))
+              )}
+            </Box>
+          )}
+
+          {infoModalTab === 2 && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {ventasPagadas.length === 0 ? (
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <HistoryIcon
+                    sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                  />
+                  <Typography color="text.secondary">
+                    No hay ventas completamente pagadas
+                  </Typography>
+                </Box>
+              ) : (
+                ventasPagadas
+                  .sort(
+                    (a, b) =>
+                      new Date(b.date).getTime() - new Date(a.date).getTime()
+                  )
+                  .map((sale) => (
+                    <SaleCard
+                      key={sale.id}
+                      sale={sale}
+                      payments={payments}
+                      rubro={rubro}
+                      onPayment={onPayment}
+                      isExpanded={expandedSale === sale.id}
+                      onToggleExpand={onExpandSale}
+                    />
+                  ))
+              )}
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+// Componente Modal de Cheques
+const ChequesModal = ({
+  isOpen,
+  currentCustomerInfo,
+  currentCustomerCheques,
+  chequeFilter,
+  rubro,
+  onClose,
+  onFilterChange,
+  onMarkCheckAsPaid,
+  onDeleteCheck,
+}: {
+  isOpen: boolean;
+  currentCustomerInfo: {
+    name: string;
+    balance: number;
+    sales: CreditSale[];
+  } | null;
+  currentCustomerCheques: ChequeWithDetails[];
+  chequeFilter: ChequeFilter;
+  rubro: Rubro | undefined;
+  onClose: () => void;
+  onFilterChange: (filter: ChequeFilter) => void;
+  onMarkCheckAsPaid: (checkId: number) => void;
+  onDeleteCheck: (checkId: number) => void;
+}) => {
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Cheques de ${currentCustomerInfo?.name || "Cliente"}`}
+      bgColor="bg-white dark:bg-gray_b"
+      buttons={
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+          <Button
+            variant="text"
+            onClick={onClose}
+            sx={{
+              color: "text.secondary",
+              borderColor: "text.secondary",
+              "&:hover": {
+                backgroundColor: "action.hover",
+                borderColor: "text.primary",
+              },
+            }}
+          >
+            Cerrar
+          </Button>
+        </Box>
+      }
+    >
+      {currentCustomerCheques.length === 0 ? (
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <WalletIcon sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
+          <Typography color="text.secondary">
+            El cliente no tiene cheques registrados
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+            <Typography variant="body2" fontWeight="medium">
+              Filtrar por estado:
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Select
+                label="Estado"
+                value={chequeFilter}
+                options={[
+                  { value: "todos", label: "Todos" },
+                  { value: "pendiente", label: "Pendientes" },
+                  { value: "cobrado", label: "Cobrados" },
+                ]}
+                onChange={(value: string | number) =>
+                  onFilterChange(value as ChequeFilter)
+                }
+                size="small"
+              />
+            </FormControl>
+          </Box>
+
+          <TableContainer component={Paper} sx={{ maxHeight: "55vh" }}>
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                    Monto
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Fecha
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Estado
+                  </TableCell>
+                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                    Productos
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Acciones
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {currentCustomerCheques
+                  .filter(
+                    (cheque) =>
+                      chequeFilter === "todos" ||
+                      cheque.checkStatus === chequeFilter
+                  )
+                  .map((cheque) => (
+                    <TableRow
+                      key={cheque.id}
+                      hover
+                      sx={{
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": { backgroundColor: "action.hover" },
+                        transition: "all 0.3s",
+                      }}
+                    >
+                      <TableCell>
+                        {cheque.amount.toLocaleString("es-AR", {
+                          style: "currency",
+                          currency: "ARS",
+                        })}
+                      </TableCell>
+                      <TableCell align="center">
+                        {format(new Date(cheque.date), "dd/MM/yyyy")}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={cheque.checkStatus || "pendiente"}
+                          color={
+                            cheque.checkStatus === "cobrado"
+                              ? "success"
+                              : cheque.checkStatus === "pendiente"
+                              ? "warning"
+                              : "error"
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ maxHeight: 80, overflow: "auto" }}>
+                          {cheque.products?.map((product, idx) => (
+                            <Box
+                              key={idx}
+                              sx={{
+                                py: 0.5,
+                                borderBottom:
+                                  idx < cheque.products.length - 1
+                                    ? "1px solid"
+                                    : "none",
+                                borderColor: "divider",
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                <Typography variant="caption">
+                                  {getDisplayProductName(
+                                    {
+                                      name: product.productName,
+                                      size: product.size,
+                                      color: product.color,
+                                      rubro: product.rubro,
+                                    },
+                                    rubro,
+                                    true
+                                  )}
+                                </Typography>
+                                <Typography variant="caption">
+                                  {product.quantity} {product.unit}
+                                </Typography>
+                                <Typography variant="caption">
+                                  {product.price.toLocaleString("es-AR", {
+                                    style: "currency",
+                                    currency: "ARS",
+                                  })}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          {cheque.checkStatus === "pendiente" && (
+                            <IconButton
+                              onClick={() => onMarkCheckAsPaid(cheque.id)}
+                              size="small"
+                              sx={{
+                                borderRadius: "4px",
+                                color: "success.main",
+                                "&:hover": {
+                                  backgroundColor: "success.main",
+                                  color: "white",
+                                },
+                              }}
+                              title="Marcar como cobrado"
+                            >
+                              <CheckCircleIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                          <IconButton
+                            onClick={() => onDeleteCheck(cheque.id)}
+                            size="small"
+                            sx={{
+                              borderRadius: "4px",
+                              color: "error.main",
+                              "&:hover": {
+                                backgroundColor: "error.main",
+                                color: "white",
+                              },
+                            }}
+                            title="Eliminar cheque"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
+    </Modal>
+  );
+};
+
+// Componente Modal de Pago
+const PaymentModal = ({
+  isOpen,
+  currentCreditSale,
+  paymentMethods,
+  onClose,
+  onPayment,
+  onPaymentMethodChange,
+  onRemovePaymentMethod,
+  onAddPaymentMethod,
+  calculateRemainingBalance,
+  isFirstGreater,
+}: {
+  isOpen: boolean;
+  currentCreditSale: CreditSale | null;
+  paymentMethods: PaymentSplit[];
+  onClose: () => void;
+  onPayment: () => void;
+  onPaymentMethodChange: (
+    index: number,
+    field: keyof PaymentSplit,
+    value: string | number
+  ) => void;
+  onRemovePaymentMethod: (index: number) => void;
+  onAddPaymentMethod: () => void;
+  calculateRemainingBalance: (sale: CreditSale) => number;
+  isFirstGreater: (a: number, b: number, epsilon?: number) => boolean;
+}) => {
+  if (!currentCreditSale) return null;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Registrar Pago - ${currentCreditSale?.customerName || "Cliente"}`}
+      bgColor="bg-white dark:bg-gray_b"
+      buttons={
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+          <Button
+            variant="text"
+            onClick={onClose}
+            sx={{
+              color: "text.secondary",
+              borderColor: "text.secondary",
+              "&:hover": {
+                backgroundColor: "action.hover",
+                borderColor: "text.primary",
+              },
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={onPayment}
+            disabled={
+              paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
+              isFirstGreater(
+                paymentMethods.reduce((sum, m) => sum + m.amount, 0),
+                calculateRemainingBalance(currentCreditSale)
+              )
+            }
+            sx={{
+              bgcolor: "primary.main",
+              "&:hover": { bgcolor: "primary.dark" },
+              "&:disabled": { bgcolor: "action.disabled" },
+            }}
+          >
+            Registrar Pago
+          </Button>
+        </Box>
+      }
+    >
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="body1" fontWeight="medium">
+              Deuda pendiente:
+            </Typography>
+            <Chip
+              label={calculateRemainingBalance(
+                currentCreditSale
+              ).toLocaleString("es-AR", {
+                style: "currency",
+                currency: "ARS",
+              })}
+              color="primary"
+              variant="filled"
+            />
+          </Box>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => {
+              const remaining = calculateRemainingBalance(currentCreditSale);
+              onPaymentMethodChange(0, "amount", remaining);
+            }}
+            sx={{
+              bgcolor: "primary.main",
+              "&:hover": { bgcolor: "primary.dark" },
+            }}
+          >
+            Pagar todo
+          </Button>
+        </Box>
+
+        <Box>
+          <Typography variant="subtitle1" fontWeight="medium" mb={2}>
+            Métodos de Pago
+          </Typography>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {paymentMethods.map((method, index) => (
+              <Box
+                key={index}
+                sx={{ display: "flex", alignItems: "center", gap: 2 }}
+              >
+                <FormControl sx={{ minWidth: 140 }}>
+                  <Select
+                    label="Método"
+                    value={method.method}
+                    options={[
+                      { value: "EFECTIVO", label: "Efectivo" },
+                      { value: "TRANSFERENCIA", label: "Transferencia" },
+                      { value: "TARJETA", label: "Tarjeta" },
+                    ]}
+                    onChange={(value) =>
+                      onPaymentMethodChange(
+                        index,
+                        "method",
+                        value as PaymentMethod
+                      )
+                    }
+                  />
+                </FormControl>
+
+                <Input
+                  type="number"
+                  value={method.amount}
+                  onRawChange={(e) =>
+                    onPaymentMethodChange(
+                      index,
+                      "amount",
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                  placeholder="0.00"
+                  step="0.01"
+                />
+
+                {paymentMethods.length > 1 && (
+                  <IconButton
+                    onClick={() => onRemovePaymentMethod(index)}
+                    size="small"
+                    sx={{
+                      color: "error.main",
+                      "&:hover": {
+                        backgroundColor: "error.main",
+                        color: "white",
+                      },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            ))}
+          </Box>
+
+          {paymentMethods.length < CUENTAS_CONFIG.MAX_PAYMENT_METHODS && (
+            <Button
+              variant="text"
+              startIcon={<Add />}
+              onClick={onAddPaymentMethod}
+              sx={{ mt: 1 }}
+            >
+              Agregar otro método
+            </Button>
+          )}
+        </Box>
+
+        <Card
+          sx={{
+            backgroundColor: "primary.main",
+            color: "white",
+            textAlign: "center",
+          }}
+        >
+          <CardContent>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Total a pagar
+            </Typography>
+            <Typography variant="h5" fontWeight="bold">
+              {paymentMethods
+                .reduce((sum, m) => sum + m.amount, 0)
+                .toLocaleString("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                })}
+            </Typography>
+
+            {isFirstGreater(
+              paymentMethods.reduce((sum, m) => sum + m.amount, 0),
+              calculateRemainingBalance(currentCreditSale)
+            ) && (
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 1,
+                  color: "warning.main",
+                  fontWeight: "medium",
+                }}
+              >
+                El monto total excede la deuda pendiente
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
+    </Modal>
+  );
+};
+
 const CuentasCorrientesPage = () => {
   const { rubro } = useRubro();
   const { currentPage, itemsPerPage } = usePagination();
 
-  // Custom hooks
   const {
     creditSales,
     payments,
@@ -717,7 +1429,6 @@ const CuentasCorrientesPage = () => {
     closeNotification,
   } = useNotification();
 
-  // Estados
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [currentCreditSale, setCurrentCreditSale] = useState<CreditSale | null>(
     null
@@ -743,7 +1454,6 @@ const CuentasCorrientesPage = () => {
   const [expandedSale, setExpandedSale] = useState<number | null>(null);
   const [infoModalTab, setInfoModalTab] = useState(0);
 
-  // Funciones de utilidad - memoizadas
   const isFirstGreater = useCallback((a: number, b: number, epsilon = 0.01) => {
     return a - b > epsilon;
   }, []);
@@ -752,7 +1462,6 @@ const CuentasCorrientesPage = () => {
     return /^\d+(\.\d{1,2})?$/.test(value);
   }, []);
 
-  // Funciones principales - memoizadas
   const calculateCustomerBalance = useCallback(
     (customerName: string) => {
       const customerSales = creditSales.filter(
@@ -865,6 +1574,9 @@ const CuentasCorrientesPage = () => {
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
+  }, []);
+  const handleTabChange = useCallback((newValue: number) => {
+    setInfoModalTab(newValue);
   }, []);
 
   const handleExportCustomerPDF = useCallback(
@@ -1226,6 +1938,9 @@ const CuentasCorrientesPage = () => {
     }
 
     try {
+      setIsPaymentModalOpen(false);
+      setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+
       for (const method of paymentMethods) {
         if (method.amount > 0) {
           const newPayment: Payment = {
@@ -1246,15 +1961,7 @@ const CuentasCorrientesPage = () => {
         await db.sales.update(currentCreditSale.id, {
           paid: true,
         } as Partial<CreditSale>);
-        setCreditSales((prev) =>
-          prev.map((s) =>
-            s.id === currentCreditSale.id ? { ...s, paid: true } : s
-          )
-        );
       }
-
-      const updatedPayments = await db.payments.toArray();
-      setPayments(updatedPayments);
 
       if (newRemainingBalance <= 0.01) {
         const saleToRegister: CreditSale = {
@@ -1266,11 +1973,16 @@ const CuentasCorrientesPage = () => {
         await addIncomeToDailyCash(saleToRegister);
       }
 
-      showNotification("Pago registrado correctamente", "success");
-      setIsPaymentModalOpen(false);
-      setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+      const updatedPayments = await db.payments.toArray();
+      const updatedSales = await db.sales.toArray();
+      const creditSales = updatedSales.filter(
+        (sale) => sale.credit === true
+      ) as CreditSale[];
 
-      if (currentCustomerInfo) {
+      setPayments(updatedPayments);
+      setCreditSales(creditSales);
+
+      if (currentCustomerInfo && isInfoModalOpen) {
         const updatedBalance = calculateCustomerBalance(
           currentCustomerInfo.name
         );
@@ -1278,9 +1990,12 @@ const CuentasCorrientesPage = () => {
           prev ? { ...prev, balance: updatedBalance } : null
         );
       }
+
+      showNotification("Pago registrado correctamente", "success");
     } catch (error) {
       console.error("Error al registrar pago:", error);
       showNotification("Error al registrar pago", "error");
+      setIsPaymentModalOpen(true);
     }
   }, [
     currentCreditSale,
@@ -1294,6 +2009,7 @@ const CuentasCorrientesPage = () => {
     currentCustomerInfo,
     calculateCustomerBalance,
     showNotification,
+    isInfoModalOpen,
   ]);
 
   const handleOpenChequesModal = useCallback(
@@ -1301,7 +2017,6 @@ const CuentasCorrientesPage = () => {
       try {
         console.log("🔍 Buscando cheques para:", customerName);
 
-        // Obtener todos los cheques
         const allCheques = await db.payments
           .where("method")
           .equals("CHEQUE")
@@ -1309,7 +2024,6 @@ const CuentasCorrientesPage = () => {
 
         console.log("📋 Todos los cheques encontrados:", allCheques);
 
-        // DEBUG: Verificar la estructura de los cheques
         allCheques.forEach((cheque, index) => {
           console.log(`Cheque ${index}:`, {
             id: cheque.id,
@@ -1320,9 +2034,7 @@ const CuentasCorrientesPage = () => {
           });
         });
 
-        // Estrategia mejorada para encontrar cheques del cliente
         const customerCheques = allCheques.filter((cheque) => {
-          // Opción 1: Buscar por customerName directo
           if (
             cheque.customerName &&
             cheque.customerName.toLowerCase().trim() ===
@@ -1331,10 +2043,8 @@ const CuentasCorrientesPage = () => {
             return true;
           }
 
-          // Opción 2: Buscar a través de la venta asociada
           if (cheque.saleId) {
-            // Esta parte requiere cargar la venta para verificar el customerName
-            return false; // Se manejará después
+            return false;
           }
 
           return false;
@@ -1342,7 +2052,6 @@ const CuentasCorrientesPage = () => {
 
         console.log("✅ Cheques filtrados por nombre:", customerCheques);
 
-        // Si no encontramos cheques por nombre directo, buscar por ventas
         if (customerCheques.length === 0) {
           console.log("🔄 Buscando cheques a través de las ventas...");
 
@@ -1393,7 +2102,7 @@ const CuentasCorrientesPage = () => {
 
                 return {
                   ...cheque,
-                  customerName: sale.customerName, // Asegurar que tenga el customerName
+                  customerName: sale.customerName,
                   saleDate: sale.date,
                   products: saleItems,
                   saleTotal: sale.total,
@@ -1406,7 +2115,6 @@ const CuentasCorrientesPage = () => {
             return;
           }
         } else {
-          // Procesar cheques encontrados por nombre directo
           const chequesWithDetails = await Promise.all(
             customerCheques.map(async (cheque) => {
               const sale = await db.sales.get(cheque.saleId);
@@ -1437,7 +2145,6 @@ const CuentasCorrientesPage = () => {
 
         setIsChequesModalOpen(true);
 
-        // Mostrar resumen final
         console.log("🎯 Cheques finales para mostrar:", currentCustomerCheques);
 
         if (currentCustomerCheques.length === 0) {
@@ -1477,7 +2184,6 @@ const CuentasCorrientesPage = () => {
     [creditSales, calculateCustomerBalance]
   );
 
-  // Funciones para manejo de métodos de pago - memoizadas
   const addPaymentMethod = useCallback(() => {
     setPaymentMethods((prev) => {
       if (prev.length >= CUENTAS_CONFIG.MAX_PAYMENT_METHODS) return prev;
@@ -1586,7 +2292,6 @@ const CuentasCorrientesPage = () => {
     [currentCreditSale, calculateRemainingBalance]
   );
 
-  // Nueva función para manejar la expansión de ventas
   const handleExpandSale = useCallback(
     (saleId: number) => {
       setExpandedSale(expandedSale === saleId ? null : saleId);
@@ -1594,7 +2299,6 @@ const CuentasCorrientesPage = () => {
     [expandedSale]
   );
 
-  // Cálculos memoizados - OPTIMIZADOS CON useMemo
   const filteredSales = useMemo(() => {
     return creditSales
       .filter((sale) => {
@@ -1636,7 +2340,6 @@ const CuentasCorrientesPage = () => {
     });
   }, [salesByCustomer]);
 
-  // Paginación memoizada
   const totalCustomers = sortedCustomerNames.length;
   const indexOfLastCredit = currentPage * itemsPerPage;
   const indexOfFirstCredit = indexOfLastCredit - itemsPerPage;
@@ -1645,7 +2348,6 @@ const CuentasCorrientesPage = () => {
     return sortedCustomerNames.slice(indexOfFirstCredit, indexOfLastCredit);
   }, [sortedCustomerNames, indexOfFirstCredit, indexOfLastCredit]);
 
-  // Memoización de valores calculados para la tabla
   const customerBalanceMap = useMemo(() => {
     const balanceMap: Record<string, number> = {};
     sortedCustomerNames.forEach((customerName) => {
@@ -1666,7 +2368,6 @@ const CuentasCorrientesPage = () => {
     return oldestMap;
   }, [sortedCustomerNames, salesByCustomer]);
 
-  // Efectos
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -1678,746 +2379,6 @@ const CuentasCorrientesPage = () => {
 
     loadData();
   }, [fetchData, showNotification]);
-
-  // Componente de modal de información mejorado
-  const InfoModalComponent = useMemo(
-    () =>
-      function InfoModalComponent() {
-        if (!currentCustomerInfo) return null;
-
-        const ventasPendientes = currentCustomerInfo.sales.filter((sale) => {
-          const remainingBalance = calculateRemainingBalance(sale);
-          return remainingBalance > 0;
-        });
-
-        const ventasPagadas = currentCustomerInfo.sales.filter((sale) => {
-          const remainingBalance = calculateRemainingBalance(sale);
-          return remainingBalance <= 0;
-        });
-
-        return (
-          <Modal
-            isOpen={isInfoModalOpen}
-            onClose={() => {
-              setIsInfoModalOpen(false);
-              setExpandedSale(null);
-              setInfoModalTab(0);
-            }}
-            title={`Gestión de Cuenta Corriente - ${currentCustomerInfo.name}`}
-            bgColor="bg-white dark:bg-gray-800"
-            buttons={
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "end",
-                  width: "100%",
-                }}
-              >
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    variant="text"
-                    onClick={() => {
-                      setIsInfoModalOpen(false);
-                      setExpandedSale(null);
-                      setInfoModalTab(0);
-                    }}
-                    sx={{
-                      color: "text.secondary",
-                      "&:hover": {
-                        backgroundColor: "action.hover",
-                      },
-                    }}
-                  >
-                    Cerrar
-                  </Button>
-                </Box>
-              </Box>
-            }
-          >
-            <Box sx={{ width: "100%" }}>
-              {/* Header con avatar */}
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}
-              >
-                <Avatar sx={{ bgcolor: "primary.main" }}>
-                  <AccountCircleIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight="bold">
-                    {currentCustomerInfo.name}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Resumen financiero */}
-              <CustomerFinancialSummary
-                customerInfo={currentCustomerInfo}
-                payments={payments}
-              />
-
-              {/* Tabs para organizar la información */}
-              <Card sx={{ mb: 2 }}>
-                <Tabs
-                  value={infoModalTab}
-                  onChange={(_, newValue) => setInfoModalTab(newValue)}
-                  sx={{
-                    borderBottom: 1,
-                    borderColor: "divider",
-                    "& .MuiTab-root": {
-                      textTransform: "none",
-                      fontWeight: "medium",
-                      minHeight: 48,
-                    },
-                  }}
-                >
-                  <Tab
-                    icon={<ReceiptIcon />}
-                    iconPosition="start"
-                    label={
-                      <Badge
-                        badgeContent={currentCustomerInfo.sales.length}
-                        color="primary"
-                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
-                      >
-                        Todas las Ventas
-                      </Badge>
-                    }
-                  />
-                  <Tab
-                    icon={<PaymentIcon />}
-                    iconPosition="start"
-                    label={
-                      <Badge
-                        badgeContent={ventasPendientes.length}
-                        color="warning"
-                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
-                      >
-                        Pendientes
-                      </Badge>
-                    }
-                  />
-                  <Tab
-                    icon={<CheckCircleIcon />}
-                    iconPosition="start"
-                    label={
-                      <Badge
-                        badgeContent={ventasPagadas.length}
-                        color="success"
-                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
-                      >
-                        Pagadas
-                      </Badge>
-                    }
-                  />
-                </Tabs>
-              </Card>
-
-              {/* Contenido de las tabs */}
-              <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
-                {infoModalTab === 0 && (
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    {currentCustomerInfo.sales.length === 0 ? (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <ReceiptIcon
-                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
-                        />
-                        <Typography color="text.secondary">
-                          No hay cuentas corrientes registradas
-                        </Typography>
-                      </Box>
-                    ) : (
-                      currentCustomerInfo.sales
-                        .sort(
-                          (a, b) =>
-                            new Date(b.date).getTime() -
-                            new Date(a.date).getTime()
-                        )
-                        .map((sale) => (
-                          <SaleCard
-                            key={sale.id}
-                            sale={sale}
-                            payments={payments}
-                            rubro={rubro}
-                            onPayment={(sale) => {
-                              setCurrentCreditSale(sale);
-                              setIsPaymentModalOpen(true);
-                            }}
-                            isExpanded={expandedSale === sale.id}
-                            onToggleExpand={handleExpandSale}
-                          />
-                        ))
-                    )}
-                  </Box>
-                )}
-
-                {infoModalTab === 1 && (
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    {ventasPendientes.length === 0 ? (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <CheckCircleIcon
-                          sx={{ fontSize: 64, color: "success.main", mb: 2 }}
-                        />
-                        <Typography color="text.secondary">
-                          No hay ventas pendientes de pago
-                        </Typography>
-                      </Box>
-                    ) : (
-                      ventasPendientes
-                        .sort((a, b) => {
-                          const balanceA = calculateRemainingBalance(a);
-                          const balanceB = calculateRemainingBalance(b);
-                          return balanceB - balanceA;
-                        })
-                        .map((sale) => (
-                          <SaleCard
-                            key={sale.id}
-                            sale={sale}
-                            payments={payments}
-                            rubro={rubro}
-                            onPayment={(sale) => {
-                              setCurrentCreditSale(sale);
-                              setIsPaymentModalOpen(true);
-                            }}
-                            isExpanded={expandedSale === sale.id}
-                            onToggleExpand={handleExpandSale}
-                          />
-                        ))
-                    )}
-                  </Box>
-                )}
-
-                {infoModalTab === 2 && (
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    {ventasPagadas.length === 0 ? (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <HistoryIcon
-                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
-                        />
-                        <Typography color="text.secondary">
-                          No hay ventas completamente pagadas
-                        </Typography>
-                      </Box>
-                    ) : (
-                      ventasPagadas
-                        .sort(
-                          (a, b) =>
-                            new Date(b.date).getTime() -
-                            new Date(a.date).getTime()
-                        )
-                        .map((sale) => (
-                          <SaleCard
-                            key={sale.id}
-                            sale={sale}
-                            payments={payments}
-                            rubro={rubro}
-                            onPayment={(sale) => {
-                              setCurrentCreditSale(sale);
-                              setIsPaymentModalOpen(true);
-                            }}
-                            isExpanded={expandedSale === sale.id}
-                            onToggleExpand={handleExpandSale}
-                          />
-                        ))
-                    )}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          </Modal>
-        );
-      },
-    [
-      isInfoModalOpen,
-      currentCustomerInfo,
-      payments,
-      rubro,
-      calculateRemainingBalance,
-      handleExportCustomerPDF,
-      isGeneratingPDF,
-      handleOpenChequesModal,
-      expandedSale,
-      handleExpandSale,
-      infoModalTab,
-    ]
-  );
-
-  // Los demás componentes de modal se mantienen igual...
-  const ChequesModalComponent = useMemo(
-    () =>
-      function ChequesModalComponent() {
-        return (
-          <Modal
-            isOpen={isChequesModalOpen}
-            onClose={() => setIsChequesModalOpen(false)}
-            title={`Cheques de ${currentCustomerInfo?.name || "Cliente"}`}
-            bgColor="bg-white dark:bg-gray-800"
-            buttons={
-              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-                <Button
-                  variant="text"
-                  onClick={() => setIsChequesModalOpen(false)}
-                  sx={{
-                    color: "text.secondary",
-                    borderColor: "text.secondary",
-                    "&:hover": {
-                      backgroundColor: "action.hover",
-                      borderColor: "text.primary",
-                    },
-                  }}
-                >
-                  Cerrar
-                </Button>
-              </Box>
-            }
-          >
-            {currentCustomerCheques.length === 0 ? (
-              <Box sx={{ textAlign: "center", py: 4 }}>
-                <WalletIcon
-                  sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
-                />
-                <Typography color="text.secondary">
-                  El cliente no tiene cheques registrados
-                </Typography>
-              </Box>
-            ) : (
-              <Box sx={{ mb: 2 }}>
-                <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
-                >
-                  <Typography variant="body2" fontWeight="medium">
-                    Filtrar por estado:
-                  </Typography>
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <Select
-                      label="Estado"
-                      value={chequeFilter}
-                      options={[
-                        { value: "todos", label: "Todos" },
-                        { value: "pendiente", label: "Pendientes" },
-                        { value: "cobrado", label: "Cobrados" },
-                      ]}
-                      onChange={(value: string | number) =>
-                        setChequeFilter(value as ChequeFilter)
-                      }
-                      size="small"
-                    />
-                  </FormControl>
-                </Box>
-
-                <TableContainer component={Paper} sx={{ maxHeight: "55vh" }}>
-                  <Table stickyHeader size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                        >
-                          Monto
-                        </TableCell>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                          align="center"
-                        >
-                          Fecha
-                        </TableCell>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                          align="center"
-                        >
-                          Estado
-                        </TableCell>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                        >
-                          Productos
-                        </TableCell>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                          align="center"
-                        >
-                          Acciones
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {currentCustomerCheques
-                        .filter(
-                          (cheque) =>
-                            chequeFilter === "todos" ||
-                            cheque.checkStatus === chequeFilter
-                        )
-                        .map((cheque) => (
-                          <TableRow
-                            key={cheque.id}
-                            hover
-                            sx={{
-                              border: "1px solid",
-                              borderColor: "divider",
-                              "&:hover": { backgroundColor: "action.hover" },
-                              transition: "all 0.3s",
-                            }}
-                          >
-                            <TableCell>
-                              {cheque.amount.toLocaleString("es-AR", {
-                                style: "currency",
-                                currency: "ARS",
-                              })}
-                            </TableCell>
-                            <TableCell align="center">
-                              {format(new Date(cheque.date), "dd/MM/yyyy")}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                label={cheque.checkStatus || "pendiente"}
-                                color={
-                                  cheque.checkStatus === "cobrado"
-                                    ? "success"
-                                    : cheque.checkStatus === "pendiente"
-                                    ? "warning"
-                                    : "error"
-                                }
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ maxHeight: 80, overflow: "auto" }}>
-                                {cheque.products?.map((product, idx) => (
-                                  <Box
-                                    key={idx}
-                                    sx={{
-                                      py: 0.5,
-                                      borderBottom:
-                                        idx < cheque.products.length - 1
-                                          ? "1px solid"
-                                          : "none",
-                                      borderColor: "divider",
-                                    }}
-                                  >
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        fontSize: "0.75rem",
-                                      }}
-                                    >
-                                      <Typography variant="caption">
-                                        {getDisplayProductName(
-                                          {
-                                            name: product.productName,
-                                            size: product.size,
-                                            color: product.color,
-                                            rubro: product.rubro,
-                                          },
-                                          rubro,
-                                          true
-                                        )}
-                                      </Typography>
-                                      <Typography variant="caption">
-                                        {product.quantity} {product.unit}
-                                      </Typography>
-                                      <Typography variant="caption">
-                                        {product.price.toLocaleString("es-AR", {
-                                          style: "currency",
-                                          currency: "ARS",
-                                        })}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                ))}
-                              </Box>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "center",
-                                  gap: 0.5,
-                                }}
-                              >
-                                {cheque.checkStatus === "pendiente" && (
-                                  <IconButton
-                                    onClick={() =>
-                                      handleMarkCheckAsPaid(cheque.id)
-                                    }
-                                    size="small"
-                                    sx={{
-                                      borderRadius: "4px",
-                                      color: "success.main",
-                                      "&:hover": {
-                                        backgroundColor: "success.main",
-                                        color: "white",
-                                      },
-                                    }}
-                                    title="Marcar como cobrado"
-                                  >
-                                    <CheckCircleIcon fontSize="small" />
-                                  </IconButton>
-                                )}
-                                <IconButton
-                                  onClick={() => handleDeleteCheck(cheque.id)}
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "error.main",
-                                    "&:hover": {
-                                      backgroundColor: "error.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Eliminar cheque"
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            )}
-          </Modal>
-        );
-      },
-    [
-      isChequesModalOpen,
-      currentCustomerInfo?.name,
-      currentCustomerCheques,
-      chequeFilter,
-      rubro,
-      handleMarkCheckAsPaid,
-      handleDeleteCheck,
-    ]
-  );
-
-  const PaymentModalComponent = useMemo(
-    () =>
-      function PaymentModalComponent() {
-        return (
-          <Modal
-            isOpen={isPaymentModalOpen}
-            onClose={() => setIsPaymentModalOpen(false)}
-            title={`Registrar Pago - ${
-              currentCreditSale?.customerName || "Cliente"
-            }`}
-            bgColor="bg-white dark:bg-gray-800"
-            buttons={
-              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-                <Button
-                  variant="text"
-                  onClick={() => {
-                    setIsPaymentModalOpen(false);
-                    setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
-                  }}
-                  sx={{
-                    color: "text.secondary",
-                    borderColor: "text.secondary",
-                    "&:hover": {
-                      backgroundColor: "action.hover",
-                      borderColor: "text.primary",
-                    },
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handlePayment}
-                  disabled={
-                    paymentMethods.reduce((sum, m) => sum + m.amount, 0) <= 0 ||
-                    isFirstGreater(
-                      paymentMethods.reduce((sum, m) => sum + m.amount, 0),
-                      calculateRemainingBalance(currentCreditSale!)
-                    )
-                  }
-                  sx={{
-                    bgcolor: "primary.main",
-                    "&:hover": { bgcolor: "primary.dark" },
-                    "&:disabled": { bgcolor: "action.disabled" },
-                  }}
-                >
-                  Registrar Pago
-                </Button>
-              </Box>
-            }
-          >
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="body1" fontWeight="medium">
-                    Deuda pendiente:
-                  </Typography>
-                  <Chip
-                    label={calculateRemainingBalance(
-                      currentCreditSale!
-                    ).toLocaleString("es-AR", {
-                      style: "currency",
-                      currency: "ARS",
-                    })}
-                    color="primary"
-                    variant="filled"
-                  />
-                </Box>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => {
-                    const remaining = calculateRemainingBalance(
-                      currentCreditSale!
-                    );
-                    setPaymentMethods([
-                      { method: "EFECTIVO", amount: remaining },
-                    ]);
-                  }}
-                  sx={{
-                    bgcolor: "primary.main",
-                    "&:hover": { bgcolor: "primary.dark" },
-                  }}
-                >
-                  Pagar todo
-                </Button>
-              </Box>
-
-              <Box>
-                <Typography variant="subtitle1" fontWeight="medium" mb={2}>
-                  Métodos de Pago
-                </Typography>
-
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {paymentMethods.map((method, index) => (
-                    <Box
-                      key={index}
-                      sx={{ display: "flex", alignItems: "center", gap: 2 }}
-                    >
-                      <FormControl sx={{ minWidth: 140 }}>
-                        <Select
-                          label="Método"
-                          value={method.method}
-                          options={[
-                            { value: "EFECTIVO", label: "Efectivo" },
-                            { value: "TRANSFERENCIA", label: "Transferencia" },
-                            { value: "TARJETA", label: "Tarjeta" },
-                          ]}
-                          onChange={(value) =>
-                            handlePaymentMethodChange(
-                              index,
-                              "method",
-                              value as PaymentMethod
-                            )
-                          }
-                        />
-                      </FormControl>
-
-                      <Input
-                        type="number"
-                        value={method.amount}
-                        onRawChange={(e) =>
-                          handlePaymentMethodChange(
-                            index,
-                            "amount",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        placeholder="0.00"
-                        step="0.01"
-                      />
-
-                      {paymentMethods.length > 1 && (
-                        <IconButton
-                          onClick={() => removePaymentMethod(index)}
-                          size="small"
-                          sx={{
-                            color: "error.main",
-                            "&:hover": {
-                              backgroundColor: "error.main",
-                              color: "white",
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-
-                {paymentMethods.length < CUENTAS_CONFIG.MAX_PAYMENT_METHODS && (
-                  <Button
-                    variant="text"
-                    startIcon={<Add />}
-                    onClick={addPaymentMethod}
-                    sx={{ mt: 1 }}
-                  >
-                    Agregar otro método
-                  </Button>
-                )}
-              </Box>
-
-              <Card
-                sx={{
-                  backgroundColor: "primary.main",
-                  color: "white",
-                  textAlign: "center",
-                }}
-              >
-                <CardContent>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Total a pagar
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {paymentMethods
-                      .reduce((sum, m) => sum + m.amount, 0)
-                      .toLocaleString("es-AR", {
-                        style: "currency",
-                        currency: "ARS",
-                      })}
-                  </Typography>
-
-                  {isFirstGreater(
-                    paymentMethods.reduce((sum, m) => sum + m.amount, 0),
-                    calculateRemainingBalance(currentCreditSale!)
-                  ) && (
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        mt: 1,
-                        color: "warning.main",
-                        fontWeight: "medium",
-                      }}
-                    >
-                      El monto total excede la deuda pendiente
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Box>
-          </Modal>
-        );
-      },
-    [
-      isPaymentModalOpen,
-      currentCreditSale,
-      paymentMethods,
-      handlePayment,
-      isFirstGreater,
-      calculateRemainingBalance,
-      handlePaymentMethodChange,
-      removePaymentMethod,
-      addPaymentMethod,
-    ]
-  );
 
   return (
     <ProtectedRoute>
@@ -2434,7 +2395,6 @@ const CuentasCorrientesPage = () => {
           Cuentas Corrientes
         </Typography>
 
-        {/* Barra de búsqueda */}
         <Box
           sx={{
             display: "flex",
@@ -2455,7 +2415,6 @@ const CuentasCorrientesPage = () => {
           </Box>
         </Box>
 
-        {/* Tabla de cuentas corrientes */}
         <Box
           sx={{
             display: "flex",
@@ -2467,7 +2426,7 @@ const CuentasCorrientesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(100vh - 250px)", flex: 1 }}
+              sx={{ maxHeight: "71vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -2713,16 +2672,61 @@ const CuentasCorrientesPage = () => {
         </Box>
 
         {/* Modales */}
-        <InfoModalComponent />
-        <ChequesModalComponent />
-        <PaymentModalComponent />
+        <InfoModal
+          isOpen={isInfoModalOpen}
+          currentCustomerInfo={currentCustomerInfo}
+          payments={payments}
+          rubro={rubro}
+          expandedSale={expandedSale}
+          infoModalTab={infoModalTab}
+          onClose={() => {
+            setIsInfoModalOpen(false);
+            setExpandedSale(null);
+            setInfoModalTab(0);
+          }}
+          onPayment={(sale) => {
+            setCurrentCreditSale(sale);
+            setIsPaymentModalOpen(true);
+          }}
+          onExpandSale={handleExpandSale}
+          calculateRemainingBalance={calculateRemainingBalance}
+          onTabChange={handleTabChange}
+        />
+
+        <ChequesModal
+          isOpen={isChequesModalOpen}
+          currentCustomerInfo={currentCustomerInfo}
+          currentCustomerCheques={currentCustomerCheques}
+          chequeFilter={chequeFilter}
+          rubro={rubro}
+          onClose={() => setIsChequesModalOpen(false)}
+          onFilterChange={setChequeFilter}
+          onMarkCheckAsPaid={handleMarkCheckAsPaid}
+          onDeleteCheck={handleDeleteCheck}
+        />
+
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          currentCreditSale={currentCreditSale}
+          paymentMethods={paymentMethods}
+          onClose={() => {
+            setIsPaymentModalOpen(false);
+            setPaymentMethods([{ method: "EFECTIVO", amount: 0 }]);
+          }}
+          onPayment={handlePayment}
+          onPaymentMethodChange={handlePaymentMethodChange}
+          onRemovePaymentMethod={removePaymentMethod}
+          onAddPaymentMethod={addPaymentMethod}
+          calculateRemainingBalance={calculateRemainingBalance}
+          isFirstGreater={isFirstGreater}
+        />
 
         {/* Modal de eliminación */}
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
           title="Eliminar Cuentas Corrientes"
-          bgColor="bg-white dark:bg-gray-800"
+          bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
@@ -2758,21 +2762,6 @@ const CuentasCorrientesPage = () => {
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
               ¿Está seguro que desea eliminar las cuentas corrientes?
-            </Typography>
-            <Typography color="text.secondary" sx={{ mb: 2 }}>
-              Todas las cuentas corrientes de {customerToDelete} serán
-              eliminadas permanentemente.
-            </Typography>
-
-            <Typography fontWeight="bold" color="error.main" sx={{ mt: 2 }}>
-              Deuda pendiente:{" "}
-              {calculateCustomerBalance(customerToDelete || "").toLocaleString(
-                "es-AR",
-                {
-                  style: "currency",
-                  currency: "ARS",
-                }
-              )}
             </Typography>
           </Box>
         </Modal>

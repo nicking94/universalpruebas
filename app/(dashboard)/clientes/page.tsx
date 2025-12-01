@@ -943,9 +943,6 @@ const ClientesPage = () => {
         <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
           ¿Está seguro que desea eliminar el cliente?
         </Typography>
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          {customerToDelete?.name} será eliminado permanentemente.
-        </Typography>
       </Box>
     </Modal>
   );
@@ -1017,7 +1014,7 @@ const ClientesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "calc(100vh - 350px)", flex: 1 }}
+              sx={{ maxHeight: "71vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>

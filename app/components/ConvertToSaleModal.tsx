@@ -203,18 +203,6 @@ export const ConvertToSaleModal = ({
       buttons={
         <>
           <Button
-            variant="contained"
-            onClick={handleConfirm}
-            sx={{
-              backgroundColor: theme.palette.primary.main,
-              "&:hover": {
-                backgroundColor: theme.palette.primary.dark,
-              },
-            }}
-          >
-            Confirmar Cobro
-          </Button>
-          <Button
             variant="outlined"
             onClick={onClose}
             sx={{
@@ -227,6 +215,18 @@ export const ConvertToSaleModal = ({
             }}
           >
             Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirm}
+            sx={{
+              backgroundColor: theme.palette.primary.main,
+              "&:hover": {
+                backgroundColor: theme.palette.primary.dark,
+              },
+            }}
+          >
+            Confirmar Cobro
           </Button>
         </>
       }

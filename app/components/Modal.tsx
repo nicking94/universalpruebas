@@ -16,7 +16,6 @@ import {
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
 
-// Constantes para mejor mantenibilidad
 const MODAL_SIZES = {
   xs: "95vw",
   sm: "90vw",
@@ -31,10 +30,9 @@ const ANIMATION = {
   easing: "cubic-bezier(0.4, 0, 0.2, 1)",
 } as const;
 
-// Styled components con soporte para dark mode
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   "& .MuiBackdrop-root": {
-    backgroundColor: alpha(theme.palette.common.black, 0.8),
+    backgroundColor: alpha(theme.palette.primary.dark, 0.5),
     backdropFilter: "blur(8px)",
     animation: `${fadeIn} 0.3s ${ANIMATION.easing}`,
   },
@@ -85,7 +83,6 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
-// Animaciones keyframes
 const fadeIn = {
   "0%": { opacity: 0 },
   "100%": { opacity: 1 },
@@ -102,7 +99,6 @@ const scaleIn = {
   },
 };
 
-// Componente para el área fija del TOTAL
 const FixedTotalSection = styled(Box)(({ theme }) => ({
   position: "sticky",
   bottom: 0,
@@ -152,6 +148,19 @@ const Modal: React.FC<ModalProps & { fixedTotal?: React.ReactNode }> = ({
     [onConfirm, onClose]
   );
 
+  const handleClose = useCallback(
+    (
+      event: React.SyntheticEvent<unknown>,
+      reason: "backdropClick" | "escapeKeyDown"
+    ) => {
+      if (reason === "backdropClick") {
+        return;
+      }
+      onClose?.();
+    },
+    [onClose]
+  );
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -172,7 +181,7 @@ const Modal: React.FC<ModalProps & { fixedTotal?: React.ReactNode }> = ({
   return (
     <StyledDialog
       open={isOpen}
-      onClose={onClose}
+      onClose={handleClose} // ✅ USAR handleClose corregido
       maxWidth={false}
       sx={{ zIndex }}
     >
