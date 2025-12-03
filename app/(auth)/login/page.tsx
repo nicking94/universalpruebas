@@ -45,16 +45,16 @@ const LoginPage = () => {
       setTimeout(() => setIsOpenNotification(false), 2500);
     }
 
-    // Manejar usuario inactivo
     if (urlParams.get("inactive") === "true") {
-      setNotificationMessage("Usuario desactivado por falta de pago");
+      setNotificationMessage(
+        "Usuario desactivado. contacte al soporte técnico"
+      );
       setNotificationType("error");
       setIsOpenNotification(true);
       setTimeout(() => setIsOpenNotification(false), 2500);
     }
 
     const initializeUsers = async () => {
-      // Verificar y corregir todos los usuarios, no solo el admin
       for (const user of USERS) {
         const existingUser = await db.users.get(user.id);
         if (!existingUser || existingUser.username !== user.username) {
@@ -138,14 +138,13 @@ const LoginPage = () => {
       acceptedTermsDate: new Date().toISOString(),
     });
 
-    // VERIFICAR SI EL USUARIO ESTÁ ACTIVO ANTES DE PERMITIR LOGIN
     const userFromConstants = USERS.find(
       (u) => u.username === data.username && u.password === data.password
     );
 
     if (userFromConstants && userFromConstants.isActive === false) {
       setNotificationMessage(
-        "Usuario desactivado por falta de pago. Contacte al administrador."
+        "Usuario desactivado. Contacte al soporte técnico."
       );
       setNotificationType("error");
       setIsOpenNotification(true);

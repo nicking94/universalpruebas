@@ -1003,6 +1003,7 @@ const ProveedoresPage = () => {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "primary.main",
                   "&:hover": { bgcolor: "primary.dark" },
@@ -1151,12 +1152,13 @@ const ProveedoresPage = () => {
                 variant="contained"
                 color="error"
                 onClick={handleDelete}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "error.main",
                   "&:hover": { bgcolor: "error.dark" },
                 }}
               >
-                Si, Eliminar
+                Sí, Eliminar
               </Button>
             </Box>
           }

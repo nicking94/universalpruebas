@@ -34,15 +34,12 @@ import {
   PromotionType,
   PromotionStatus,
 } from "@/app/lib/types/types";
-
-// Importar tus componentes personalizados
 import Button from "@/app/components/Button";
 import Notification from "@/app/components/Notification";
 import Modal from "@/app/components/Modal";
 import Select from "@/app/components/Select";
 import Input from "@/app/components/Input";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
-// Importar el hook useNotification
 import { useNotification } from "@/app/hooks/useNotification";
 
 const PromocionesPage = () => {
@@ -57,7 +54,7 @@ const PromocionesPage = () => {
   const [promotionToDelete, setPromotionToDelete] = useState<Promotion | null>(
     null
   );
-  // REEMPLAZADO: Usar el hook personalizado en lugar del estado local
+
   const {
     isNotificationOpen,
     notificationMessage,
@@ -87,7 +84,6 @@ const PromocionesPage = () => {
     Record<string, string>
   >({});
 
-  // Función para obtener colores según el tema (consistente con VentasPage)
   const getTableHeaderStyle = () => ({
     bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
     color: "primary.contrastText",
@@ -103,7 +99,6 @@ const PromocionesPage = () => {
     },
   });
 
-  // Opciones mejoradas
   const promotionTypeOptions = [
     {
       value: "PERCENTAGE_DISCOUNT",
@@ -120,10 +115,6 @@ const PromocionesPage = () => {
     { value: "inactive", label: "Inactiva" },
   ];
 
-  // ELIMINADO: La función showNotification local ya no es necesaria
-  // ya que usamos showNotification del hook personalizado
-
-  // Validación mejorada
   const validatePromotion = (promotion: typeof newPromotion): boolean => {
     const errors: Record<string, string> = {};
 
@@ -163,7 +154,6 @@ const PromocionesPage = () => {
         (p): p is Promotion & { id: number } => !!p.id
       );
 
-      // Ordenar por estado y fecha
       setPromotions(
         promotionsWithId.sort((a, b) => {
           if (a.status === b.status) {
@@ -427,7 +417,7 @@ const PromocionesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "60vh", flex: 1 }}
+              sx={{ minHeight: "59vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -655,6 +645,7 @@ const PromocionesPage = () => {
               <Button
                 variant="contained"
                 onClick={handleConfirmAddPromotion}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "primary.main",
                   "&:hover": { bgcolor: "primary.dark" },
@@ -720,7 +711,7 @@ const PromocionesPage = () => {
                       setNewPromotion((prev) => ({
                         ...prev,
                         type: value as PromotionType,
-                        discount: 0, // Reset discount when type changes
+                        discount: 0,
                       }))
                     }
                     size="small"
@@ -861,6 +852,7 @@ const PromocionesPage = () => {
               <Button
                 variant="contained"
                 onClick={handleConfirmDelete}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "error.main",
                   "&:hover": { bgcolor: "error.dark" },

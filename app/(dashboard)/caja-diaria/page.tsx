@@ -82,7 +82,6 @@ const CajaDiariaPage = () => {
     new Date().getFullYear()
   );
 
-  // Funciones memoizadas para mejor performance
   const getFilteredMovements = useCallback(() => {
     return selectedDayMovements.filter((movement) => {
       const typeMatch =
@@ -347,7 +346,6 @@ const CajaDiariaPage = () => {
 
   const dailySummaries = useMemo(() => getDailySummary(), [getDailySummary]);
 
-  // Efectos
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -402,12 +400,10 @@ const CajaDiariaPage = () => {
     checkInitialCashStatus();
   }, [checkAndCloseOldCashes]);
 
-  // Paginación
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = dailySummaries.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Componente DetailModal
   const DetailModal = useCallback(() => {
     const filteredMovements = getFilteredMovements();
     const { totalIngresos, totalEgresos } = calculateFilteredTotals();

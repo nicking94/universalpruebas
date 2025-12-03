@@ -1,8 +1,11 @@
+"use client";
 import { formatCurrency } from "../lib/utils/currency";
 import { Budget, PaymentSplit, PaymentMethod } from "../lib/types/types";
 import { useState } from "react";
 import Modal from "./Modal";
 import InputCash from "./InputCash";
+import Button from "./Button";
+import Select, { SelectOption } from "./Select";
 
 // Material-UI imports
 import {
@@ -18,12 +21,7 @@ import {
   IconButton,
   Chip,
   Divider,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Alert,
-  Button,
   useTheme,
 } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
@@ -35,7 +33,7 @@ interface ConvertToSaleModalProps {
   onConfirm: (paymentMethods: PaymentSplit[]) => void;
 }
 
-const paymentOptions = [
+const paymentOptions: SelectOption<PaymentMethod>[] = [
   { value: "EFECTIVO", label: "Efectivo" },
   { value: "TRANSFERENCIA", label: "Transferencia" },
   { value: "TARJETA", label: "Tarjeta" },
@@ -205,6 +203,7 @@ export const ConvertToSaleModal = ({
           <Button
             variant="outlined"
             onClick={onClose}
+            text="Cancelar"
             sx={{
               color: theme.palette.text.secondary,
               borderColor: theme.palette.divider,
@@ -213,21 +212,19 @@ export const ConvertToSaleModal = ({
                 borderColor: theme.palette.action.active,
               },
             }}
-          >
-            Cancelar
-          </Button>
+          />
           <Button
             variant="contained"
             onClick={handleConfirm}
+            isPrimaryAction={true}
+            text="Confirmar Cobro"
             sx={{
               backgroundColor: theme.palette.primary.main,
               "&:hover": {
                 backgroundColor: theme.palette.primary.dark,
               },
             }}
-          >
-            Confirmar Cobro
-          </Button>
+          />
         </>
       }
     >
@@ -386,22 +383,16 @@ export const ConvertToSaleModal = ({
                 key={index}
                 sx={{ display: "flex", alignItems: "center", gap: 2 }}
               >
-                <FormControl sx={{ minWidth: 140 }} size="small">
-                  <InputLabel>Método</InputLabel>
-                  <Select
-                    value={method.method}
-                    label="Método"
-                    onChange={(e) =>
-                      handlePaymentMethodChange(index, "method", e.target.value)
-                    }
-                  >
-                    {paymentOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Select<PaymentMethod>
+                  label="Método"
+                  options={paymentOptions}
+                  value={method.method}
+                  onChange={(value) =>
+                    handlePaymentMethodChange(index, "method", value)
+                  }
+                  size="small"
+                  sx={{ minWidth: 140 }}
+                />
 
                 <Box sx={{ flex: 1, position: "relative" }}>
                   <InputCash
@@ -445,13 +436,13 @@ export const ConvertToSaleModal = ({
           {paymentMethods.length < paymentOptions.length && (
             <Button
               onClick={addPaymentMethod}
-              startIcon={<AddIcon />}
+              icon={<AddIcon />}
+              iconPosition="left"
               variant="outlined"
               size="small"
+              text="Agregar otro método de pago"
               sx={{ mt: 2 }}
-            >
-              Agregar otro método de pago
-            </Button>
+            />
           )}
 
           {/* Resumen de montos */}

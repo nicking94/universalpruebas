@@ -45,7 +45,6 @@ import AdvancedFilterPanel from "@/app/components/AdvancedFilterPanel";
 import { toCapitalize } from "@/app/lib/utils/capitalizeText";
 import Image from "next/image";
 
-// Material-UI imports
 import {
   Box,
   Typography,
@@ -71,7 +70,6 @@ import {
   InsertDriveFile,
 } from "@mui/icons-material";
 
-// Componentes personalizados
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 
@@ -91,6 +89,8 @@ const MovimientosPage = () => {
   const { rubro } = useRubro();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
@@ -149,6 +149,13 @@ const MovimientosPage = () => {
     value: new Date().getFullYear() - i,
     label: String(new Date().getFullYear() - i),
   }));
+  const getModalTitle = () => {
+    return isEditing ? "Editar Movimiento" : "Nuevo Movimiento";
+  };
+
+  const getButtonText = () => {
+    return isEditing ? "Actualizar" : "Guardar";
+  };
 
   const recalculateTotals = (movements: DailyCashMovement[]) => {
     return movements.reduce(
@@ -256,12 +263,50 @@ const MovimientosPage = () => {
     }
   }, []);
 
-  const handleOpenModal = async () => {
+  const handleOpenModalForNew = async () => {
     const { needsRedirect } = await ensureCashIsOpen();
     if (needsRedirect) {
       setShouldRedirectToCash(true);
       return;
     }
+    setIsEditing(false);
+    setEditingExpenseId(null);
+    resetExpenseForm();
+    setIsOpenModal(true);
+  };
+
+  const handleOpenModalForEdit = async (expense: Expense) => {
+    const { needsRedirect } = await ensureCashIsOpen();
+    if (needsRedirect) {
+      setShouldRedirectToCash(true);
+      return;
+    }
+
+    if (!expense.id) {
+      showNotification("No se puede editar un movimiento sin ID", "error");
+      return;
+    }
+
+    setIsEditing(true);
+    setEditingExpenseId(expense.id);
+    setNewExpense({
+      amount: expense.amount,
+      date: expense.date,
+      description: expense.description,
+      category: expense.category,
+      paymentMethod: expense.paymentMethod,
+      receipt: expense.receipt,
+      installments: expense.installments || 1,
+      rubro: expense.rubro,
+      supplier: expense.supplier || "",
+      type: expense.type,
+    });
+
+    if (expense.receipt) {
+      setReceiptPreview(expense.receipt);
+    }
+
+    setSelectedSupplier(expense.supplier || "");
     setIsOpenModal(true);
   };
 
@@ -306,7 +351,7 @@ const MovimientosPage = () => {
     );
   };
 
-  const handleAddExpense = async () => {
+  const handleSaveExpense = async () => {
     if (!newExpense.description || !newExpense.amount || !newExpense.category) {
       showNotification("Complete todos los campos obligatorios", "error");
       return;
@@ -320,88 +365,155 @@ const MovimientosPage = () => {
           )
         : newExpense.amount;
 
-      const expenseToAdd = {
+      const expenseData = {
         ...newExpense,
-        id: Date.now(),
         rubro: rubro,
         amount: totalPayment,
       };
 
-      // Registrar el movimiento en expenses
-      await db.expenses.add(expenseToAdd);
+      if (isEditing && editingExpenseId) {
+        await db.expenses.update(editingExpenseId, expenseData);
+        const expenseDate = new Date(newExpense.date);
+        const localDateString = expenseDate.toISOString().split("T")[0];
 
-      // Obtener la fecha correctamente formateada
-      const expenseDate = new Date(newExpense.date);
-      const localDateString = expenseDate.toISOString().split("T")[0];
+        const dailyCash = await db.dailyCashes.get({ date: localDateString });
 
-      // Obtener o crear la caja diaria
-      let dailyCash = await db.dailyCashes.get({ date: localDateString });
+        if (dailyCash) {
+          const updatedMovements = dailyCash.movements.map((m) =>
+            m.id === editingExpenseId
+              ? {
+                  ...m,
+                  amount: totalPayment,
+                  description: newExpense.description,
+                  type: newExpense.type,
+                  paymentMethod: newExpense.paymentMethod,
+                  date: newExpense.date,
+                  supplierName: newExpense.supplier,
+                  expenseCategory: newExpense.category,
+                  combinedPaymentMethods: newExpense.combinedPaymentMethods,
+                }
+              : m
+          );
 
-      if (!dailyCash) {
-        // Si no existe, obtener los movimientos existentes para esa fecha
-        const existingMovements = await db.dailyCashes
-          .where("date")
-          .equals(localDateString)
-          .first();
+          const updatedCash = {
+            ...dailyCash,
+            movements: updatedMovements,
+            totalIncome: updatedMovements
+              .filter((m) => m.type === "INGRESO")
+              .reduce((sum, m) => sum + m.amount, 0),
+            totalExpense: updatedMovements
+              .filter((m) => m.type === "EGRESO")
+              .reduce((sum, m) => sum + m.amount, 0),
+            cashIncome: updatedMovements
+              .filter(
+                (m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO"
+              )
+              .reduce((sum, m) => sum + m.amount, 0),
+            cashExpense: updatedMovements
+              .filter(
+                (m) => m.type === "EGRESO" && m.paymentMethod === "EFECTIVO"
+              )
+              .reduce((sum, m) => sum + m.amount, 0),
+            otherIncome: updatedMovements
+              .filter(
+                (m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO"
+              )
+              .reduce((sum, m) => sum + m.amount, 0),
+          };
 
-        dailyCash = {
+          await db.dailyCashes.update(dailyCash.id, updatedCash);
+        }
+
+        setExpenses((prev) =>
+          prev.map((exp) =>
+            exp.id === editingExpenseId
+              ? { ...expenseData, id: editingExpenseId }
+              : exp
+          )
+        );
+
+        showNotification("Movimiento actualizado correctamente", "success");
+      } else {
+        const expenseToAdd = {
+          ...expenseData,
           id: Date.now(),
-          date: localDateString,
-          movements: existingMovements?.movements || [],
-          closed: false,
-          totalIncome: 0,
-          totalExpense: 0,
-          cashIncome: 0,
-          cashExpense: 0,
-          otherIncome: 0,
         };
-        await db.dailyCashes.add(dailyCash);
+        await db.expenses.add(expenseToAdd);
+        const expenseDate = new Date(newExpense.date);
+        const localDateString = expenseDate.toISOString().split("T")[0];
+        let dailyCash = await db.dailyCashes.get({ date: localDateString });
+
+        if (!dailyCash) {
+          const existingMovements = await db.dailyCashes
+            .where("date")
+            .equals(localDateString)
+            .first();
+
+          dailyCash = {
+            id: Date.now(),
+            date: localDateString,
+            movements: existingMovements?.movements || [],
+            closed: false,
+            totalIncome: 0,
+            totalExpense: 0,
+            cashIncome: 0,
+            cashExpense: 0,
+            otherIncome: 0,
+          };
+          await db.dailyCashes.add(dailyCash);
+        }
+
+        const movement = {
+          id: expenseToAdd.id,
+          amount: totalPayment,
+          description: newExpense.description,
+          type: newExpense.type,
+          paymentMethod: newExpense.paymentMethod,
+          date: newExpense.date,
+          rubro: rubro,
+          supplierName: newExpense.supplier,
+          expenseCategory: newExpense.category,
+          combinedPaymentMethods: newExpense.combinedPaymentMethods,
+        };
+
+        const updatedMovements = [...dailyCash.movements, movement];
+
+        const updatedCash = {
+          ...dailyCash,
+          movements: updatedMovements,
+          totalIncome: updatedMovements
+            .filter((m) => m.type === "INGRESO")
+            .reduce((sum, m) => sum + m.amount, 0),
+          totalExpense: updatedMovements
+            .filter((m) => m.type === "EGRESO")
+            .reduce((sum, m) => sum + m.amount, 0),
+          cashIncome: updatedMovements
+            .filter(
+              (m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO"
+            )
+            .reduce((sum, m) => sum + m.amount, 0),
+          cashExpense: updatedMovements
+            .filter(
+              (m) => m.type === "EGRESO" && m.paymentMethod === "EFECTIVO"
+            )
+            .reduce((sum, m) => sum + m.amount, 0),
+          otherIncome: updatedMovements
+            .filter(
+              (m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO"
+            )
+            .reduce((sum, m) => sum + m.amount, 0),
+        };
+
+        await db.dailyCashes.update(dailyCash.id, updatedCash);
+
+        setExpenses((prev) => [...prev, expenseToAdd]);
+        showNotification("Movimiento registrado correctamente", "success");
       }
 
-      // Crear el movimiento para la caja diaria
-      const movement = {
-        id: expenseToAdd.id,
-        amount: totalPayment,
-        description: newExpense.description,
-        type: newExpense.type,
-        paymentMethod: newExpense.paymentMethod,
-        date: newExpense.date,
-        rubro: rubro,
-        supplierName: newExpense.supplier,
-        expenseCategory: newExpense.category,
-        combinedPaymentMethods: newExpense.combinedPaymentMethods,
-      };
-
-      // Actualizar la caja diaria
-      const updatedMovements = [...dailyCash.movements, movement];
-
-      const updatedCash = {
-        ...dailyCash,
-        movements: updatedMovements,
-        totalIncome: updatedMovements
-          .filter((m) => m.type === "INGRESO")
-          .reduce((sum, m) => sum + m.amount, 0),
-        totalExpense: updatedMovements
-          .filter((m) => m.type === "EGRESO")
-          .reduce((sum, m) => sum + m.amount, 0),
-        cashIncome: updatedMovements
-          .filter((m) => m.type === "INGRESO" && m.paymentMethod === "EFECTIVO")
-          .reduce((sum, m) => sum + m.amount, 0),
-        cashExpense: updatedMovements
-          .filter((m) => m.type === "EGRESO" && m.paymentMethod === "EFECTIVO")
-          .reduce((sum, m) => sum + m.amount, 0),
-        otherIncome: updatedMovements
-          .filter((m) => m.type === "INGRESO" && m.paymentMethod !== "EFECTIVO")
-          .reduce((sum, m) => sum + m.amount, 0),
-      };
-
-      await db.dailyCashes.update(dailyCash.id, updatedCash);
-
-      // Actualizar el estado
-      setExpenses((prev) => [...prev, expenseToAdd]);
-      showNotification("Movimiento registrado correctamente", "success");
       resetExpenseForm();
       setIsOpenModal(false);
+      setIsEditing(false);
+      setEditingExpenseId(null);
     } catch (error) {
       console.error("Error al registrar movimiento:", error);
       showNotification("Error al registrar movimiento", "error");
@@ -412,10 +524,7 @@ const MovimientosPage = () => {
     if (!expenseToDelete || !expenseToDelete.id) return;
 
     try {
-      // 1. Eliminar el movimiento de la tabla de expenses
       await db.expenses.delete(expenseToDelete.id);
-
-      // 2. Actualizar la caja diaria correspondiente
       const expenseDate = new Date(expenseToDelete.date);
       const localDateString = expenseDate
         .toLocaleDateString("es-AR", {
@@ -430,12 +539,10 @@ const MovimientosPage = () => {
       const dailyCash = await db.dailyCashes.get({ date: localDateString });
 
       if (dailyCash) {
-        // Filtrar el movimiento eliminado
         const updatedMovements = dailyCash.movements.filter(
           (m) => m.id !== expenseToDelete.id
         );
 
-        // Calcular nuevos totales
         const totals = updatedMovements.reduce(
           (acc, m) => {
             const amount = m.amount || 0;
@@ -466,7 +573,6 @@ const MovimientosPage = () => {
           }
         );
 
-        // Actualizar la caja diaria con los nuevos totales
         const updatedCash = {
           ...dailyCash,
           movements: updatedMovements,
@@ -475,13 +581,11 @@ const MovimientosPage = () => {
 
         await db.dailyCashes.update(dailyCash.id, updatedCash);
 
-        // Si no quedan movimientos y la caja está cerrada, eliminarla
         if (updatedMovements.length === 0 && dailyCash.closed) {
           await db.dailyCashes.delete(dailyCash.id);
         }
       }
 
-      // 3. Actualizar el estado local y recargar datos
       await loadExpenses();
       showNotification("Movimiento eliminado correctamente", "success");
       setIsDeleteModalOpen(false);
@@ -498,7 +602,6 @@ const MovimientosPage = () => {
       return;
     }
 
-    // Verificar si la categoría ya existe
     const categoryExists = categories.some(
       (cat) =>
         cat.name.toLowerCase() === newCategory.name.toLowerCase() &&
@@ -518,13 +621,9 @@ const MovimientosPage = () => {
       };
 
       await db.expenseCategories.add(categoryToAdd);
-
-      // Actualizar el estado local inmediatamente
       setCategories((prev) => [...prev, categoryToAdd]);
 
       showNotification("Categoría agregada correctamente", "success");
-
-      // Seleccionar automáticamente la categoría recién creada
       setNewExpense((prev) => ({
         ...prev,
         category: newCategory.name,
@@ -555,7 +654,6 @@ const MovimientosPage = () => {
 
       if (category.id !== undefined) {
         await db.expenseCategories.delete(category.id);
-        // Actualizar estado local
         setCategories((prev) => prev.filter((c) => c.id !== category.id));
       }
       showNotification("Categoría eliminada correctamente", "success");
@@ -582,10 +680,7 @@ const MovimientosPage = () => {
   };
 
   const filteredExpenses = expenses.filter((expense) => {
-    // Filtro por rubro
     if (expense.rubro !== rubro && rubro !== "Todos los rubros") return false;
-
-    // Filtro por mes y año
     const expenseDate = parseISO(expense.date);
     if (
       !isWithinInterval(expenseDate, {
@@ -595,7 +690,6 @@ const MovimientosPage = () => {
     )
       return false;
 
-    // Filtros avanzados
     if (filters.length > 0) {
       return filters.every((filter) => {
         if (filter.field === "type") return expense.type === filter.value;
@@ -788,7 +882,7 @@ const MovimientosPage = () => {
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={handleOpenModal}
+                onClick={handleOpenModalForNew}
                 sx={{
                   backgroundColor: theme.palette.primary.main,
                   "&:hover": {
@@ -983,13 +1077,7 @@ const MovimientosPage = () => {
                               <IconButton
                                 size="small"
                                 onClick={() => {
-                                  setNewExpense({
-                                    ...expense,
-                                    date: expense.date,
-                                  });
-                                  if (expense.receipt)
-                                    setReceiptPreview(expense.receipt);
-                                  setIsOpenModal(true);
+                                  handleOpenModalForEdit(expense);
                                 }}
                                 title="Editar"
                                 sx={{
@@ -1094,6 +1182,7 @@ const MovimientosPage = () => {
                     setIsCategoryDeleteModalOpen(false);
                   }
                 }}
+                isPrimaryAction={true}
                 sx={{
                   backgroundColor: "error.main",
                   "&:hover": {
@@ -1101,7 +1190,7 @@ const MovimientosPage = () => {
                   },
                 }}
               >
-                Si, Eliminar
+                Sí, Eliminar
               </Button>
             </Box>
           }
@@ -1122,8 +1211,10 @@ const MovimientosPage = () => {
           onClose={() => {
             setIsOpenModal(false);
             resetExpenseForm();
+            setIsEditing(false);
+            setEditingExpenseId(null);
           }}
-          title={newExpense.amount ? "Editar Movimiento" : "Nuevo Movimiento"}
+          title={getModalTitle()}
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
@@ -1145,7 +1236,8 @@ const MovimientosPage = () => {
               </Button>
               <Button
                 variant="contained"
-                onClick={handleAddExpense}
+                onClick={handleSaveExpense}
+                isPrimaryAction={true}
                 sx={{
                   backgroundColor: theme.palette.primary.main,
                   "&:hover": {
@@ -1153,7 +1245,7 @@ const MovimientosPage = () => {
                   },
                 }}
               >
-                {newExpense.date ? "Actualizar" : "Guardar"}
+                {getButtonText()}
               </Button>
             </Box>
           }
@@ -1208,8 +1300,8 @@ const MovimientosPage = () => {
                     ...categories.map((category) => ({
                       value: category.name,
                       label: category.name,
-                      deletable: true, // Habilita el botón de eliminar
-                      metadata: category, // Pasamos el objeto completo para poder eliminarlo
+                      deletable: true,
+                      metadata: category,
                     })),
                   ]}
                   value={newExpense.category}
@@ -1220,7 +1312,6 @@ const MovimientosPage = () => {
                     });
                   }}
                   onDeleteOption={(option) => {
-                    // Buscar la categoría completa usando el metadata
                     const category = categories.find(
                       (c) =>
                         c.name === option.value ||
@@ -1231,7 +1322,7 @@ const MovimientosPage = () => {
                       setIsCategoryDeleteModalOpen(true);
                     }
                   }}
-                  showDeleteButton={true} // Activa los botones de eliminar
+                  showDeleteButton={true}
                 />
               </Box>
 
@@ -1361,18 +1452,6 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="contained"
-                onClick={handleDeleteExpense}
-                sx={{
-                  backgroundColor: "error.main",
-                  "&:hover": {
-                    backgroundColor: "error.dark",
-                  },
-                }}
-              >
-                Eliminar
-              </Button>
-              <Button
                 variant="outlined"
                 onClick={() => setIsDeleteModalOpen(false)}
                 sx={{
@@ -1385,6 +1464,19 @@ const MovimientosPage = () => {
                 }}
               >
                 Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleDeleteExpense}
+                isPrimaryAction={true}
+                sx={{
+                  backgroundColor: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.dark",
+                  },
+                }}
+              >
+                Sí, Eliminar
               </Button>
             </Box>
           }

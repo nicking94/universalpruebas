@@ -1,6 +1,6 @@
 "use client";
 import { ModalProps } from "../lib/types/types";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -123,7 +123,7 @@ const FixedTotalSection = styled(Box)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
-const Modal: React.FC<ModalProps & { fixedTotal?: React.ReactNode }> = ({
+const Modal: React.FC<ModalProps> = ({
   isOpen,
   title = "Confirmación",
   children,
@@ -132,20 +132,23 @@ const Modal: React.FC<ModalProps & { fixedTotal?: React.ReactNode }> = ({
   buttons,
   zIndex = 1300,
   fixedTotal,
+  primaryButtonRef,
 }) => {
   const theme = useTheme();
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      if (!isOpen) return;
+
+      if (e.key === "Escape") {
         e.preventDefault();
-        onConfirm?.();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
+        e.stopPropagation();
         onClose?.();
+        return;
       }
     },
-    [onConfirm, onClose]
+    [isOpen, onClose]
   );
 
   const handleClose = useCallback(
@@ -168,22 +171,30 @@ const Modal: React.FC<ModalProps & { fixedTotal?: React.ReactNode }> = ({
     document.body.style.overflow = "hidden";
 
     window.scrollTo({ top: 0 });
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
       document.body.style.overflow = originalStyle;
     };
   }, [isOpen, handleKeyDown]);
+
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      modalRef.current.focus();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
     <StyledDialog
+      ref={modalRef}
       open={isOpen}
-      onClose={handleClose} // ✅ USAR handleClose corregido
+      onClose={handleClose}
       maxWidth={false}
       sx={{ zIndex }}
+      tabIndex={-1}
     >
       {/* Header */}
       <DialogTitle
@@ -398,6 +409,7 @@ const Modal: React.FC<ModalProps & { fixedTotal?: React.ReactNode }> = ({
             </Button>
             {onConfirm && (
               <Button
+                ref={primaryButtonRef}
                 variant="contained"
                 onClick={onConfirm}
                 sx={{

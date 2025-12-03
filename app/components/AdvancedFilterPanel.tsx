@@ -523,6 +523,7 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
               onClick={() => setIsFiltersOpen(false)}
               variant="contained"
               size="small"
+              isPrimaryAction={true}
               sx={{
                 backgroundColor: theme.palette.primary.main,
                 color: theme.palette.primary.contrastText,

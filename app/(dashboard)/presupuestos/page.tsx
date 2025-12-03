@@ -38,7 +38,6 @@ import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 import { ensureCashIsOpen } from "@/app/lib/utils/cash";
 import { useRouter } from "next/navigation";
 
-// Material-UI imports
 import {
   Box,
   Typography,
@@ -76,7 +75,6 @@ import {
 import Button from "@/app/components/Button";
 import Select from "@/app/components/Select";
 
-// Definir tipos para las opciones
 interface CustomerOption {
   value: string;
   label: string;
@@ -137,7 +135,6 @@ const PresupuestosPage = () => {
   const router = useRouter();
   const theme = useTheme();
 
-  // Refs para debounce
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const productSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -193,7 +190,6 @@ const PresupuestosPage = () => {
     { value: "rechazado", label: "Rechazado" },
   ];
 
-  // Iconos memoizados para el Autocomplete de productos múltiples
   const icon = useMemo(() => <CheckBoxOutlineBlank fontSize="small" />, []);
   const checkedIcon = useMemo(() => <CheckBox fontSize="small" />, []);
 
@@ -256,7 +252,7 @@ const PresupuestosPage = () => {
   }, [products, rubro]);
 
   const filteredProductOptions = useMemo(() => {
-    if (!productSearchQuery) return productOptions.slice(0, 50); // Limitar a 50 resultados iniciales
+    if (!productSearchQuery) return productOptions.slice(0, 50);
 
     const query = productSearchQuery.toLowerCase();
     return productOptions
@@ -265,10 +261,9 @@ const PresupuestosPage = () => {
           option.label.toLowerCase().includes(query) ||
           option.product?.name.toLowerCase().includes(query)
       )
-      .slice(0, 50); // Limitar resultados a 50
+      .slice(0, 50);
   }, [productOptions, productSearchQuery]);
 
-  // Función corregida para getOptionDisabled
   const getOptionDisabled = (option: ProductOption): boolean => {
     return option.isDisabled || false;
   };
@@ -923,7 +918,6 @@ const PresupuestosPage = () => {
       setBudgets(allBudgets);
       setFilteredBudgets(filtered);
 
-      // Limpiar el estado
       setNewBudget({
         date: new Date().toISOString(),
         customerName: "",
@@ -1121,12 +1115,10 @@ const PresupuestosPage = () => {
 
   const handleSearch = useCallback(
     (query: string) => {
-      // Limpiar timeout anterior
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
 
-      // Configurar nuevo timeout
       searchTimeoutRef.current = setTimeout(() => {
         setSearchQuery(query);
         setCurrentPage(1);
@@ -1167,18 +1159,15 @@ const PresupuestosPage = () => {
   );
 
   const handleProductSearchChange = useCallback((query: string) => {
-    // Limpiar timeout anterior
     if (productSearchTimeoutRef.current) {
       clearTimeout(productSearchTimeoutRef.current);
     }
 
-    // Configurar nuevo timeout
     productSearchTimeoutRef.current = setTimeout(() => {
       setProductSearchQuery(query);
     }, 200);
   }, []);
 
-  // Optimizar renderOption con useCallback - Tipos corregidos
   const renderOption = useCallback(
     (
       props: React.HTMLAttributes<HTMLLIElement>,
@@ -1206,7 +1195,6 @@ const PresupuestosPage = () => {
     [icon, checkedIcon]
   );
 
-  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -1663,6 +1651,7 @@ const PresupuestosPage = () => {
               <Button
                 variant="contained"
                 onClick={editingBudget ? handleUpdateBudget : handleAddBudget}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "primary.main",
                   "&:hover": { bgcolor: "primary.dark" },
@@ -1776,7 +1765,7 @@ const PresupuestosPage = () => {
                   getOptionLabel={getOptionLabel}
                   getOptionDisabled={getOptionDisabled}
                   isOptionEqualToValue={isOptionEqualToValue}
-                  filterOptions={(options) => options} // Desactivar filtrado automático
+                  filterOptions={(options) => options}
                   renderOption={renderOption}
                   renderInput={(params) => (
                     <TextField
@@ -2176,6 +2165,7 @@ const PresupuestosPage = () => {
               <Button
                 variant="contained"
                 onClick={handleConfirmDelete}
+                isPrimaryAction={true}
                 sx={{
                   backgroundColor: "error.main",
                   "&:hover": {
@@ -2183,7 +2173,7 @@ const PresupuestosPage = () => {
                   },
                 }}
               >
-                Si, Eliminar
+                Sí, Eliminar
               </Button>
             </>
           }

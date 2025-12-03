@@ -28,10 +28,7 @@ import Input from "@/app/components/Input";
 import Select from "@/app/components/Select";
 import Button from "@/app/components/Button";
 import Notification from "@/app/components/Notification";
-// Importar el hook useNotification
 import { useNotification } from "@/app/hooks/useNotification";
-
-// Importar iconos de Material UI
 import {
   Add,
   Edit,
@@ -75,7 +72,7 @@ const ClientesPage = () => {
   const [isDeleteBudgetModalOpen, setIsDeleteBudgetModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  // REEMPLAZADO: Usar el hook personalizado en lugar del estado local
+
   const {
     isNotificationOpen,
     notificationMessage,
@@ -91,13 +88,11 @@ const ClientesPage = () => {
     Record<string, number>
   >({});
 
-  // Función para obtener colores según el tema (consistente con otras páginas)
   const getTableHeaderStyle = () => ({
     bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
     color: "primary.contrastText",
   });
 
-  // Opciones para el select de estado
   const statusOptions = [
     { value: "activo", label: "Activo" },
     { value: "inactivo", label: "Inactivo" },
@@ -115,7 +110,6 @@ const ClientesPage = () => {
           (sale) => sale.credit === true
         ) as CreditSale[];
 
-        // Calcular balances para cada cliente
         const balances: Record<string, number> = {};
         creditSalesData.forEach((sale) => {
           if (!balances[sale.customerName]) {
@@ -161,7 +155,6 @@ const ClientesPage = () => {
     const fetchCustomerSales = async () => {
       if (selectedCustomer) {
         try {
-          // Buscar ventas por customerId O por customerName
           const sales = await db.sales
             .where("customerId")
             .equals(selectedCustomer.id)
@@ -215,9 +208,6 @@ const ClientesPage = () => {
     indexOfFirstCustomer,
     indexOfLastCustomer
   );
-
-  // ELIMINADO: La función showNotification local ya no es necesaria
-  // ya que usamos showNotification del hook personalizado
 
   const handleAddCustomer = async () => {
     if (!newCustomer.name.trim()) {
@@ -398,7 +388,6 @@ const ClientesPage = () => {
         async () => {
           await db.customers.update(editingCustomer.id, updatedCustomer);
 
-          // Actualizar ventas
           const customerSales = await db.sales
             .where("customerId")
             .equals(editingCustomer.id)
@@ -412,7 +401,6 @@ const ClientesPage = () => {
             )
           );
 
-          // Actualizar presupuestos
           if (editingBudget) {
             const updatedBudget = {
               ...editingBudget,
@@ -489,16 +477,6 @@ const ClientesPage = () => {
           {selectedBudget ? (
             <>
               <Button
-                variant="contained"
-                onClick={() => setSelectedBudget(null)}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                Volver
-              </Button>
-              <Button
                 variant="text"
                 onClick={() => {
                   setIsBudgetsModalOpen(false);
@@ -515,6 +493,17 @@ const ClientesPage = () => {
                 }}
               >
                 Cerrar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => setSelectedBudget(null)}
+                isPrimaryAction={true}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Volver
               </Button>
             </>
           ) : (
@@ -662,7 +651,7 @@ const ClientesPage = () => {
           </Box>
         </Box>
       ) : (
-        <Box sx={{ maxHeight: "70vh", overflow: "auto" }}>
+        <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
           {customerBudgets.length > 0 ? (
             <TableContainer component={Paper}>
               <Table stickyHeader>
@@ -780,7 +769,7 @@ const ClientesPage = () => {
         </Box>
       }
     >
-      <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+      <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
         {customerSales.length > 0 ? (
           <TableContainer component={Paper}>
             <Table stickyHeader>
@@ -846,7 +835,6 @@ const ClientesPage = () => {
     </Modal>
   );
 
-  // Modal de confirmación para eliminar presupuesto - CORREGIDO
   const DeleteBudgetModal = () => (
     <Modal
       isOpen={isDeleteBudgetModalOpen}
@@ -901,7 +889,6 @@ const ClientesPage = () => {
     </Modal>
   );
 
-  // Modal de confirmación para eliminar cliente - CORREGIDO
   const DeleteCustomerModal = () => (
     <Modal
       isOpen={isDeleteModalOpen}
@@ -928,12 +915,13 @@ const ClientesPage = () => {
             variant="contained"
             color="error"
             onClick={handleConfirmDelete}
+            isPrimaryAction={true}
             sx={{
               bgcolor: "error.main",
               "&:hover": { bgcolor: "error.dark" },
             }}
           >
-            Si, Eliminar
+            Sí, Eliminar
           </Button>
         </Box>
       }
@@ -1014,7 +1002,7 @@ const ClientesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "71vh", flex: 1 }}
+              sx={{ maxHeight: "72vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -1316,6 +1304,7 @@ const ClientesPage = () => {
                 onClick={
                   editingCustomer ? handleUpdateCustomer : handleAddCustomer
                 }
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "primary.main",
                   "&:hover": { bgcolor: "primary.dark" },

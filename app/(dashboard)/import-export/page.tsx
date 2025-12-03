@@ -9,7 +9,6 @@ import { format } from "date-fns";
 import Notification from "@/app/components/Notification";
 import { Payment, Product, Sale } from "@/app/lib/types/types";
 
-// Material-UI imports
 import {
   Button,
   Box,
@@ -107,7 +106,6 @@ export default function ImportExportPage() {
     const text = await file.text();
     const data = JSON.parse(text);
 
-    // CORREGIR: Este código tiene un problema lógico
     if (data.sales && data.payments) {
       const paymentMap = new Map();
       data.payments.forEach((payment: Payment) => {
@@ -130,10 +128,8 @@ export default function ImportExportPage() {
       });
     }
 
-    // CORREGIR: Mejorar la lógica de categorías personalizadas
     if (data.products && Array.isArray(data.products)) {
       data.products = data.products.map((product: Product) => {
-        // Verificar si necesita migración de categorías
         if (
           product.category &&
           (!product.customCategories || product.customCategories.length === 0)
@@ -179,7 +175,6 @@ export default function ImportExportPage() {
           db.promotions,
         ],
         async () => {
-          // Limpiar todas las tablas
           await Promise.all([
             db.theme.clear(),
             db.products.clear(),
@@ -206,7 +201,6 @@ export default function ImportExportPage() {
           ]);
 
           try {
-            // Importar todos los datos
             await Promise.all([
               db.theme.bulkAdd(data.theme || []),
               db.products.bulkAdd(data.products || []),

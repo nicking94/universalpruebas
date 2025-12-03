@@ -127,6 +127,9 @@ export type ModalProps = {
   buttons?: React.ReactNode;
   minheight?: string;
   zIndex?: string;
+
+  fixedTotal?: boolean;
+  primaryButtonRef?: React.Ref<HTMLButtonElement>;
 };
 
 export type InputProps = {

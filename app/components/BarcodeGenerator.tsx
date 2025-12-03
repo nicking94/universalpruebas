@@ -5,14 +5,9 @@ import { formatCurrency } from "../lib/utils/currency";
 import { Product } from "../lib/types/types";
 import Modal from "./Modal";
 import Input from "./Input";
-import {
-  Button,
-  Box,
-  Typography,
-  FormControlLabel,
-  Checkbox,
-  useTheme,
-} from "@mui/material";
+import Button from "./Button";
+import Checkbox from "./Checkbox";
+import { Box, Typography } from "@mui/material";
 import { Print as PrintIcon, Close as CloseIcon } from "@mui/icons-material";
 
 type BarcodeGeneratorProps = {
@@ -32,7 +27,6 @@ const BarcodeGenerator = ({
   const [isPrinting, setIsPrinting] = useState(false);
   const [showPrice, setShowPrice] = useState(true);
   const barcodeRef = useRef<HTMLDivElement>(null);
-  const theme = useTheme();
 
   const handlePrint = () => {
     if (!barcodeRef.current || isPrinting) return;
@@ -161,9 +155,11 @@ const BarcodeGenerator = ({
         <>
           <Button
             variant="outlined"
-            startIcon={<CloseIcon />}
+            icon={<CloseIcon />}
+            iconPosition="left"
             onClick={onClose}
             disabled={isPrinting}
+            text="Cerrar"
             sx={{
               color: "#6b7280",
               borderColor: "#d1d5db",
@@ -172,23 +168,23 @@ const BarcodeGenerator = ({
                 borderColor: "#9ca3af",
               },
             }}
-          >
-            Cerrar
-          </Button>
+          />
           <Button
             variant="contained"
-            startIcon={<PrintIcon />}
+            icon={<PrintIcon />}
+            iconPosition="left"
             onClick={handlePrint}
             disabled={isPrinting}
+            isPrimaryAction={true}
+            text={isPrinting ? "Imprimiendo..." : "Imprimir Etiqueta"}
+            loading={isPrinting}
             sx={{
               backgroundColor: "background.primary",
               "&:hover": {
                 backgroundColor: "#background.primary",
               },
             }}
-          >
-            {isPrinting ? "Imprimiendo..." : "Imprimir Etiqueta"}
-          </Button>
+          />
         </>
       }
     >
@@ -222,25 +218,17 @@ const BarcodeGenerator = ({
         </Box>
 
         {/* Checkbox para mostrar/ocultar precio */}
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={showPrice}
-              onChange={(e) => setShowPrice(e.target.checked)}
-              disabled={isPrinting}
-              sx={{
-                color: theme.palette.primary.main,
-                "&.Mui-checked": {
-                  color: theme.palette.primary.main,
-                },
-              }}
-            />
-          }
-          label={
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Mostrar precio en la etiqueta
-            </Typography>
-          }
+        <Checkbox
+          label="Mostrar precio en la etiqueta"
+          checked={showPrice}
+          onChange={setShowPrice}
+          disabled={isPrinting}
+          sx={{
+            color: "primary.main",
+            "&.Mui-checked": {
+              color: "primary.main",
+            },
+          }}
         />
 
         <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -253,8 +241,7 @@ const BarcodeGenerator = ({
               flexDirection: "column",
               alignItems: "center",
               p: 2,
-              border: `1px solid ${theme.palette.divider}`,
-              borderRadius: 1,
+              minHeight: "18vh",
             }}
           >
             <Barcode

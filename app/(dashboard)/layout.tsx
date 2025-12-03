@@ -12,8 +12,6 @@ import { PaginationProvider } from "../context/PaginationContext";
 import UpdatesManager from "../components/Notifications/UpdatesManager";
 import PaymentNotification from "../components/PaymentNotification";
 import { useAppVersion } from "../hooks/useAppVersion";
-
-// Material-UI imports
 import { ThemeProvider, CssBaseline, Box } from "@mui/material";
 import { lightTheme, darkTheme } from "@/app/theme/theme";
 
@@ -25,8 +23,6 @@ export default function AppLayout({
   const { isSidebarOpen } = useSidebar();
   const router = useRouter();
   const [theme, setTheme] = useState<string>("light");
-
-  // Usar el hook de versión
   const { isUpdating, isAutoUpdate } = useAppVersion();
 
   const handleTheme = () => {
@@ -63,7 +59,6 @@ export default function AppLayout({
     saveTheme();
   }, [theme]);
 
-  // Seleccionar el tema de Material-UI basado en el estado del tema
   const muiTheme = theme === "dark" ? darkTheme : lightTheme;
 
   return (

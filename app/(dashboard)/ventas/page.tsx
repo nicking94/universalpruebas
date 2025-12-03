@@ -16,7 +16,6 @@ import {
   TextField,
   Autocomplete,
   useTheme,
-  InputAdornment,
 } from "@mui/material";
 import {
   Add,
@@ -37,6 +36,7 @@ import { ensureCashIsOpen } from "@/app/lib/utils/cash";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import InputCash from "@/app/components/InputCash";
+import PaymentModal from "@/app/components/PaymentModal";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import { useRubro } from "@/app/context/RubroContext";
 import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
@@ -68,14 +68,12 @@ import {
   Payment,
 } from "@/app/lib/types/types";
 import Select from "@/app/components/Select";
-import { AttachMoney, Settings } from "@mui/icons-material";
+import { Settings } from "@mui/icons-material";
 
-// Importar tus componentes personalizados
 import Button from "@/app/components/Button";
 import Notification from "@/app/components/Notification";
 import Modal from "@/app/components/Modal";
 import Checkbox from "@/app/components/Checkbox";
-// Importar el hook useNotification
 import { useNotification } from "@/app/hooks/useNotification";
 
 type SelectOption = {
@@ -91,6 +89,8 @@ type CustomerOption = {
 };
 
 const VentasPage = () => {
+  const cobrarButtonRef = useRef<HTMLButtonElement>(null);
+  const imprimirButtonRef = useRef<HTMLButtonElement>(null);
   const { businessData, setBusinessData } = useBusinessData();
   const { rubro } = useRubro();
   const theme = useTheme();
@@ -111,7 +111,7 @@ const VentasPage = () => {
 
   const router = useRouter();
   const ticketRef = useRef<PrintableTicketHandle>(null);
-  // REEMPLAZADO: Usar el hook personalizado en lugar del estado local
+
   const {
     isNotificationOpen,
     notificationMessage,
@@ -148,10 +148,6 @@ const VentasPage = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isBusinessDataModalOpen, setIsBusinessDataModalOpen] = useState(false);
-
-  // ✅ NUEVO: Estado para controlar la apertura del modal de ticket después del pago
-  const [shouldOpenTicketAfterPayment, setShouldOpenTicketAfterPayment] =
-    useState(false);
 
   const CONVERSION_FACTORS = {
     Gr: { base: "Kg", factor: 0.001 },
@@ -224,7 +220,6 @@ const VentasPage = () => {
     [theme.palette.mode]
   );
 
-  // ✅ OPTIMIZADO: Memoizar getCardStyle
   const getCardStyle = useMemo(
     () => (color: "success" | "error" | "primary" | "warning") => ({
       bgcolor:
@@ -441,9 +436,7 @@ const VentasPage = () => {
   const handleCloseBusinessDataModal = () => {
     setIsBusinessDataModalOpen(false);
 
-    // ✅ MEJORADO: Usar estado en lugar de confirm
     if (selectedSale) {
-      // Pequeño delay para permitir que el DOM se actualice
       setTimeout(() => {
         setIsInfoModalOpen(true);
       }, 100);
@@ -710,496 +703,11 @@ const VentasPage = () => {
     );
   };
 
-  const PaymentModal = () => {
-    const [localPaymentAmount, setLocalPaymentAmount] = useState<number>(0);
-    const [localChange, setLocalChange] = useState<number>(0);
-
-    // Calcular cambio
-    const calculateChange = (payment: number, total: number): number => {
-      return Math.max(0, payment - total);
-    };
-
-    // Resetear cuando se abre el modal
-    useEffect(() => {
-      if (isPaymentModalOpen) {
-        setLocalPaymentAmount(0);
-        setLocalChange(0);
-        setIsProcessingPayment(false);
-      }
-    }, [isPaymentModalOpen]);
-
-    // Calcular cambio cuando cambia el monto
-    useEffect(() => {
-      const calculatedChange = calculateChange(
-        localPaymentAmount,
-        newSale.total
-      );
-      setLocalChange(calculatedChange);
-    }, [localPaymentAmount, newSale.total]);
-
-    const handleCloseModal = (
-      reason?: "backdropClick" | "escapeKeyDown" | "cancelButton"
-    ) => {
-      // Prevenir cierre durante procesamiento
-      if (isProcessingPayment) {
-        return;
-      }
-
-      // Solo permitir cierre con botón cancelar
-      if (reason === "backdropClick" || reason === "escapeKeyDown") {
-        return;
-      }
-      setIsPaymentModalOpen(false);
-    };
-
-    const handleCancelPayment = () => {
-      if (isProcessingPayment) return;
-      handleCloseModal("cancelButton");
-    };
-
-    const handleConfirmPayment = async () => {
-      if (isProcessingPayment) return;
-
-      setIsProcessingPayment(true);
-
-      try {
-        // Verificar que la caja esté abierta
-        const needsRedirect = await ensureCashIsOpen();
-        if (needsRedirect.needsRedirect) {
-          setShouldRedirectToCash(true);
-          showNotification(
-            "Debes abrir la caja primero para realizar ventas",
-            "error"
-          );
-          setIsProcessingPayment(false);
-          setIsPaymentModalOpen(false);
-          return;
-        }
-
-        // Verificar que el pago sea suficiente
-        if (localPaymentAmount < newSale.total) {
-          showNotification(
-            `El pago (${formatCurrency(
-              localPaymentAmount
-            )}) es menor al total (${formatCurrency(newSale.total)})`,
-            "error"
-          );
-          setIsProcessingPayment(false);
-          return;
-        }
-
-        // Validar stock
-        const stockValidation = validateStockForSale(newSale.products);
-        if (!stockValidation.isValid) {
-          stockValidation.errors.forEach((error) =>
-            showNotification(error, "error")
-          );
-          setIsProcessingPayment(false);
-          return;
-        }
-
-        // Actualizar stocks
-        const originalStocks: { [key: number]: number } = {};
-        for (const product of newSale.products) {
-          const originalProduct = products.find((p) => p.id === product.id);
-          if (originalProduct) {
-            originalStocks[product.id] = originalProduct.stock;
-          }
-        }
-
-        for (const product of newSale.products) {
-          const updatedStock = updateStockAfterSale(
-            product.id,
-            product.quantity,
-            product.unit
-          );
-          await db.products.update(product.id, { stock: updatedStock });
-        }
-
-        // Crear la venta
-        let customerId = selectedCustomer?.value;
-        let finalCustomerName = "";
-        let finalCustomerPhone = "";
-
-        const generateCustomerId = (name: string): string => {
-          const cleanName = name
-            .toUpperCase()
-            .trim()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-zA-Z0-9-]/g, "");
-          const timestamp = Date.now().toString().slice(-5);
-          return `${cleanName}-${timestamp}`;
-        };
-
-        if (isCredit && !customerId && customerName) {
-          // Cliente nuevo
-          const newCustomer: Customer = {
-            id: generateCustomerId(customerName),
-            name: customerName.toUpperCase().trim(),
-            phone: customerPhone,
-            status: "activo",
-            pendingBalance: 0,
-            purchaseHistory: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            rubro: rubro === "Todos los rubros" ? undefined : rubro,
-          };
-          await db.customers.add(newCustomer);
-          setCustomers([...customers, newCustomer]);
-          setCustomerOptions([
-            ...customerOptions,
-            { value: newCustomer.id, label: newCustomer.name },
-          ]);
-          customerId = newCustomer.id;
-          finalCustomerName = customerName.toUpperCase().trim();
-          finalCustomerPhone = customerPhone;
-        } else if (isCredit && selectedCustomer) {
-          // ✅ CORRECCIÓN: Cliente existente seleccionado en venta con cheque
-          const customer = customers.find(
-            (c) => c.id === selectedCustomer.value
-          );
-          if (customer) {
-            customerId = customer.id;
-            finalCustomerName = customer.name;
-            finalCustomerPhone = customer.phone || "";
-          }
-        } else if (selectedCustomer && !isCredit) {
-          // Cliente existente en venta normal
-          const customer = customers.find(
-            (c) => c.id === selectedCustomer.value
-          );
-          if (customer) {
-            customerId = customer.id;
-            finalCustomerName = customer.name;
-            finalCustomerPhone = customer.phone || "";
-          }
-        } else {
-          finalCustomerName = "CLIENTE OCASIONAL";
-        }
-
-        const saleToSave: CreditSale = {
-          id: Date.now(),
-          products: newSale.products,
-          paymentMethods: isCredit ? [] : newSale.paymentMethods,
-          total: newSale.total,
-          date: new Date().toISOString(),
-          barcode: newSale.barcode,
-          manualAmount: newSale.manualAmount,
-          manualProfitPercentage: newSale.manualProfitPercentage || 0,
-          credit: isCredit,
-          customerName: finalCustomerName, // ✅ Usar finalCustomerName que ahora incluye cliente existente
-          customerPhone: finalCustomerPhone,
-          customerId: customerId || "",
-          paid: !isCredit,
-          concept: newSale.concept || "",
-          appliedPromotion: selectedPromotions || undefined,
-        };
-
-        if (isCredit && registerCheck) {
-          saleToSave.chequeInfo = {
-            amount: newSale.total,
-            status: "pendiente",
-            date: new Date().toISOString(),
-          };
-
-          // Crear el pago del cheque - CORREGIDO
-          const chequePayment: Payment = {
-            id: Date.now(),
-            saleId: saleToSave.id,
-            saleDate: saleToSave.date,
-            amount: newSale.total,
-            date: new Date().toISOString(),
-            method: "CHEQUE",
-            checkStatus: "pendiente",
-            customerName: finalCustomerName,
-            customerId: customerId,
-          };
-
-          // ✅ AÑADIR ESTO: Guardar el pago del cheque
-          await db.payments.add(chequePayment);
-          console.log("✅ Cheque guardado en payments:", chequePayment);
-
-          await addIncomeToDailyCash({
-            ...saleToSave,
-            paymentMethods: [{ method: "CHEQUE", amount: newSale.total }],
-            customerName: finalCustomerName,
-          });
-        }
-
-        // Registrar en caja diaria si no es crédito
-        if (!isCredit) {
-          await addIncomeToDailyCash(saleToSave);
-        }
-
-        // Guardar la venta
-        await db.sales.add(saleToSave);
-        setSales([...sales, saleToSave]);
-
-        // Actualizar promociones si se aplicó alguna
-        if (selectedPromotions && selectedPromotions.id) {
-          await db.promotions.update(selectedPromotions.id, {
-            updatedAt: new Date().toISOString(),
-          });
-
-          const updatedPromotions = await db.promotions.toArray();
-          const activePromotions = updatedPromotions.filter(
-            (p) =>
-              p.status === "active" &&
-              (p.rubro === rubro || p.rubro === "Todos los rubros")
-          );
-          setAvailablePromotions(activePromotions);
-        }
-
-        // Actualizar historial del cliente
-        if (customerId && finalCustomerName !== "CLIENTE OCASIONAL") {
-          await updateCustomerPurchaseHistory(customerId, saleToSave);
-        }
-
-        showNotification("Venta registrada correctamente", "success");
-
-        // ✅ CORRECCIÓN MEJORADA: Cerrar solo el modal de pago y preparar para abrir ticket
-        setIsPaymentModalOpen(false);
-        setIsProcessingPayment(false);
-
-        // Resetear estado
-        const resetSaleState = () => {
-          setNewSale({
-            products: [],
-            paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
-            total: 0,
-            date: new Date().toISOString(),
-            barcode: "",
-            manualAmount: 0,
-            manualProfitPercentage: 0,
-            concept: "",
-          });
-          setIsCredit(false);
-          setRegisterCheck(false);
-          setSelectedCustomer(null);
-          setCustomerName("");
-          setCustomerPhone("");
-          setSelectedPromotions(null);
-          setTemporarySelectedPromotion(null);
-        };
-
-        if (!isCredit) {
-          // Para ventas no crédito: preparar para mostrar ticket
-          resetSaleState();
-          setSelectedSale(saleToSave);
-          // ✅ NUEVO: Usar un estado intermedio para controlar la apertura del ticket
-          setShouldOpenTicketAfterPayment(true);
-        } else {
-          // Para crédito: solo resetear
-          resetSaleState();
-          showNotification(
-            "Venta a crédito registrada correctamente",
-            "success"
-          );
-        }
-      } catch (error) {
-        console.error("Error al procesar la venta:", error);
-        showNotification("Error al procesar la venta", "error");
-        setIsProcessingPayment(false);
-      }
-    };
-
-    return (
-      <Modal
-        isOpen={isPaymentModalOpen}
-        onClose={handleCloseModal}
-        title="Pago y Cambio"
-        bgColor="bg-white dark:bg-gray_b"
-        buttons={
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-            <Button
-              variant="text"
-              onClick={handleCancelPayment}
-              disabled={isProcessingPayment}
-              sx={{
-                color: "text.secondary",
-                borderColor: "text.secondary",
-                "&:hover": {
-                  backgroundColor: "action.hover",
-                  borderColor: "text.primary",
-                },
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleConfirmPayment}
-              disabled={
-                localPaymentAmount < newSale.total || isProcessingPayment
-              }
-              sx={{
-                bgcolor: "primary.main",
-                "&:hover": { bgcolor: "primary.dark" },
-              }}
-            >
-              {isProcessingPayment ? "Procesando..." : "Confirmar Pago"}
-            </Button>
-          </Box>
-        }
-      >
-        <Box sx={{ p: 2, spaceY: 3 }}>
-          {/* Total a pagar */}
-          <Card sx={getCardStyle("primary")}>
-            <Box sx={{ textAlign: "center", p: 2 }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Total a Pagar
-              </Typography>
-              <Typography variant="h4" fontWeight="bold">
-                {formatCurrency(newSale.total)}
-              </Typography>
-            </Box>
-          </Card>
-
-          {/* Monto recibido */}
-          <Box>
-            <Typography variant="body1" fontWeight="semibold" sx={{ mb: 1 }}>
-              Monto Recibido
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <TextField
-                type="number"
-                value={localPaymentAmount === 0 ? "" : localPaymentAmount}
-                onChange={(e) => {
-                  const value =
-                    e.target.value === "" ? 0 : parseFloat(e.target.value);
-                  setLocalPaymentAmount(isNaN(value) ? 0 : value);
-                }}
-                placeholder="0.00"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <AttachMoney />
-                    </InputAdornment>
-                  ),
-                }}
-                fullWidth
-                size="small"
-              />
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={() => setLocalPaymentAmount(newSale.total)}
-                  size="small"
-                >
-                  Total
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setLocalPaymentAmount(0)}
-                  size="small"
-                >
-                  Limpiar
-                </Button>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Cambio */}
-          {localPaymentAmount > 0 && (
-            <Card
-              sx={{
-                p: 3,
-                border: 2,
-                borderColor: localChange >= 0 ? "success.main" : "error.main",
-                bgcolor: localChange >= 0 ? "success.light" : "error.light",
-              }}
-            >
-              <Box sx={{ textAlign: "center" }}>
-                <Typography
-                  variant="body1"
-                  fontWeight="bold"
-                  color={localChange >= 0 ? "success.dark" : "error.dark"}
-                  sx={{ mb: 1 }}
-                >
-                  {localChange >= 0
-                    ? "🎉 Cambio a Entregar"
-                    : "⚠️ Pago Insuficiente"}
-                </Typography>
-                <Typography
-                  variant="h4"
-                  fontWeight="bold"
-                  color={localChange >= 0 ? "success.dark" : "error.dark"}
-                >
-                  {formatCurrency(Math.abs(localChange))}
-                </Typography>
-                {localChange < 0 && (
-                  <Typography variant="body2" color="error.dark" sx={{ mt: 1 }}>
-                    Faltan {formatCurrency(Math.abs(localChange))} para
-                    completar el pago
-                  </Typography>
-                )}
-              </Box>
-            </Card>
-          )}
-
-          {/* Resumen */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 2,
-              p: 2,
-              bgcolor: "grey.50",
-              borderRadius: 1,
-            }}
-          >
-            <Box sx={{ textAlign: "center" }}>
-              <Typography variant="body2" color="text.secondary">
-                Total Venta
-              </Typography>
-              <Typography variant="h6" fontWeight="bold">
-                {formatCurrency(newSale.total)}
-              </Typography>
-            </Box>
-            <Box sx={{ textAlign: "center" }}>
-              <Typography variant="body2" color="text.secondary">
-                Monto Recibido
-              </Typography>
-              <Typography variant="h6" fontWeight="bold">
-                {formatCurrency(localPaymentAmount)}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-      </Modal>
-    );
-  };
-
-  // ✅ NUEVO: useEffect para manejar la apertura del ticket después del pago
-  useEffect(() => {
-    if (shouldOpenTicketAfterPayment && selectedSale) {
-      setIsInfoModalOpen(true);
-      setShouldOpenTicketAfterPayment(false);
-    }
-  }, [shouldOpenTicketAfterPayment, selectedSale]);
-
-  // ✅ NUEVO: Prevenir estados de modal conflictivos
-  useEffect(() => {
-    if (isPaymentModalOpen) {
-      setIsOpenModal(false);
-    }
-  }, [isPaymentModalOpen]);
-
-  useEffect(() => {
-    if (isInfoModalOpen) {
-      setIsOpenModal(false);
-      setIsPaymentModalOpen(false);
-    }
-  }, [isInfoModalOpen]);
-
   const handleOpenPaymentModal = () => {
-    // Prevenir múltiples aperturas si ya está procesando
     if (isProcessingPayment || isPaymentModalOpen) {
       return;
     }
 
-    // Validaciones básicas
     if (newSale.products.length === 0) {
       showNotification("Debe agregar al menos un producto", "error");
       return;
@@ -1226,9 +734,299 @@ const VentasPage = () => {
         return;
       }
     }
+    setIsOpenModal(false);
+    setTimeout(() => {
+      setIsPaymentModalOpen(true);
+    }, 100);
+  };
 
-    // Abrir modal de pago
-    setIsPaymentModalOpen(true);
+  const handleConfirmPayment = async () => {
+    if (isProcessingPayment) {
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    try {
+      const needsRedirect = await ensureCashIsOpen();
+      if (needsRedirect.needsRedirect) {
+        setShouldRedirectToCash(true);
+        showNotification(
+          "Debes abrir la caja primero para realizar ventas",
+          "error"
+        );
+        setIsProcessingPayment(false);
+        setIsPaymentModalOpen(false);
+        return;
+      }
+
+      const stockValidation = validateStockForSale(newSale.products);
+      if (!stockValidation.isValid) {
+        stockValidation.errors.forEach((error) =>
+          showNotification(error, "error")
+        );
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      if (isCredit) {
+        const normalizedName = customerName.toUpperCase().trim();
+
+        if (!normalizedName && !selectedCustomer) {
+          showNotification("Debe ingresar o seleccionar un cliente", "error");
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        if (normalizedName) {
+          const nameExists = customers.some(
+            (customer) =>
+              customer.name.toUpperCase() === normalizedName &&
+              (!selectedCustomer || customer.id !== selectedCustomer.value)
+          );
+
+          if (nameExists) {
+            showNotification(
+              "Este cliente ya existe. Selecciónelo de la lista o use un nombre diferente.",
+              "error"
+            );
+            setIsProcessingPayment(false);
+            return;
+          }
+        }
+      }
+
+      if (!isCredit && !registerCheck) {
+        const totalPayment = newSale.paymentMethods.reduce(
+          (sum, method) => sum + method.amount,
+          0
+        );
+
+        if (totalPayment < newSale.total) {
+          showNotification(
+            `Pago insuficiente. Total: ${formatCurrency(
+              newSale.total
+            )}, Recibido: ${formatCurrency(totalPayment)}`,
+            "error"
+          );
+          setIsProcessingPayment(false);
+          return;
+        }
+      }
+
+      for (const product of newSale.products) {
+        try {
+          const updatedStock = updateStockAfterSale(
+            product.id,
+            product.quantity,
+            product.unit
+          );
+          await db.products.update(product.id, { stock: updatedStock });
+        } catch (error) {
+          console.error(
+            `Error actualizando stock para producto ${product.id}:`,
+            error
+          );
+          showNotification(
+            `Error actualizando stock para ${product.name}`,
+            "error"
+          );
+          setIsProcessingPayment(false);
+          return;
+        }
+      }
+
+      let customerId = selectedCustomer?.value;
+      let finalCustomerName = "";
+      let finalCustomerPhone = "";
+
+      const generateCustomerId = (name: string): string => {
+        const cleanName = name
+          .toUpperCase()
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-zA-Z0-9-]/g, "");
+        const timestamp = Date.now().toString().slice(-5);
+        return `${cleanName}-${timestamp}`;
+      };
+
+      if (isCredit && !customerId && customerName) {
+        const newCustomer: Customer = {
+          id: generateCustomerId(customerName),
+          name: customerName.toUpperCase().trim(),
+          phone: customerPhone,
+          status: "activo",
+          pendingBalance: 0,
+          purchaseHistory: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          rubro: rubro === "Todos los rubros" ? undefined : rubro,
+        };
+
+        try {
+          await db.customers.add(newCustomer);
+          setCustomers([...customers, newCustomer]);
+          setCustomerOptions([
+            ...customerOptions,
+            { value: newCustomer.id, label: newCustomer.name },
+          ]);
+          customerId = newCustomer.id;
+          finalCustomerName = customerName.toUpperCase().trim();
+          finalCustomerPhone = customerPhone;
+        } catch (error) {
+          console.error("Error creando cliente:", error);
+          showNotification("Error al crear el cliente", "error");
+          setIsProcessingPayment(false);
+          return;
+        }
+      } else if (isCredit && selectedCustomer) {
+        const customer = customers.find((c) => c.id === selectedCustomer.value);
+        if (customer) {
+          customerId = customer.id;
+          finalCustomerName = customer.name;
+          finalCustomerPhone = customer.phone || "";
+        }
+      } else if (selectedCustomer && !isCredit) {
+        const customer = customers.find((c) => c.id === selectedCustomer.value);
+        if (customer) {
+          customerId = customer.id;
+          finalCustomerName = customer.name;
+          finalCustomerPhone = customer.phone || "";
+        }
+      } else {
+        finalCustomerName = "CLIENTE OCASIONAL";
+      }
+
+      const saleToSave: CreditSale = {
+        id: Date.now(),
+        products: newSale.products,
+        paymentMethods: isCredit ? [] : newSale.paymentMethods,
+        total: newSale.total,
+        date: new Date().toISOString(),
+        barcode: newSale.barcode,
+        manualAmount: newSale.manualAmount,
+        manualProfitPercentage: newSale.manualProfitPercentage || 0,
+        credit: isCredit,
+        customerName: finalCustomerName,
+        customerPhone: finalCustomerPhone,
+        customerId: customerId || "",
+        paid: !isCredit,
+        concept: newSale.concept || "",
+        appliedPromotion: selectedPromotions || undefined,
+      };
+
+      if (isCredit && registerCheck) {
+        saleToSave.chequeInfo = {
+          amount: newSale.total,
+          status: "pendiente",
+          date: new Date().toISOString(),
+        };
+
+        const chequePayment: Payment = {
+          id: Date.now(),
+          saleId: saleToSave.id,
+          saleDate: saleToSave.date,
+          amount: newSale.total,
+          date: new Date().toISOString(),
+          method: "CHEQUE",
+          checkStatus: "pendiente",
+          customerName: finalCustomerName,
+          customerId: customerId,
+        };
+
+        await db.payments.add(chequePayment);
+        console.log("✅ Cheque guardado en payments:", chequePayment);
+
+        await addIncomeToDailyCash({
+          ...saleToSave,
+          paymentMethods: [{ method: "CHEQUE", amount: newSale.total }],
+          customerName: finalCustomerName,
+        });
+      }
+
+      if (!isCredit) {
+        await addIncomeToDailyCash(saleToSave);
+      }
+
+      await db.sales.add(saleToSave);
+      setSales([...sales, saleToSave]);
+
+      if (selectedPromotions && selectedPromotions.id) {
+        await db.promotions.update(selectedPromotions.id, {
+          updatedAt: new Date().toISOString(),
+        });
+
+        const updatedPromotions = await db.promotions.toArray();
+        const activePromotions = updatedPromotions.filter(
+          (p) =>
+            p.status === "active" &&
+            (p.rubro === rubro || p.rubro === "Todos los rubros")
+        );
+        setAvailablePromotions(activePromotions);
+      }
+
+      if (customerId && finalCustomerName !== "CLIENTE OCASIONAL") {
+        await updateCustomerPurchaseHistory(customerId, saleToSave);
+      }
+
+      showNotification(
+        `Venta ${isCredit ? "a crédito" : ""} registrada correctamente`,
+        "success"
+      );
+
+      if (!isCredit) {
+        setIsPaymentModalOpen(false);
+        setNewSale({
+          products: [],
+          paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
+          total: 0,
+          date: new Date().toISOString(),
+          barcode: "",
+          manualAmount: 0,
+          manualProfitPercentage: 0,
+          concept: "",
+        });
+
+        setIsCredit(false);
+        setRegisterCheck(false);
+        setSelectedCustomer(null);
+        setCustomerName("");
+        setCustomerPhone("");
+        setSelectedPromotions(null);
+        setTemporarySelectedPromotion(null);
+        setSelectedSale(saleToSave);
+        setTimeout(() => {
+          setIsInfoModalOpen(true);
+        }, 200);
+      } else {
+        setNewSale({
+          products: [],
+          paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
+          total: 0,
+          date: new Date().toISOString(),
+          barcode: "",
+          manualAmount: 0,
+          manualProfitPercentage: 0,
+          concept: "",
+        });
+
+        setIsCredit(false);
+        setRegisterCheck(false);
+        setSelectedCustomer(null);
+        setCustomerName("");
+        setCustomerPhone("");
+        setSelectedPromotions(null);
+        setTemporarySelectedPromotion(null);
+
+        setIsPaymentModalOpen(false);
+      }
+      setIsOpenModal(false);
+      setIsProcessingPayment(false);
+    } catch (error) {
+      console.error("Error al procesar la venta:", error);
+      showNotification("Error al procesar la venta", "error");
+      setIsProcessingPayment(false);
+    }
   };
 
   const updateStockAfterSale = (
@@ -1316,7 +1114,6 @@ const VentasPage = () => {
         sale.manualProfitPercentage || 0
       );
 
-      // Crear movimiento único para la venta con métodos de pago combinados
       const movement: DailyCashMovement = {
         id: Date.now(),
         amount: sale.total,
@@ -1533,7 +1330,6 @@ const VentasPage = () => {
           paymentMethods: updatedMethods,
         };
       } else {
-        // ✅ CORRECCIÓN: Cast explícito al tipo PaymentMethod
         updatedMethods[index] = {
           ...updatedMethods[index],
           [field]: value as PaymentMethod,
@@ -1571,7 +1367,7 @@ const VentasPage = () => {
             ...updatedMethods,
             {
               method: paymentOptions[prev.paymentMethods.length]
-                .value as PaymentMethod, // ✅ Cast aquí
+                .value as PaymentMethod,
               amount: share,
             },
           ],
@@ -1624,14 +1420,14 @@ const VentasPage = () => {
     });
   };
 
-  const handleAddSale = async () => {
+  const handleAddSale = useCallback(async () => {
     const needsRedirect = await ensureCashIsOpen();
     if (needsRedirect.needsRedirect) {
       setShouldRedirectToCash(true);
       return;
     }
     setIsOpenModal(true);
-  };
+  }, []);
 
   const updateCustomerPurchaseHistory = async (
     customerId: string,
@@ -1680,6 +1476,7 @@ const VentasPage = () => {
     setTemporarySelectedPromotion(null);
     setIsOpenModal(false);
     setIsPaymentModalOpen(false);
+    setIsProcessingPayment(false);
   };
 
   const handleCloseInfoModal = () => {
@@ -2041,6 +1838,112 @@ const VentasPage = () => {
       }));
     }
   }, [newSale.products, newSale.manualAmount, selectedPromotions]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isModalOpen =
+        isOpenModal ||
+        isInfoModalOpen ||
+        isPaymentModalOpen ||
+        isPromotionModalOpen ||
+        isBusinessDataModalOpen;
+
+      if (isModalOpen || rubro === "Todos los rubros" || isProcessingPayment) {
+        return;
+      }
+
+      if (e.key === "F1") {
+        e.preventDefault();
+        handleAddSale();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    rubro,
+    handleAddSale,
+    isOpenModal,
+    isInfoModalOpen,
+    isPaymentModalOpen,
+    isPromotionModalOpen,
+    isBusinessDataModalOpen,
+    isProcessingPayment,
+  ]);
+
+  useEffect(() => {
+    if (isInfoModalOpen && selectedSale && !selectedSale.credit) {
+      const handleEnterKey = (e: KeyboardEvent) => {
+        const activeElement = document.activeElement;
+        const isInputFocused =
+          activeElement?.tagName === "INPUT" ||
+          activeElement?.tagName === "TEXTAREA";
+
+        if (
+          e.key === "Enter" &&
+          !isInputFocused &&
+          !e.shiftKey &&
+          !e.ctrlKey &&
+          !e.altKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          imprimirButtonRef.current?.click();
+        }
+      };
+
+      window.addEventListener("keydown", handleEnterKey);
+      return () => {
+        window.removeEventListener("keydown", handleEnterKey);
+      };
+    }
+  }, [isInfoModalOpen, selectedSale]);
+
+  useEffect(() => {
+    if (isOpenModal && !isProcessingPayment) {
+      const handleEnterKey = (e: KeyboardEvent) => {
+        if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (newSale.products.length === 0) {
+            showNotification("Debe agregar al menos un producto", "error");
+            return;
+          }
+
+          if (isCredit) {
+            const normalizedName = customerName.toUpperCase().trim();
+            if (!normalizedName && !selectedCustomer) {
+              showNotification(
+                "Debe ingresar o seleccionar un cliente",
+                "error"
+              );
+              return;
+            }
+          }
+
+          cobrarButtonRef.current?.click();
+        }
+      };
+
+      window.addEventListener("keydown", handleEnterKey);
+      return () => {
+        window.removeEventListener("keydown", handleEnterKey);
+      };
+    }
+  }, [
+    isOpenModal,
+    isProcessingPayment,
+    newSale.products.length,
+    isCredit,
+    customerName,
+    selectedCustomer,
+    showNotification,
+  ]);
 
   const indexOfLastSale = currentPage * itemsPerPage;
   const indexOfFirstSale = indexOfLastSale - itemsPerPage;
@@ -2429,18 +2332,6 @@ const VentasPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                onClick={handlePrintTicket}
-                variant="contained"
-                startIcon={<Print fontSize="small" />}
-                disabled={!selectedSale || selectedSale?.credit}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                Imprimir Ticket
-              </Button>
-              <Button
                 variant="text"
                 onClick={handleCloseInfoModal}
                 sx={{
@@ -2453,6 +2344,19 @@ const VentasPage = () => {
                 }}
               >
                 Cerrar
+              </Button>
+              <Button
+                ref={imprimirButtonRef}
+                onClick={handlePrintTicket}
+                variant="contained"
+                startIcon={<Print fontSize="small" />}
+                disabled={!selectedSale || selectedSale?.credit}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Imprimir Ticket
               </Button>
             </Box>
           }
@@ -2535,6 +2439,7 @@ const VentasPage = () => {
                 Cancelar
               </Button>
               <Button
+                ref={cobrarButtonRef}
                 variant="contained"
                 onClick={handleOpenPaymentModal}
                 disabled={isProcessingPayment}
@@ -3228,11 +3133,23 @@ const VentasPage = () => {
             </Box>
           </Box>
         </Modal>
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => {
+            if (!isProcessingPayment) {
+              setIsPaymentModalOpen(false);
 
+              setTimeout(() => setIsOpenModal(true), 100);
+            }
+          }}
+          total={newSale.total}
+          onConfirm={handleConfirmPayment}
+          isProcessing={isProcessingPayment}
+          isCredit={isCredit}
+          registerCheck={registerCheck}
+        />
         <PromotionSelectionModal />
-        <PaymentModal />
 
-        {/* REEMPLAZADO: Usar closeNotification del hook en lugar de la función local */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
@@ -3273,7 +3190,6 @@ const VentasPage = () => {
                       "success"
                     );
 
-                    // Volver a abrir el modal del ticket si se cerró
                     if (selectedSale) {
                       setIsInfoModalOpen(true);
                     }

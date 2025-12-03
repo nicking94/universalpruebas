@@ -12,48 +12,17 @@ import {
 
 export interface CheckboxProps
   extends Omit<MuiCheckboxProps, "onChange" | "value"> {
-  /**
-   * Etiqueta del checkbox
-   */
   label?: string;
-  /**
-   * Valor actual del checkbox
-   */
   checked: boolean;
-  /**
-   * Función llamada cuando el estado cambia
-   */
   onChange: (checked: boolean) => void;
-  /**
-   * Texto de ayuda
-   */
   helperText?: string;
-  /**
-   * Si el checkbox está en estado de error
-   */
   error?: boolean;
-  /**
-   * Si el checkbox está deshabilitado
-   */
   disabled?: boolean;
-  /**
-   * Posición de la etiqueta respecto al checkbox
-   */
   labelPlacement?: FormControlLabelProps["labelPlacement"];
-  /**
-   * Clase CSS adicional
-   */
   className?: string;
-  /**
-   * Estilos adicionales
-   */
   sx?: MuiCheckboxProps["sx"];
 }
 
-/**
- * Componente Checkbox personalizado que envuelve el Checkbox de Material UI
- * con una interfaz más simple y estilos consistentes con tu tema.
- */
 const Checkbox: React.FC<CheckboxProps> = ({
   label,
   checked,

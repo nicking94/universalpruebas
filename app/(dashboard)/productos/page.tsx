@@ -19,6 +19,7 @@ import {
   QrCode,
   Add,
 } from "@mui/icons-material";
+
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { db } from "@/app/database/db";
 import SearchBar from "@/app/components/SearchBar";
@@ -60,7 +61,6 @@ import Input from "@/app/components/Input";
 import Button from "@/app/components/Button";
 import { useNotification } from "@/app/hooks/useNotification";
 
-// Constantes de configuración
 const PRODUCT_CONFIG = {
   MAX_PRODUCTS_PER_CATEGORY: 30,
   IVA_PERCENTAGE: 21,
@@ -122,7 +122,6 @@ const seasonOptions = [
   { value: "verano", label: "Verano" },
 ];
 
-// Custom hooks optimizados
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
@@ -324,16 +323,16 @@ const useSortedProducts = (
 
     filtered.sort((a, b) => {
       const getExpirationStatus = (product: Product) => {
-        if (!product.expiration) return 3; // Sin vencimiento - última prioridad
+        if (!product.expiration) return 3;
 
         const today = startOfDay(new Date());
         const expDate = startOfDay(parseISO(product.expiration));
         const diffDays = differenceInDays(expDate, today);
 
-        if (diffDays < 0) return 0; // Vencido - máxima prioridad
-        if (diffDays === 0) return 1; // Vence hoy
-        if (diffDays <= 7) return 2; // Por vencer (7 días)
-        return 3; // Normal
+        if (diffDays < 0) return 0;
+        if (diffDays === 0) return 1;
+        if (diffDays <= 7) return 2;
+        return 3;
       };
 
       const statusA = getExpirationStatus(a);
@@ -450,7 +449,6 @@ const getRowStyles = (expirationStatus: string, hasLowStock: boolean) => {
   }
 };
 
-// Interfaces para props
 interface ProductRowProps {
   product: Product;
   rubro: Rubro;
@@ -968,11 +966,6 @@ const ProductForm = React.memo(
                   label="Incluir IVA 21%"
                   checked={formData.hasIvaIncluded || false}
                   onChange={onIvaChange}
-                  helperText={
-                    formData.hasIvaIncluded
-                      ? "Precios incluyen IVA"
-                      : "Precios sin IVA"
-                  }
                 />
               </div>
             </div>
@@ -1152,7 +1145,6 @@ const ProductsPage = () => {
   const { rubro } = useRubro();
   const { currentPage, itemsPerPage } = usePagination();
 
-  // Custom hooks
   const {
     products,
     loading,
@@ -1171,7 +1163,6 @@ const ProductsPage = () => {
     closeNotification,
   } = useNotification();
 
-  // Estados
   const [isOpenModal, setIsOpenModal] = useState(false);
   const {
     formData: newProduct,
@@ -1228,7 +1219,6 @@ const ProductsPage = () => {
   const [sizeToDelete, setSizeToDelete] = useState<string | null>(null);
   const [isSizeDeleteModalOpen, setIsSizeDeleteModalOpen] = useState(false);
 
-  // Funciones de utilidad memoizadas
   const calculatePriceWithIva = useCallback((price: number): number => {
     return price * (1 + PRODUCT_CONFIG.IVA_PERCENTAGE / 100);
   }, []);
@@ -1271,7 +1261,6 @@ const ProductsPage = () => {
       let newCostPrice = newProduct.costPrice;
       let newPrice = newProduct.price;
 
-      // Asegurar que currentHasIvaIncluded sea siempre booleano
       const currentHasIvaIncluded = newProduct.hasIvaIncluded ?? true;
 
       if (hasIvaIncluded && !currentHasIvaIncluded) {
@@ -1423,7 +1412,6 @@ const ProductsPage = () => {
     [rubro]
   );
 
-  // Funciones principales memoizadas
   const handleReturnProduct = useCallback(async () => {
     if (!selectedReturnProduct) {
       showNotification("Por favor seleccione un producto", "error");
@@ -1936,7 +1924,6 @@ const ProductsPage = () => {
     setIsConfirmModalOpen(true);
   }, []);
 
-  // Cálculos memoizados
   const sortedProducts = useSortedProducts(
     products,
     filters,
@@ -1945,7 +1932,6 @@ const ProductsPage = () => {
     debouncedSearchQuery
   );
 
-  // Paginación
   const indexOfLastProduct = currentPage * itemsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - itemsPerPage;
   const currentProducts = sortedProducts.slice(
@@ -1953,18 +1939,58 @@ const ProductsPage = () => {
     indexOfLastProduct
   );
 
-  // Efectos optimizados
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "F3") {
-        e.preventDefault();
-        setIsSelectionModalOpen(true);
+      const isModalOpen =
+        isOpenModal ||
+        isConfirmModalOpen ||
+        isPriceModalOpen ||
+        isReturnModalOpen ||
+        isSelectionModalOpen ||
+        isBarcodeModalOpen ||
+        showReturnsHistory ||
+        isSizeDeleteModalOpen ||
+        isCategoryDeleteModalOpen;
+
+      if (isModalOpen || rubro === "Todos los rubros") {
+        return;
+      }
+
+      switch (e.key) {
+        case "F2":
+          e.preventDefault();
+          handleAddProduct();
+          break;
+        case "F3":
+          e.preventDefault();
+          setIsSelectionModalOpen(true);
+          break;
+        case "F4":
+          e.preventDefault();
+          handleOpenPriceModal();
+          break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    rubro,
+    handleAddProduct,
+    handleOpenPriceModal,
+    isOpenModal,
+    isConfirmModalOpen,
+    isPriceModalOpen,
+    isReturnModalOpen,
+    isSelectionModalOpen,
+    isBarcodeModalOpen,
+    showReturnsHistory,
+    isSizeDeleteModalOpen,
+    isCategoryDeleteModalOpen,
+  ]);
 
   useEffect(() => {
     const shouldDisableSave = editingProduct
@@ -2180,7 +2206,7 @@ const ProductsPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "60vh", flex: 1 }}
+              sx={{ maxHeight: "72vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -2419,12 +2445,13 @@ const ProductsPage = () => {
                 variant="contained"
                 color="error"
                 onClick={handleConfirmDeleteSize}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "error.main",
                   "&:hover": { bgcolor: "error.dark" },
                 }}
               >
-                Confirmar
+                Sí, Eliminar
               </Button>
             </Box>
           }
@@ -2446,6 +2473,7 @@ const ProductsPage = () => {
             <Button
               variant="text"
               onClick={() => setIsSelectionModalOpen(false)}
+              isPrimaryAction={true}
               sx={{
                 color: "text.secondary",
                 borderColor: "text.secondary",
@@ -2597,6 +2625,7 @@ const ProductsPage = () => {
               <Button
                 variant="contained"
                 onClick={handleReturnProduct}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "primary.main",
                   "&:hover": { bgcolor: "primary.dark" },
@@ -2740,6 +2769,7 @@ const ProductsPage = () => {
                 variant="contained"
                 onClick={handleConfirmAddProduct}
                 disabled={isSaveDisabled}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "primary.main",
                   "&:hover": { bgcolor: "primary.dark" },
@@ -2842,6 +2872,7 @@ const ProductsPage = () => {
               <Button
                 variant="contained"
                 onClick={handleConfirmDelete}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "error.main",
                   "&:hover": { bgcolor: "error.dark" },
@@ -2865,12 +2896,13 @@ const ProductsPage = () => {
         <Modal
           isOpen={isPriceModalOpen}
           onClose={() => setIsPriceModalOpen(false)}
-          title="Consultar Precio de Producto"
+          title="Consultar precio"
           bgColor="bg-white dark:bg-gray_b"
           buttons={
             <Button
               variant="text"
               onClick={() => setIsPriceModalOpen(false)}
+              isPrimaryAction={true}
               sx={{
                 color: "text.secondary",
                 borderColor: "text.secondary",

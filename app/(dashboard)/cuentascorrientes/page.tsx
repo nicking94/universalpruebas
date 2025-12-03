@@ -82,7 +82,6 @@ const CUENTAS_CONFIG = {
   MAX_PAYMENT_METHODS: 3,
 } as const;
 
-// Hook personalizado para manejar las ventas a crédito
 const useCreditSales = () => {
   const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -126,7 +125,6 @@ const useCreditSales = () => {
   };
 };
 
-// Componente de Resumen Financiero del Cliente
 const CustomerFinancialSummary = ({
   customerInfo,
   payments,
@@ -280,7 +278,6 @@ const CustomerFinancialSummary = ({
   );
 };
 
-// Componente de Historial de Pagos
 const PaymentHistory = ({
   sale,
   payments,
@@ -396,7 +393,6 @@ const PaymentHistory = ({
   );
 };
 
-// Componente de Detalle de Productos
 const SaleProductsDetail = ({
   sale,
   rubro,
@@ -487,7 +483,6 @@ const SaleProductsDetail = ({
   );
 };
 
-// Componente de Tarjeta de Venta
 const SaleCard = ({
   sale,
   payments,
@@ -698,7 +693,7 @@ const InfoModal = ({
   onPayment,
   onExpandSale,
   calculateRemainingBalance,
-  onTabChange, // ✅ Agregar esta prop
+  onTabChange,
 }: {
   isOpen: boolean;
   currentCustomerInfo: {
@@ -714,7 +709,7 @@ const InfoModal = ({
   onPayment: (sale: CreditSale) => void;
   onExpandSale: (saleId: number) => void;
   calculateRemainingBalance: (sale: CreditSale) => number;
-  onTabChange: (newValue: number) => void; // ✅ Agregar esta prop
+  onTabChange: (newValue: number) => void;
 }) => {
   if (!currentCustomerInfo) return null;
 
@@ -771,7 +766,7 @@ const InfoModal = ({
         <Card sx={{ mb: 2 }}>
           <Tabs
             value={infoModalTab}
-            onChange={(_, newValue) => onTabChange(newValue)} // ✅ Agregar el manejador
+            onChange={(_, newValue) => onTabChange(newValue)}
             sx={{
               borderBottom: 1,
               borderColor: "divider",
@@ -824,7 +819,7 @@ const InfoModal = ({
           </Tabs>
         </Card>
 
-        <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+        <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
           {infoModalTab === 0 && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {currentCustomerInfo.sales.length === 0 ? (
@@ -927,7 +922,6 @@ const InfoModal = ({
   );
 };
 
-// Componente Modal de Cheques
 const ChequesModal = ({
   isOpen,
   currentCustomerInfo,
@@ -1178,7 +1172,6 @@ const ChequesModal = ({
   );
 };
 
-// Componente Modal de Pago
 const PaymentModal = ({
   isOpen,
   currentCreditSale,
@@ -1240,6 +1233,7 @@ const PaymentModal = ({
                 calculateRemainingBalance(currentCreditSale)
               )
             }
+            isPrimaryAction={true}
             sx={{
               bgcolor: "primary.main",
               "&:hover": { bgcolor: "primary.dark" },
@@ -2746,12 +2740,13 @@ const CuentasCorrientesPage = () => {
               <Button
                 variant="contained"
                 onClick={handleDeleteCustomerCredits}
+                isPrimaryAction={true}
                 sx={{
                   bgcolor: "error.main",
                   "&:hover": { bgcolor: "error.dark" },
                 }}
               >
-                Si, Eliminar
+                Sí, Eliminar
               </Button>
             </Box>
           }

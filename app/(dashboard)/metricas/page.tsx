@@ -25,7 +25,6 @@ import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import { useRubro } from "@/app/context/RubroContext";
 import { calculatePrice, calculateProfit } from "@/app/lib/utils/calculations";
 
-// Recharts imports
 import {
   BarChart,
   Bar,
@@ -43,7 +42,6 @@ import {
   PieLabelRenderProps,
 } from "recharts";
 
-// Material-UI imports - Coherente con VentasPage
 import {
   Box,
   Card,
@@ -72,13 +70,11 @@ import {
   Analytics,
 } from "@mui/icons-material";
 
-// Componentes personalizados
 import Select, { SelectOption } from "@/app/components/Select";
 import Notification from "@/app/components/Notification";
 
 const WEEK_STARTS_ON = 1;
 
-// Interfaces para los tipos de datos de gráficos
 interface ChartDataItem {
   name: string;
   ingresos: number;
@@ -116,7 +112,6 @@ interface CustomPieTooltipProps {
   payload?: PieTooltipPayloadItem[];
 }
 
-// Componente para las tarjetas de métricas - Estilo coherente con VentasPage
 interface MetricCardProps {
   title: string;
   value: number;
@@ -377,9 +372,9 @@ const ProductRanking = ({
             sx={{
               backgroundColor: "white",
               borderRadius: 1,
-              minWidth: isMobile ? "100%" : 120, // Ancho completo en móvil
-              maxWidth: isMobile ? "100%" : 150, // Ancho máximo en móvil
-              alignSelf: isMobile ? "stretch" : "auto", // Estirar en móvil
+              minWidth: isMobile ? "100%" : 120,
+              maxWidth: isMobile ? "100%" : 150,
+              alignSelf: isMobile ? "stretch" : "auto",
             }}
           />
         </Stack>
@@ -466,7 +461,6 @@ const ProductRanking = ({
   );
 };
 
-// Custom Tooltip para los gráficos - Estilo coherente
 const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   const theme = useTheme();
 
@@ -503,7 +497,6 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   return null;
 };
 
-// Custom Tooltip para el gráfico de pie
 const CustomPieTooltip = ({ active, payload }: CustomPieTooltipProps) => {
   const theme = useTheme();
 
@@ -535,7 +528,6 @@ const CustomPieTooltip = ({ active, payload }: CustomPieTooltipProps) => {
   return null;
 };
 
-// Componente para las etiquetas del gráfico de pie
 const renderPieLabel = (props: PieLabelRenderProps) => {
   const { name, percent } = props;
   if (percent === undefined || name === undefined) return null;
@@ -575,7 +567,6 @@ const Metrics = () => {
     "success" | "error" | "info"
   >("success");
 
-  // Función para mostrar notificaciones - Coherente con VentasPage
   const showNotification = (
     message: string,
     type: "success" | "error" | "info"
@@ -609,7 +600,6 @@ const Metrics = () => {
     W: "vatio",
   };
 
-  // Colores para los gráficos usando el theme de Material-UI - Coherente con VentasPage
   const chartColors = {
     ingresos: theme.palette.success.main,
     egresos: theme.palette.error.main,
@@ -618,7 +608,6 @@ const Metrics = () => {
     text: theme.palette.text.primary,
   };
 
-  // Mantener las funciones existentes (filterByRubro, getConsistentSummary, getChartData, getProductMovements)
   const filterByRubro = (
     movement: DailyCashMovement,
     currentRubro: Rubro
@@ -1036,7 +1025,6 @@ const Metrics = () => {
     ]
   );
 
-  // Mantener los useEffect existentes
   useEffect(() => {
     const today = new Date();
     if (selectedYear !== today.getFullYear()) {
@@ -1114,22 +1102,15 @@ const Metrics = () => {
     }
   }, [rubro]);
 
-  // Obtener resúmenes para todos los períodos
   const weeklySummary = getConsistentSummary("week");
   const monthlySummary = getConsistentSummary("month");
   const annualSummary = getConsistentSummary("year");
-
-  // Obtener datos de gráficos para todos los períodos
   const weeklyChartData = getChartData("week");
   const monthlyChartData = getChartData("month");
   const annualChartData = getChartData("year");
-
-  // Obtener productos más vendidos para todos los períodos
   const topProductsWeekly = getProductMovements("week", weeklyRankingUnit);
   const topProductsMonthly = getProductMovements("month", monthlyRankingUnit);
   const topProductsYearly = getProductMovements("year", yearlyRankingUnit);
-
-  // Datos para el gráfico de pie por período
   const getPieChartData = (period: "week" | "month" | "year") => {
     const summary =
       period === "week"
@@ -1156,7 +1137,6 @@ const Metrics = () => {
     ];
   };
 
-  // Opciones para los selects de mes y año
   const monthOptions: SelectOption[] = Array.from({ length: 12 }, (_, i) => ({
     value: i + 1,
     label: format(new Date(selectedYear, i, 1), "MMMM", { locale: es }),
