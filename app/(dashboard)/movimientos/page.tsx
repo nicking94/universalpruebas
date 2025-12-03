@@ -227,7 +227,7 @@ const MovimientosPage = () => {
         (newExpense.type === "TODOS" || cat.type === newExpense.type)
     );
     setCategories(filtered);
-  }, [rubro]);
+  }, [rubro, newExpense.type]);
 
   const loadExpenses = useCallback(async () => {
     try {
@@ -596,45 +596,60 @@ const MovimientosPage = () => {
     }
   };
 
-  const handleAddCategory = async () => {
-    if (!newCategory.name) {
+  const handleAddCategory = useCallback(async () => {
+    if (!newCategory.name?.trim()) {
       showNotification("Ingrese un nombre para la categoría", "error");
       return;
     }
 
+    const trimmedCategory = newCategory.name.trim();
+    const lowerName = trimmedCategory.toLowerCase();
     const categoryExists = categories.some(
       (cat) =>
-        cat.name.toLowerCase() === newCategory.name.toLowerCase() &&
-        cat.rubro === rubro
+        cat.name.toLowerCase() === lowerName &&
+        cat.rubro === rubro &&
+        cat.type === newCategory.type
     );
 
     if (categoryExists) {
-      showNotification("Ya existe una categoría con ese nombre", "error");
+      showNotification(
+        "Ya existe una categoría con ese nombre para este tipo",
+        "error"
+      );
       return;
     }
 
     try {
       const categoryToAdd = {
-        ...newCategory,
         id: Date.now(),
+        name: trimmedCategory,
         rubro: rubro,
+        type: newCategory.type,
       };
 
       await db.expenseCategories.add(categoryToAdd);
       setCategories((prev) => [...prev, categoryToAdd]);
 
-      showNotification("Categoría agregada correctamente", "success");
       setNewExpense((prev) => ({
         ...prev,
-        category: newCategory.name,
+        category: trimmedCategory,
       }));
 
-      setNewCategory({ name: "", rubro: rubro, type: "EGRESO" });
+      setNewCategory({ name: "", rubro: rubro, type: newExpense.type });
+
+      showNotification("Categoría agregada correctamente", "success");
     } catch (error) {
       console.error("Error al agregar categoría:", error);
-      showNotification("Error al agregar categoría", "error");
+      showNotification("Error al agregar la categoría", "error");
     }
-  };
+  }, [
+    newCategory.name,
+    newCategory.type,
+    categories,
+    rubro,
+    newExpense.type,
+    showNotification,
+  ]);
 
   const handleDeleteCategory = async (category: ExpenseCategory) => {
     try {
@@ -676,6 +691,8 @@ const MovimientosPage = () => {
       supplier: "",
       type: "EGRESO",
     });
+
+    setNewCategory({ name: "", rubro: rubro, type: "EGRESO" });
     setReceiptPreview(null);
   };
 
@@ -797,6 +814,12 @@ const MovimientosPage = () => {
     loadCategories();
     loadExpenses();
   }, [rubro, loadSuppliers, loadCategories, loadExpenses]);
+  useEffect(() => {
+    setNewCategory((prev) => ({
+      ...prev,
+      type: newExpense.type,
+    }));
+  }, [newExpense.type]);
 
   const indexOfLastExpense = currentPage * itemsPerPage;
   const indexOfFirstExpense = indexOfLastExpense - itemsPerPage;
@@ -1161,14 +1184,14 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsCategoryDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
-                  borderColor: "divider",
+                  borderColor: "text.secondary",
                   "&:hover": {
                     backgroundColor: "action.hover",
-                    borderColor: "text.secondary",
+                    borderColor: "text.primary",
                   },
                 }}
               >
@@ -1200,7 +1223,11 @@ const MovimientosPage = () => {
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar la categoría?
+              ¿¿Desea eliminar la categoría?
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+              La categoría <strong>{categoryToDelete?.name}</strong> será
+              eliminada definitivamente.
             </Typography>
           </Box>
         </Modal>
@@ -1218,17 +1245,17 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => {
                   setIsOpenModal(false);
                   resetExpenseForm();
                 }}
                 sx={{
                   color: "text.secondary",
-                  borderColor: "divider",
+                  borderColor: "text.secondary",
                   "&:hover": {
                     backgroundColor: "action.hover",
-                    borderColor: "text.secondary",
+                    borderColor: "text.primary",
                   },
                 }}
               >
@@ -1332,44 +1359,24 @@ const MovimientosPage = () => {
                   display: "flex",
                   gap: 1,
                   alignItems: "flex-end",
-                  p: 1.5,
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.05)"
-                      : "rgba(0,0,0,0.02)",
-                  borderRadius: 1,
-                  border: `1px dashed ${theme.palette.divider}`,
                 }}
               >
                 <Input
-                  label="Crear nueva categoría"
-                  placeholder="Ingrese nombre de nueva categoría (Ej: Alquiler, Servicios, Insumos)"
-                  value={toCapitalize(newCategory.name)}
-                  onRawChange={(e) =>
+                  label="Crear Nueva Categoría"
+                  value={newCategory.name || ""}
+                  onChange={(value) => {
                     setNewCategory({
                       ...newCategory,
-                      name: toCapitalize(e.target.value),
-                    })
-                  }
+                      name: toCapitalize(value.toString()),
+                    });
+                  }}
+                  placeholder="Nombre de nueva categoría"
+                  buttonIcon={<Add fontSize="small" />}
+                  onButtonClick={handleAddCategory}
+                  buttonTitle="Crear categoría"
+                  buttonDisabled={!newCategory.name?.trim()}
                   fullWidth
                 />
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={handleAddCategory}
-                  disabled={!newCategory.name.trim()}
-                  sx={{
-                    backgroundColor: theme.palette.success.main,
-                    "&:hover": {
-                      backgroundColor: theme.palette.success.dark,
-                    },
-                    minWidth: "120px",
-                    height: "40px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Crear Categoría
-                </Button>
               </Box>
             </Box>
 
@@ -1452,14 +1459,14 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
-                  borderColor: "divider",
+                  borderColor: "text.secondary",
                   "&:hover": {
                     backgroundColor: "action.hover",
-                    borderColor: "text.secondary",
+                    borderColor: "text.primary",
                   },
                 }}
               >
@@ -1481,9 +1488,17 @@ const MovimientosPage = () => {
             </Box>
           }
         >
-          <Typography>
-            ¿Está seguro que desea eliminar el movimiento?
-          </Typography>
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿¿Desea eliminar el movimiento?
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+              El movimiento será eliminado definitivamente.
+            </Typography>
+          </Box>
         </Modal>
 
         {/* Modal de estadísticas */}
@@ -1493,14 +1508,14 @@ const MovimientosPage = () => {
           title="Estadísticas de Movimientos"
           buttons={
             <Button
-              variant="outlined"
+              variant="text"
               onClick={() => setIsStatsModalOpen(false)}
               sx={{
                 color: "text.secondary",
-                borderColor: "divider",
+                borderColor: "text.secondary",
                 "&:hover": {
                   backgroundColor: "action.hover",
-                  borderColor: "text.secondary",
+                  borderColor: "text.primary",
                 },
               }}
             >
@@ -1723,14 +1738,14 @@ const MovimientosPage = () => {
             title="Comprobante del Movimiento"
             buttons={
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setReceiptPreview(null)}
                 sx={{
                   color: "text.secondary",
-                  borderColor: "divider",
+                  borderColor: "text.secondary",
                   "&:hover": {
                     backgroundColor: "action.hover",
-                    borderColor: "text.secondary",
+                    borderColor: "text.primary",
                   },
                 }}
               >

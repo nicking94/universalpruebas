@@ -11,15 +11,12 @@ import {
   useTheme,
   IconButton,
   Box,
-  ListItemText,
-  ListItemIcon,
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 
-// Interfaz genérica para metadata con tipos específicos
 export interface SelectOptionMetadata {
   id?: string | number;
-  [key: string]: unknown; // Permite propiedades adicionales sin usar 'any'
+  [key: string]: unknown;
 }
 
 export interface SelectOption<T = string | number, M = SelectOptionMetadata> {
@@ -27,7 +24,7 @@ export interface SelectOption<T = string | number, M = SelectOptionMetadata> {
   label: string;
   disabled?: boolean;
   deletable?: boolean;
-  metadata?: M; // Metadata tipada
+  metadata?: M;
 }
 
 export interface SelectProps<T = string | number, M = SelectOptionMetadata>
@@ -43,7 +40,7 @@ export interface SelectProps<T = string | number, M = SelectOptionMetadata>
   size?: "small" | "medium";
   variant?: "outlined" | "filled" | "standard";
   showDeleteButton?: boolean;
-  getOptionId?: (option: SelectOption<T, M>) => string | number | undefined; // Función para obtener ID
+  getOptionId?: (option: SelectOption<T, M>) => string | number | undefined;
 }
 
 function Select<T = string | number, M = SelectOptionMetadata>({
@@ -84,14 +81,12 @@ function Select<T = string | number, M = SelectOptionMetadata>({
     return showDeleteButton && onDeleteOption && option.deletable !== false;
   };
 
-  // Función para generar una key única para cada opción
   const getOptionKey = (option: SelectOption<T, M>) => {
     if (getOptionId) {
       const id = getOptionId(option);
       if (id !== undefined) return `${id}`;
     }
 
-    // Si la opción tiene metadata con ID, úsalo
     if (
       option.metadata &&
       typeof option.metadata === "object" &&
@@ -100,7 +95,6 @@ function Select<T = string | number, M = SelectOptionMetadata>({
       return `${option.metadata.id}`;
     }
 
-    // Si no, usa el valor como fallback
     return String(option.value);
   };
 
@@ -168,52 +162,81 @@ function Select<T = string | number, M = SelectOptionMetadata>({
         }}
         {...props}
       >
-        {options.map((option) => (
-          <MenuItem
-            key={getOptionKey(option)}
-            value={option.value as string | number}
-            disabled={option.disabled}
-            sx={{
-              color: theme.palette.text.primary,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingRight: shouldShowDeleteButton(option) ? "8px" : "16px",
-              "& .delete-button": {
-                opacity: 0,
-                transition: "opacity 0.2s",
-              },
-              "&:hover .delete-button": {
-                opacity: 1,
-              },
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
-              <ListItemText primary={option.label} />
-            </Box>
+        {options.map((option) => {
+          const showDelete = shouldShowDeleteButton(option);
 
-            {shouldShowDeleteButton(option) && (
-              <ListItemIcon sx={{ minWidth: "auto", marginLeft: 1 }}>
-                <IconButton
-                  size="small"
-                  onClick={(e) => handleDelete(e, option)}
-                  className="delete-button"
+          return (
+            <MenuItem
+              key={getOptionKey(option)}
+              value={option.value as string | number}
+              disabled={option.disabled}
+              sx={{
+                padding: 0,
+                minHeight: "48px",
+                "&:hover": {
+                  backgroundColor: theme.palette.action.hover,
+                },
+                "&.Mui-selected": {
+                  backgroundColor: theme.palette.action.selected,
+                },
+                "&.Mui-selected:hover": {
+                  backgroundColor: theme.palette.action.selected,
+                },
+              }}
+            >
+              {/* Contenedor interno que ocupa todo el espacio */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  width: "100%",
+                  padding: "8px",
+                  maxHeight: "2.4vh",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Texto a la izquierda - ocupa todo el espacio posible */}
+                <Box
                   sx={{
-                    color: theme.palette.error.main,
-                    "&:hover": {
-                      backgroundColor: theme.palette.error.light,
-                      color: theme.palette.error.dark,
-                    },
-                    padding: "4px",
+                    flex: 1,
+                    textAlign: "left",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    paddingRight: showDelete ? "8px" : 0,
+                    display: "flex",
+                    alignItems: "center",
+                    minHeight: "36px",
                   }}
-                  title="Eliminar"
                 >
-                  <Delete fontSize="small" />
-                </IconButton>
-              </ListItemIcon>
-            )}
-          </MenuItem>
-        ))}
+                  {option.label}
+                </Box>
+
+                {/* Botón a la derecha - solo se muestra si es necesario */}
+                {showDelete && (
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleDelete(e, option)}
+                    sx={{
+                      color: theme.palette.error.main,
+                      flexShrink: 0,
+                      transition: "transform 0.2s, background-color 0.2s",
+                      "&:hover": {
+                        backgroundColor: theme.palette.error.light,
+                        transform: "scale(1.1)",
+                      },
+                      padding: "4px",
+                    }}
+                    title="Eliminar"
+                  >
+                    <Delete fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            </MenuItem>
+          );
+        })}
       </MuiSelect>
       {helperText && (
         <FormHelperText

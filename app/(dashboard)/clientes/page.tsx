@@ -874,16 +874,11 @@ const ClientesPage = () => {
       <Box sx={{ textAlign: "center", py: 2 }}>
         <Delete sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }} />
         <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-          ¿Está seguro que desea eliminar el presupuesto?
+          ¿¿Desea eliminar el presupuesto?
         </Typography>
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          {budgetToDelete?.date &&
-            `Del ${new Date(budgetToDelete.date).toLocaleDateString("es-AR")}`}
-          {budgetToDelete && (
-            <Typography sx={{ mt: 1, fontWeight: "semibold" }}>
-              Total: ${budgetToDelete.total.toFixed(2)}
-            </Typography>
-          )}
+        <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+          El presupuesto <strong>{budgetToDelete?.name}</strong> será eliminado
+          definitivamente.
         </Typography>
       </Box>
     </Modal>
@@ -929,7 +924,11 @@ const ClientesPage = () => {
       <Box sx={{ textAlign: "center", py: 2 }}>
         <Delete sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }} />
         <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-          ¿Está seguro que desea eliminar el cliente?
+          ¿Desea eliminar el cliente?
+        </Typography>
+        <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+          El cliente <strong>{customerToDelete?.name}</strong> será eliminado
+          definitivamente.
         </Typography>
       </Box>
     </Modal>

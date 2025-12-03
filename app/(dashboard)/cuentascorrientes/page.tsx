@@ -74,6 +74,7 @@ import {
   CreditCard as CreditCardIcon,
   LocalAtm as LocalAtmIcon,
   AccountCircle as AccountCircleIcon,
+  Delete,
 } from "@mui/icons-material";
 import { useNotification } from "@/app/hooks/useNotification";
 
@@ -2752,11 +2753,15 @@ const CuentasCorrientesPage = () => {
           }
         >
           <Box sx={{ textAlign: "center", py: 2 }}>
-            <DeleteIcon
+            <Delete
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar las cuentas corrientes?
+              ¿Desea eliminar las cuentas corrientes?
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+              Las cuentas corrientes de <strong>{customerToDelete}</strong>{" "}
+              serán eliminadas definitivamente.
             </Typography>
           </Box>
         </Modal>

@@ -2178,10 +2178,18 @@ const PresupuestosPage = () => {
             </>
           }
         >
-          <Typography>
-            ¿Está seguro que desea eliminar el presupuesto de{" "}
-            {budgetToDelete?.customerName}?
-          </Typography>
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿¿Desea eliminar el presupuesto?
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+              El presupuesto de <strong>{budgetToDelete?.customerName}</strong>{" "}
+              será eliminado definitivamente.
+            </Typography>
+          </Box>
         </Modal>
 
         {selectedCustomerForNotes && (

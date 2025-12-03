@@ -1168,7 +1168,11 @@ const ProveedoresPage = () => {
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar el proveedor?
+              ¿¿Desea eliminar el proveedor?
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+              El proveedor <strong>{supplierToDelete?.companyName}</strong> será
+              eliminado definitivamente.
             </Typography>
           </Box>
         </Modal>

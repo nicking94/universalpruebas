@@ -868,12 +868,14 @@ const PromocionesPage = () => {
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar la promoción?
+              ¿¿Desea eliminar la promoción?
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary", mb: 1 }}>
+              La promoción <strong>{promotionToDelete?.name}</strong> será
+              eliminada definitivamente.
             </Typography>
           </Box>
         </Modal>
-
-        {/* REEMPLAZADO: Usar closeNotification del hook en lugar de la función local */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}
