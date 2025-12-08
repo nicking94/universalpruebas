@@ -48,7 +48,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
   useTheme,
   Card,
@@ -56,9 +55,6 @@ import {
   Divider,
   Autocomplete,
   TextField,
-  Checkbox,
-  Popper,
-  AutocompleteRenderOptionState,
 } from "@mui/material";
 import {
   Add,
@@ -68,12 +64,12 @@ import {
   Note,
   ShoppingCart,
   Description,
-  CheckBoxOutlineBlank,
-  CheckBox,
-  Search,
 } from "@mui/icons-material";
 import Button from "@/app/components/Button";
 import Select from "@/app/components/Select";
+import CustomChip from "@/app/components/CustomChip";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import ProductSearchAutocomplete from "@/app/components/ProductSearchAutocomplete";
 
 interface CustomerOption {
   value: string;
@@ -85,18 +81,44 @@ interface StatusOption {
   label: string;
 }
 
+interface BudgetItem extends SaleItem {
+  basePrice?: number;
+}
+
+interface BudgetFormData {
+  date: string;
+  customerName: string;
+  customerPhone: string;
+  items: BudgetItem[];
+  total: number;
+  deposit: string;
+  remaining: number;
+  expirationDate: string;
+  notes: string;
+  status: "pendiente" | "aprobado" | "rechazado" | "cobrado";
+  customerId?: string;
+}
+
+interface ConversionFactors {
+  [key: string]: {
+    base: string;
+    factor: number;
+  };
+}
+
+interface StockAvailability {
+  available: boolean;
+  availableQuantity: number;
+  availableUnit: string;
+}
+
 const PresupuestosPage = () => {
   const { rubro } = useRubro();
   const { businessData } = useBusinessData();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [filteredBudgets, setFilteredBudgets] = useState<Budget[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newBudget, setNewBudget] = useState<
-    Omit<Budget, "id" | "createdAt" | "updatedAt"> & {
-      items: Array<SaleItem & { basePrice?: number }>;
-      customerId?: string;
-    }
-  >({
+  const [newBudget, setNewBudget] = useState<BudgetFormData>({
     date: new Date().toISOString(),
     customerName: "",
     customerPhone: "",
@@ -131,14 +153,14 @@ const PresupuestosPage = () => {
     id: string | null;
     name: string;
   } | null>(null);
-  const [productSearchQuery, setProductSearchQuery] = useState("");
+
   const router = useRouter();
   const theme = useTheme();
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const productSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const CONVERSION_FACTORS = {
+  const CONVERSION_FACTORS: ConversionFactors = {
     A: { base: "A", factor: 1 },
     Bulto: { base: "Bulto", factor: 1 },
     Cajón: { base: "Cajón", factor: 1 },
@@ -159,7 +181,7 @@ const PresupuestosPage = () => {
     "Unid.": { base: "Unid.", factor: 1 },
     V: { base: "V", factor: 1 },
     W: { base: "W", factor: 1 },
-  } as const;
+  };
 
   const unitOptions: UnitOption[] = [
     { value: "A", label: "Amperio", convertible: false },
@@ -190,13 +212,9 @@ const PresupuestosPage = () => {
     { value: "rechazado", label: "Rechazado" },
   ];
 
-  const icon = useMemo(() => <CheckBoxOutlineBlank fontSize="small" />, []);
-  const checkedIcon = useMemo(() => <CheckBox fontSize="small" />, []);
-
   const convertToBaseUnit = useCallback(
     (quantity: number, fromUnit: string): number => {
-      const unitInfo =
-        CONVERSION_FACTORS[fromUnit as keyof typeof CONVERSION_FACTORS];
+      const unitInfo = CONVERSION_FACTORS[fromUnit];
       return unitInfo ? quantity * unitInfo.factor : quantity;
     },
     []
@@ -204,8 +222,7 @@ const PresupuestosPage = () => {
 
   const convertFromBaseUnit = useCallback(
     (quantity: number, toUnit: string): number => {
-      const unitInfo =
-        CONVERSION_FACTORS[toUnit as keyof typeof CONVERSION_FACTORS];
+      const unitInfo = CONVERSION_FACTORS[toUnit];
       return unitInfo ? quantity / unitInfo.factor : quantity;
     },
     []
@@ -224,58 +241,15 @@ const PresupuestosPage = () => {
     (productUnit: string): UnitOption[] => {
       if (productUnit === "Unid.") return [];
 
-      const productUnitInfo =
-        CONVERSION_FACTORS[productUnit as keyof typeof CONVERSION_FACTORS];
+      const productUnitInfo = CONVERSION_FACTORS[productUnit];
       if (!productUnitInfo) return unitOptions.filter((u) => !u.convertible);
 
       return unitOptions.filter((option) => {
         if (!option.convertible) return false;
-        const optionInfo =
-          CONVERSION_FACTORS[option.value as keyof typeof CONVERSION_FACTORS];
+        const optionInfo = CONVERSION_FACTORS[option.value];
         return optionInfo?.base === productUnitInfo.base;
       });
     },
-    []
-  );
-
-  const productOptions = useMemo(() => {
-    return products
-      .filter((p) => rubro === "Todos los rubros" || p.rubro === rubro)
-      .map((p) => ({
-        value: p.id,
-        label: `${p.name}${p.size ? ` (${p.size})` : ""}${
-          p.color ? ` - ${p.color}` : ""
-        }`,
-        product: p,
-        isDisabled: p.stock <= 0,
-      })) as ProductOption[];
-  }, [products, rubro]);
-
-  const filteredProductOptions = useMemo(() => {
-    if (!productSearchQuery) return productOptions.slice(0, 50);
-
-    const query = productSearchQuery.toLowerCase();
-    return productOptions
-      .filter(
-        (option) =>
-          option.label.toLowerCase().includes(query) ||
-          option.product?.name.toLowerCase().includes(query)
-      )
-      .slice(0, 50);
-  }, [productOptions, productSearchQuery]);
-
-  const getOptionDisabled = (option: ProductOption): boolean => {
-    return option.isDisabled || false;
-  };
-
-  const getOptionLabel = useCallback(
-    (option: ProductOption) => option.label,
-    []
-  );
-
-  const isOptionEqualToValue = useCallback(
-    (option: ProductOption, value: ProductOption) =>
-      option.value === value.value,
     []
   );
 
@@ -352,7 +326,7 @@ const PresupuestosPage = () => {
   );
 
   const calculateTotalAndRemaining = useCallback(
-    (items: Array<SaleItem & { basePrice?: number }>, deposit: string) => {
+    (items: BudgetItem[], deposit: string) => {
       const total = items.reduce(
         (total, item) =>
           total + item.price * item.quantity * (1 - (item.discount || 0) / 100),
@@ -381,11 +355,7 @@ const PresupuestosPage = () => {
       product: Product,
       requestedQuantity: number,
       requestedUnit: string
-    ): {
-      available: boolean;
-      availableQuantity: number;
-      availableUnit: string;
-    } => {
+    ): StockAvailability => {
       try {
         const stockInBase = convertToBaseUnit(
           Number(product.stock),
@@ -624,40 +594,6 @@ const PresupuestosPage = () => {
       showNotification("Error al convertir presupuesto a venta", "error");
     }
   };
-
-  const handleProductSelect = useCallback(
-    (event: SyntheticEvent, newValue: ProductOption[]) => {
-      const selectedProducts = Array.from(newValue).map((option) => {
-        const product = products.find((p) => p.id === option.value);
-        return {
-          productId: option.value,
-          productName: product?.name || "",
-          price: product?.price || 0,
-          quantity: 1,
-          unit: product?.unit || "Unid.",
-          discount: 0,
-          size: product?.size,
-          color: product?.color,
-          basePrice: product
-            ? product.price / convertToBaseUnit(1, product.unit)
-            : 0,
-        };
-      });
-
-      const { total, remaining } = calculateTotalAndRemaining(
-        selectedProducts,
-        newBudget.deposit
-      );
-
-      setNewBudget((prev) => ({
-        ...prev,
-        items: selectedProducts,
-        total,
-        remaining,
-      }));
-    },
-    [products, newBudget.deposit, convertToBaseUnit, calculateTotalAndRemaining]
-  );
 
   const handleQuantityChange = useCallback(
     (productId: number, quantity: number, unit: Product["unit"]) => {
@@ -1158,43 +1094,6 @@ const PresupuestosPage = () => {
     [customers]
   );
 
-  const handleProductSearchChange = useCallback((query: string) => {
-    if (productSearchTimeoutRef.current) {
-      clearTimeout(productSearchTimeoutRef.current);
-    }
-
-    productSearchTimeoutRef.current = setTimeout(() => {
-      setProductSearchQuery(query);
-    }, 200);
-  }, []);
-
-  const renderOption = useCallback(
-    (
-      props: React.HTMLAttributes<HTMLLIElement>,
-      option: ProductOption,
-      { selected }: AutocompleteRenderOptionState
-    ) => (
-      <li {...props}>
-        <Checkbox
-          icon={icon}
-          checkedIcon={checkedIcon}
-          style={{ marginRight: 8 }}
-          checked={selected}
-        />
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          <Typography variant="body2">{option.label}</Typography>
-          {option.product && (
-            <Typography variant="caption" color="text.secondary">
-              Stock: {option.product.stock} {option.product.unit} | Precio:{" "}
-              {formatCurrency(option.product.price)}
-            </Typography>
-          )}
-        </Box>
-      </li>
-    ),
-    [icon, checkedIcon]
-  );
-
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -1428,7 +1327,7 @@ const PresupuestosPage = () => {
                             : "-"}
                         </TableCell>
                         <TableCell sx={{ textAlign: "center" }}>
-                          <Chip
+                          <CustomChip
                             label={budget.status}
                             size="small"
                             color={
@@ -1437,7 +1336,7 @@ const PresupuestosPage = () => {
                                 : budget.status === "rechazado"
                                 ? "error"
                                 : budget.status === "cobrado"
-                                ? "primary"
+                                ? "success"
                                 : "warning"
                             }
                             variant="filled"
@@ -1611,7 +1510,6 @@ const PresupuestosPage = () => {
               status: "pendiente",
             });
             setSelectedCustomer(null);
-            setProductSearchQuery("");
           }}
           title={editingBudget ? "Editar Presupuesto" : "Nuevo Presupuesto"}
           bgColor="bg-white dark:bg-gray_b"
@@ -1635,7 +1533,6 @@ const PresupuestosPage = () => {
                     status: "pendiente",
                   });
                   setSelectedCustomer(null);
-                  setProductSearchQuery("");
                 }}
                 sx={{
                   color: "text.secondary",
@@ -1668,7 +1565,7 @@ const PresupuestosPage = () => {
                 label="Seleccionar cliente existente"
                 options={customerOptions}
                 value={selectedCustomer?.value || ""}
-                onChange={(value) => {
+                onChange={(value: string) => {
                   const selected = customerOptions.find(
                     (option) => option.value === value
                   );
@@ -1685,7 +1582,7 @@ const PresupuestosPage = () => {
                 <Input
                   label="Nombre del cliente"
                   value={newBudget.customerName}
-                  onRawChange={(e) =>
+                  onRawChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setNewBudget({ ...newBudget, customerName: e.target.value })
                   }
                   placeholder="Ingrese el nombre del cliente"
@@ -1697,7 +1594,7 @@ const PresupuestosPage = () => {
                 <Input
                   label="Teléfono (opcional)"
                   value={newBudget.customerPhone || ""}
-                  onRawChange={(e) =>
+                  onRawChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setNewBudget({
                       ...newBudget,
                       customerPhone: e.target.value,
@@ -1714,7 +1611,7 @@ const PresupuestosPage = () => {
                 <CustomDatePicker
                   label="Fecha de expiración"
                   value={newBudget.expirationDate || ""}
-                  onChange={(date) =>
+                  onChange={(date: string) =>
                     setNewBudget({ ...newBudget, expirationDate: date || "" })
                   }
                 />
@@ -1727,7 +1624,7 @@ const PresupuestosPage = () => {
                     label: option.label,
                   }))}
                   value={newBudget.status}
-                  onChange={(value) => {
+                  onChange={(value: string) => {
                     setNewBudget({
                       ...newBudget,
                       status: value as "pendiente" | "aprobado" | "rechazado",
@@ -1741,59 +1638,69 @@ const PresupuestosPage = () => {
 
             <Box>
               <Box sx={{ mb: 2 }}>
-                <Autocomplete
-                  multiple
-                  options={filteredProductOptions}
-                  value={newBudget.items.map((item) => {
+                <ProductSearchAutocomplete
+                  products={products}
+                  selectedProducts={newBudget.items.map((item) => {
                     const product = products.find(
                       (p) => p.id === item.productId
                     );
                     return {
                       value: item.productId,
-                      label: `${item.productName}${
-                        item.size ? ` (${item.size})` : ""
-                      }${item.color ? ` - ${item.color}` : ""}`,
+                      label: getDisplayProductName(
+                        {
+                          name: product?.name || item.productName,
+                          size: product?.size || item.size,
+                          color: product?.color || item.color,
+                          rubro: product?.rubro || item.rubro,
+                          lot: product?.lot,
+                        },
+                        rubro,
+                        true
+                      ),
                       product: product!,
                       isDisabled: false,
                     } as ProductOption;
                   })}
-                  onChange={handleProductSelect}
-                  onInputChange={(event, value) => {
-                    handleProductSearchChange(value);
+                  onProductSelect={(selectedOptions) => {
+                    const selectedProducts = selectedOptions
+                      .filter((option) => !option.isDisabled)
+                      .map((option) => {
+                        const product =
+                          option.product ||
+                          products.find((p) => p.id === option.value);
+                        return {
+                          productId: option.value,
+                          productName: product?.name || "",
+                          price: product?.price || 0,
+                          quantity: 1,
+                          unit: product?.unit || "Unid.",
+                          discount: 0,
+                          size: product?.size,
+                          color: product?.color,
+                          basePrice: product
+                            ? product.price / convertToBaseUnit(1, product.unit)
+                            : 0,
+                        };
+                      });
+
+                    const { total, remaining } = calculateTotalAndRemaining(
+                      selectedProducts,
+                      newBudget.deposit
+                    );
+
+                    setNewBudget((prev) => ({
+                      ...prev,
+                      items: selectedProducts,
+                      total,
+                      remaining,
+                    }));
                   }}
-                  disableCloseOnSelect
-                  getOptionLabel={getOptionLabel}
-                  getOptionDisabled={getOptionDisabled}
-                  isOptionEqualToValue={isOptionEqualToValue}
-                  filterOptions={(options) => options}
-                  renderOption={renderOption}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="Buscar productos"
-                      size="small"
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <>
-                            <Search
-                              fontSize="small"
-                              sx={{ mr: 1, color: "text.secondary" }}
-                            />
-                            {params.InputProps.startAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                  noOptionsText="No se encontraron productos"
-                  loading={products.length === 0}
-                  loadingText="Cargando productos..."
-                  PopperComponent={(props) => (
-                    <Popper {...props} placement="bottom-start" />
-                  )}
-                  limitTags={3}
-                  disableListWrap
+                  onSearchChange={(query) => {
+                    console.log("Búsqueda de productos:", query);
+                  }}
+                  rubro={rubro}
+                  placeholder="Seleccionar productos"
+                  maxDisplayed={50}
                 />
               </Box>
 
@@ -1934,7 +1841,9 @@ const PresupuestosPage = () => {
                                     value={
                                       item.quantity === 0 ? "" : item.quantity
                                     }
-                                    onRawChange={(e) => {
+                                    onRawChange={(
+                                      e: React.ChangeEvent<HTMLInputElement>
+                                    ) => {
                                       const value = e.target.value;
                                       if (value === "") {
                                         handleQuantityChange(
@@ -1953,7 +1862,9 @@ const PresupuestosPage = () => {
                                         }
                                       }
                                     }}
-                                    onBlur={(e) => {
+                                    onBlur={(
+                                      e: React.FocusEvent<HTMLInputElement>
+                                    ) => {
                                       if (
                                         e.target.value === "" ||
                                         parseFloat(e.target.value) < 0.001
@@ -1974,7 +1885,9 @@ const PresupuestosPage = () => {
                                     value={
                                       item.discount === 0 ? "" : item.discount
                                     }
-                                    onRawChange={(e) => {
+                                    onRawChange={(
+                                      e: React.ChangeEvent<HTMLInputElement>
+                                    ) => {
                                       const value = e.target.value;
                                       if (
                                         value === "" ||
@@ -1986,7 +1899,9 @@ const PresupuestosPage = () => {
                                         );
                                       }
                                     }}
-                                    onBlur={(e) => {
+                                    onBlur={(
+                                      e: React.FocusEvent<HTMLInputElement>
+                                    ) => {
                                       if (e.target.value === "") {
                                         handleDiscountChange(
                                           item.productId,
@@ -2066,7 +1981,9 @@ const PresupuestosPage = () => {
                                 label="Seña en efectivo (opcional)"
                                 type="number"
                                 value={newBudget.deposit}
-                                onRawChange={(e) => {
+                                onRawChange={(
+                                  e: React.ChangeEvent<HTMLInputElement>
+                                ) => {
                                   const value = e.target.value;
                                   if (
                                     value === "" ||
@@ -2083,7 +2000,9 @@ const PresupuestosPage = () => {
                                     });
                                   }
                                 }}
-                                onBlur={(e) => {
+                                onBlur={(
+                                  e: React.FocusEvent<HTMLInputElement>
+                                ) => {
                                   if (e.target.value === "") {
                                     setNewBudget({
                                       ...newBudget,

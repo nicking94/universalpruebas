@@ -9,7 +9,6 @@ import {
   IconButton,
   List,
   ListItem,
-  Chip,
   useTheme,
   alpha,
 } from "@mui/material";
@@ -19,6 +18,7 @@ import {
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
+import CustomChip from "../CustomChip";
 
 interface NotificationDropdownProps {
   notifications: NotificationType[];
@@ -246,7 +246,7 @@ const NotificationItem = ({
             })}
           </Typography>
           {isUnread && (
-            <Chip
+            <CustomChip
               label="Nuevo"
               size="small"
               color="primary"

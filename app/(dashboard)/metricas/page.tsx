@@ -35,7 +35,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Chip,
   Stack,
   useTheme,
   useMediaQuery,
@@ -71,6 +70,7 @@ import { calculatePrice, calculateProfit } from "@/app/lib/utils/calculations";
 import { db } from "@/app/database/db";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Notification from "@/app/components/Notification";
+import CustomChip from "@/app/components/CustomChip";
 
 const WEEK_STARTS_ON = 1;
 
@@ -204,7 +204,7 @@ const MetricCard = ({
           </Box>
           <Stack alignItems="flex-end" spacing={0.5}>
             {trend !== undefined && (
-              <Chip
+              <CustomChip
                 label={`${trend > 0 ? "+" : ""}${trend}%`}
                 size="small"
                 color={trend > 0 ? "success" : trend < 0 ? "error" : "default"}
@@ -215,7 +215,7 @@ const MetricCard = ({
                 }}
               />
             )}
-            <Chip
+            <CustomChip
               label={
                 period === "week" ? "SEM" : period === "month" ? "MES" : "AÑO"
               }

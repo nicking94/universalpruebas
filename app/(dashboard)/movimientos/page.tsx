@@ -35,7 +35,6 @@ import {
   Paper,
   IconButton,
   useTheme,
-  Chip,
   Card,
   CardContent,
 } from "@mui/material";
@@ -46,6 +45,7 @@ import {
   Description,
   Analytics,
   InsertDriveFile,
+  Info,
 } from "@mui/icons-material";
 import { useRubro } from "@/app/context/RubroContext";
 import {
@@ -72,6 +72,7 @@ import InputCash from "@/app/components/InputCash";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
+import CustomChip from "@/app/components/CustomChip";
 
 ChartJS.register(
   ArcElement,
@@ -220,14 +221,19 @@ const MovimientosPage = () => {
   }, [rubro]);
 
   const loadCategories = useCallback(async () => {
-    const storedCategories = await db.expenseCategories.toArray();
-    const filtered = storedCategories.filter(
-      (cat) =>
-        (cat.rubro === rubro || cat.rubro === "Todos los rubros") &&
-        (newExpense.type === "TODOS" || cat.type === newExpense.type)
-    );
-    setCategories(filtered);
-  }, [rubro, newExpense.type]);
+    try {
+      const storedCategories = await db.expenseCategories.toArray();
+
+      const filtered = storedCategories.filter(
+        (cat) => cat.rubro === rubro || cat.rubro === "Todos los rubros"
+      );
+
+      setCategories(filtered);
+    } catch (error) {
+      console.error("Error al cargar categorías:", error);
+      showNotification("Error al cargar categorías", "error");
+    }
+  }, [rubro]);
 
   const loadExpenses = useCallback(async () => {
     try {
@@ -301,6 +307,11 @@ const MovimientosPage = () => {
       supplier: expense.supplier || "",
       type: expense.type,
     });
+    setNewCategory({
+      name: "",
+      rubro: rubro,
+      type: expense.type as "INGRESO" | "EGRESO",
+    });
 
     if (expense.receipt) {
       setReceiptPreview(expense.receipt);
@@ -352,7 +363,7 @@ const MovimientosPage = () => {
   };
 
   const handleSaveExpense = async () => {
-    if (!newExpense.description || !newExpense.amount || !newExpense.category) {
+    if (!newExpense.amount || !newExpense.category) {
       showNotification("Complete todos los campos obligatorios", "error");
       return;
     }
@@ -607,24 +618,23 @@ const MovimientosPage = () => {
     const categoryExists = categories.some(
       (cat) =>
         cat.name.toLowerCase() === lowerName &&
-        cat.rubro === rubro &&
-        cat.type === newCategory.type
+        (cat.rubro === rubro || cat.rubro === "Todos los rubros")
     );
 
     if (categoryExists) {
       showNotification(
-        "Ya existe una categoría con ese nombre para este tipo",
+        "Ya existe una categoría con ese nombre para este rubro",
         "error"
       );
       return;
     }
 
     try {
-      const categoryToAdd = {
+      const categoryToAdd: ExpenseCategory = {
         id: Date.now(),
         name: trimmedCategory,
         rubro: rubro,
-        type: newCategory.type,
+        type: "EGRESO",
       };
 
       await db.expenseCategories.add(categoryToAdd);
@@ -635,21 +645,18 @@ const MovimientosPage = () => {
         category: trimmedCategory,
       }));
 
-      setNewCategory({ name: "", rubro: rubro, type: newExpense.type });
+      setNewCategory({
+        name: "",
+        rubro: rubro,
+        type: "EGRESO",
+      });
 
       showNotification("Categoría agregada correctamente", "success");
     } catch (error) {
       console.error("Error al agregar categoría:", error);
       showNotification("Error al agregar la categoría", "error");
     }
-  }, [
-    newCategory.name,
-    newCategory.type,
-    categories,
-    rubro,
-    newExpense.type,
-    showNotification,
-  ]);
+  }, [newCategory.name, categories, rubro, showNotification]);
 
   const handleDeleteCategory = async (category: ExpenseCategory) => {
     try {
@@ -832,10 +839,11 @@ const MovimientosPage = () => {
     <ProtectedRoute>
       <Box
         sx={{
-          px: 5,
+          px: 4,
           py: 2,
-          color: "text.secondary",
           height: "calc(100vh - 80px)",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <Typography variant="h5" fontWeight="semibold" mb={2}>
@@ -885,7 +893,6 @@ const MovimientosPage = () => {
                 display: "flex",
                 justifyContent: "flex-end",
                 gap: 2,
-                mt: 2,
               }}
             >
               <Button
@@ -1033,7 +1040,7 @@ const MovimientosPage = () => {
                         }}
                       >
                         <TableCell>
-                          <Chip
+                          <CustomChip
                             label={expense.type}
                             size="small"
                             color={
@@ -1065,9 +1072,13 @@ const MovimientosPage = () => {
                           sx={{
                             textAlign: "center",
                             fontWeight: "bold",
-                            color: "error.main",
+                            color:
+                              expense.type === "INGRESO"
+                                ? "success.main"
+                                : "error.main",
                           }}
                         >
+                          {expense.type === "INGRESO" ? "+" : "-"}{" "}
                           {formatCurrency(expense.amount)}
                         </TableCell>
                         {rubro !== "Todos los rubros" && (
@@ -1184,7 +1195,6 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="text"
                 variant="text"
                 onClick={() => setIsCategoryDeleteModalOpen(false)}
                 sx={{
@@ -1315,8 +1325,15 @@ const MovimientosPage = () => {
               />
             </Box>
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Box sx={{ display: "flex", gap: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                gap: 2,
+                alignItems: "flex-end",
+              }}
+            >
+              <Box sx={{ flex: 1 }}>
                 <Select
                   label="Categoría*"
                   options={[
@@ -1351,34 +1368,43 @@ const MovimientosPage = () => {
                     }
                   }}
                   showDeleteButton={true}
-                />
-              </Box>
-
-              {/* Campo para crear nueva categoría - usando Input personalizado */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "flex-end",
-                }}
-              >
-                <Input
-                  label="Crear Nueva Categoría"
-                  value={newCategory.name || ""}
-                  onChange={(value) => {
-                    setNewCategory({
-                      ...newCategory,
-                      name: toCapitalize(value.toString()),
-                    });
-                  }}
-                  placeholder="Nombre de nueva categoría"
-                  buttonIcon={<Add fontSize="small" />}
-                  onButtonClick={handleAddCategory}
-                  buttonTitle="Crear categoría"
-                  buttonDisabled={!newCategory.name?.trim()}
                   fullWidth
                 />
               </Box>
+
+              {/* Mostrar input para crear nueva categoría SOLO cuando NO se está editando */}
+              {!isEditing && (
+                <Box sx={{ flex: 1 }}>
+                  <Input
+                    label="Crear Nueva Categoría"
+                    value={newCategory.name || ""}
+                    onChange={(value) => {
+                      setNewCategory({
+                        ...newCategory,
+                        name: toCapitalize(value.toString()),
+                      });
+                    }}
+                    placeholder="Nombre de nueva categoría"
+                    buttonIcon={<Add fontSize="small" />}
+                    onButtonClick={handleAddCategory}
+                    buttonTitle="Crear categoría"
+                    buttonDisabled={!newCategory.name?.trim()}
+                    fullWidth
+                  />
+                </Box>
+              )}
+
+              {isEditing && (
+                <Box sx={{ flex: 1, display: "flex", alignItems: "center" }}>
+                  <div className="w-full bg-white dark:bg-gray_b p-2.5 rounded-lg border border-blue_l">
+                    <p className="text-sm text-blue_b dark:text-blue-200">
+                      <Info className="inline mr-2" fontSize="small" />
+                      Para cambiar la categoría, seleccione una existente de la
+                      lista.
+                    </p>
+                  </div>
+                </Box>
+              )}
             </Box>
 
             <Box sx={{ display: "flex", gap: 2 }}>
@@ -1413,7 +1439,7 @@ const MovimientosPage = () => {
                 }}
               />
               <Input
-                label="Descripción*"
+                label="Descripción"
                 placeholder="Concepto"
                 value={newExpense.description}
                 onRawChange={(e) =>
@@ -1460,7 +1486,6 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="text"
                 variant="text"
                 onClick={() => setIsDeleteModalOpen(false)}
                 sx={{

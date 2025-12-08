@@ -25,7 +25,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
 } from "@mui/material";
 import {
   Add,
@@ -35,6 +34,7 @@ import {
   Inventory,
 } from "@mui/icons-material";
 import Button from "@/app/components/Button";
+import CustomChip from "@/app/components/CustomChip";
 
 const ProveedoresPage = () => {
   const { rubro } = useRubro();
@@ -1028,7 +1028,7 @@ const ProveedoresPage = () => {
                 <Box
                   key={index}
                   sx={{
-                    backgroundColor: "primary.main",
+                    backgroundColor: "background.paper",
                     borderRadius: 1,
                     border: "1px solid",
                     borderColor: "primary.light",
@@ -1044,26 +1044,27 @@ const ProveedoresPage = () => {
                       mb: 2,
                     }}
                   >
-                    <Chip
+                    <CustomChip
                       label={`Contacto #${index + 1}`}
                       color="primary"
                       variant="filled"
                       sx={{ color: "white" }}
                     />
                     {contacts.length > 1 && (
-                      <Button
-                        variant="contained"
-                        color="error"
-                        startIcon={<Delete />}
-                        onClick={() => handleRemoveContact(index)}
+                      <IconButton
                         size="small"
+                        onClick={() => handleRemoveContact(index)}
                         sx={{
-                          bgcolor: "error.main",
-                          "&:hover": { bgcolor: "error.dark" },
+                          color: "error.main",
+                          "&:hover": {
+                            backgroundColor: "error.main",
+                            color: "white",
+                          },
                         }}
+                        title="Eliminar contacto"
                       >
-                        Eliminar
-                      </Button>
+                        <Delete fontSize="small" />
+                      </IconButton>
                     )}
                   </Box>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

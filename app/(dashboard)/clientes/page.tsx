@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 
 import {
   Box,
@@ -11,7 +11,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
   FormControl,
   useTheme,
@@ -41,6 +40,7 @@ import Pagination from "@/app/components/Pagination";
 import Input from "@/app/components/Input";
 import Select from "@/app/components/Select";
 import Notification from "@/app/components/Notification";
+import CustomChip from "@/app/components/CustomChip";
 
 const ClientesPage = () => {
   const { rubro } = useRubro();
@@ -89,6 +89,14 @@ const ClientesPage = () => {
     Record<string, number>
   >({});
 
+  // Ref para showNotification
+  const showNotificationRef = useRef(showNotification);
+
+  // Actualizar referencia cuando cambie
+  useEffect(() => {
+    showNotificationRef.current = showNotification;
+  }, [showNotification]);
+
   const getTableHeaderStyle = () => ({
     bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
     color: "primary.contrastText",
@@ -98,6 +106,59 @@ const ClientesPage = () => {
     { value: "activo", label: "Activo" },
     { value: "inactivo", label: "Inactivo" },
   ];
+
+  // Funciones memoizadas para cargar datos
+  const fetchCustomerBudgets = useCallback(async (customer: Customer) => {
+    if (!customer) return;
+
+    try {
+      const budgets = await db.budgets
+        .where("customerId")
+        .equals(customer.id)
+        .toArray();
+      setCustomerBudgets(budgets);
+    } catch (error) {
+      console.error("Error al cargar presupuestos:", error);
+      showNotificationRef.current("Error al cargar los presupuestos", "error");
+    }
+  }, []);
+
+  const fetchCustomerSales = useCallback(async (customer: Customer) => {
+    if (!customer) return;
+
+    try {
+      const sales = await db.sales
+        .where("customerId")
+        .equals(customer.id)
+        .or("customerName")
+        .equals(customer.name)
+        .toArray();
+      setCustomerSales(sales);
+    } catch (error) {
+      console.error("Error al cargar ventas:", error);
+      showNotificationRef.current(
+        "Error al cargar el historial de compras",
+        "error"
+      );
+    }
+  }, []);
+
+  // Efecto optimizado para cargar datos cuando se selecciona un cliente
+  useEffect(() => {
+    if (selectedCustomer) {
+      const loadCustomerData = async () => {
+        await Promise.all([
+          fetchCustomerBudgets(selectedCustomer),
+          fetchCustomerSales(selectedCustomer),
+        ]);
+      };
+      loadCustomerData();
+    } else {
+      // Limpiar datos cuando no hay cliente seleccionado
+      setCustomerBudgets([]);
+      setCustomerSales([]);
+    }
+  }, [selectedCustomer, fetchCustomerBudgets, fetchCustomerSales]);
 
   useEffect(() => {
     const fetchCreditData = async () => {
@@ -130,51 +191,6 @@ const ClientesPage = () => {
 
     fetchCreditData();
   }, []);
-
-  useEffect(() => {
-    const fetchCustomerBudgets = async () => {
-      if (selectedCustomer) {
-        try {
-          const budgets = await db.budgets
-            .where("customerId")
-            .equals(selectedCustomer.id)
-            .toArray();
-          if (selectedCustomer) {
-            setCustomerBudgets(budgets);
-          }
-        } catch (error) {
-          console.error("Error al cargar presupuestos:", error);
-          showNotification("Error al cargar los presupuestos", "error");
-        }
-      }
-    };
-
-    fetchCustomerBudgets();
-  }, [selectedCustomer]);
-
-  useEffect(() => {
-    const fetchCustomerSales = async () => {
-      if (selectedCustomer) {
-        try {
-          const sales = await db.sales
-            .where("customerId")
-            .equals(selectedCustomer.id)
-            .or("customerName")
-            .equals(selectedCustomer.name)
-            .toArray();
-
-          if (selectedCustomer) {
-            setCustomerSales(sales);
-          }
-        } catch (error) {
-          console.error("Error al cargar ventas:", error);
-          showNotification("Error al cargar el historial de compras", "error");
-        }
-      }
-    };
-
-    fetchCustomerSales();
-  }, [selectedCustomer]);
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -212,7 +228,10 @@ const ClientesPage = () => {
 
   const handleAddCustomer = async () => {
     if (!newCustomer.name.trim()) {
-      showNotification("El nombre del cliente es requerido", "error");
+      showNotificationRef.current(
+        "El nombre del cliente es requerido",
+        "error"
+      );
       return;
     }
 
@@ -222,7 +241,10 @@ const ClientesPage = () => {
       );
 
       if (existingCustomer) {
-        showNotification("Ya existe un cliente con este nombre", "error");
+        showNotificationRef.current(
+          "Ya existe un cliente con este nombre",
+          "error"
+        );
         return;
       }
 
@@ -249,10 +271,10 @@ const ClientesPage = () => {
         pendingBalance: 0,
       });
       setIsModalOpen(false);
-      showNotification("Cliente agregado correctamente", "success");
+      showNotificationRef.current("Cliente agregado correctamente", "success");
     } catch (error) {
       console.error("Error al agregar cliente:", error);
-      showNotification("Error al agregar cliente", "error");
+      showNotificationRef.current("Error al agregar cliente", "error");
     }
   };
 
@@ -273,7 +295,7 @@ const ClientesPage = () => {
     const pendingBalance = getCustomerPendingBalance(customer);
 
     if (pendingBalance > 0) {
-      showNotification(
+      showNotificationRef.current(
         `No se puede eliminar el cliente porque tiene un saldo pendiente de $${pendingBalance.toFixed(
           2
         )}`,
@@ -296,7 +318,7 @@ const ClientesPage = () => {
         .toArray();
 
       if (customerSales.length > 0) {
-        showNotification(
+        showNotificationRef.current(
           "No se puede eliminar el cliente porque tiene una cuenta corriente pendiente de pago",
           "error"
         );
@@ -308,10 +330,10 @@ const ClientesPage = () => {
         filteredCustomers.filter((c) => c.id !== customerToDelete.id)
       );
       setCustomers(customers.filter((c) => c.id !== customerToDelete.id));
-      showNotification("Cliente eliminado correctamente", "success");
+      showNotificationRef.current("Cliente eliminado correctamente", "success");
     } catch (error) {
       console.error("Error al eliminar cliente:", error);
-      showNotification("Error al eliminar cliente", "error");
+      showNotificationRef.current("Error al eliminar cliente", "error");
     } finally {
       setIsDeleteModalOpen(false);
       setCustomerToDelete(null);
@@ -334,7 +356,10 @@ const ClientesPage = () => {
 
   const handleUpdateCustomer = async () => {
     if (!editingCustomer || !newCustomer.name.trim()) {
-      showNotification("El nombre del cliente es requerido", "error");
+      showNotificationRef.current(
+        "El nombre del cliente es requerido",
+        "error"
+      );
       return;
     }
 
@@ -346,7 +371,10 @@ const ClientesPage = () => {
       );
 
       if (existingCustomer) {
-        showNotification("Ya existe un cliente con este nombre", "error");
+        showNotificationRef.current(
+          "Ya existe un cliente con este nombre",
+          "error"
+        );
         return;
       }
 
@@ -419,339 +447,269 @@ const ClientesPage = () => {
       setEditingCustomer(null);
       setEditingBudget(null);
       setIsModalOpen(false);
-      showNotification("Cliente actualizado correctamente", "success");
+      showNotificationRef.current(
+        "Cliente actualizado correctamente",
+        "success"
+      );
     } catch (error) {
       console.error("Error al actualizar cliente:", error);
-      showNotification("Error al actualizar cliente", "error");
+      showNotificationRef.current("Error al actualizar cliente", "error");
     }
   };
 
-  const handleViewPurchaseHistory = (customer: Customer) => {
+  const handleViewPurchaseHistory = useCallback((customer: Customer) => {
     setSelectedCustomer(customer);
     setIsSalesModalOpen(true);
-  };
+  }, []);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
   };
 
-  const handleViewBudgetItems = (budget: Budget) => {
+  const handleViewBudgetItems = useCallback((budget: Budget) => {
     setSelectedBudget(budget);
-  };
+  }, []);
 
-  const BudgetsModal = () => (
-    <Modal
-      isOpen={isBudgetsModalOpen}
-      onClose={() => {
-        setIsBudgetsModalOpen(false);
-        setSelectedCustomer(null);
-        setSelectedBudget(null);
-        setCustomerBudgets([]);
-      }}
-      title={
-        selectedBudget
-          ? "Detalles del Presupuesto"
-          : `Presupuestos de ${selectedCustomer?.name || ""}`
-      }
-      bgColor="bg-white dark:bg-gray_b"
-      buttons={
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-          {selectedBudget ? (
-            <>
-              <Button
-                variant="text"
-                onClick={() => {
-                  setIsBudgetsModalOpen(false);
-                  setSelectedCustomer(null);
-                  setSelectedBudget(null);
-                }}
-                sx={{
-                  color: "text.secondary",
-                  borderColor: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.primary",
-                  },
-                }}
-              >
-                Cerrar
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => setSelectedBudget(null)}
-                isPrimaryAction={true}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                Volver
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="text"
-              onClick={() => {
-                setIsBudgetsModalOpen(false);
-                setSelectedCustomer(null);
-                setSelectedBudget(null);
-              }}
-              sx={{
-                color: "text.secondary",
-                borderColor: "text.secondary",
-                "&:hover": {
-                  backgroundColor: "action.hover",
-                  borderColor: "text.primary",
-                },
-              }}
-            >
-              Cerrar
-            </Button>
-          )}
-        </Box>
-      }
-    >
-      {selectedBudget ? (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-            <Box>
-              <Typography variant="subtitle2" fontWeight="bold">
-                Fecha:
-              </Typography>
-              <Typography>
-                {new Date(selectedBudget.date).toLocaleDateString("es-AR")}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2" fontWeight="bold">
-                Total:
-              </Typography>
-              <Typography>${selectedBudget.total.toFixed(2)}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2" fontWeight="bold">
-                Seña:
-              </Typography>
-              <Typography>${selectedBudget.deposit || "0.00"}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2" fontWeight="bold">
-                Saldo:
-              </Typography>
-              <Typography>${selectedBudget.remaining.toFixed(2)}</Typography>
-            </Box>
+  // Funciones para manejar cierre de modales
+  const handleCloseBudgetsModal = useCallback(() => {
+    setIsBudgetsModalOpen(false);
+    setSelectedCustomer(null);
+    setSelectedBudget(null);
+    setCustomerBudgets([]);
+  }, []);
+
+  const handleCloseSalesModal = useCallback(() => {
+    setIsSalesModalOpen(false);
+    setSelectedCustomer(null);
+    setCustomerSales([]);
+  }, []);
+
+  const handleOpenBudgetsModal = useCallback((customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsBudgetsModalOpen(true);
+  }, []);
+
+  // Contenido memoizado para modales
+  const BudgetsModalContent = useMemo(() => {
+    if (!selectedCustomer) return null;
+
+    return selectedBudget ? (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold">
+              Fecha:
+            </Typography>
+            <Typography>
+              {new Date(selectedBudget.date).toLocaleDateString("es-AR")}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold">
+              Total:
+            </Typography>
+            <Typography>${selectedBudget.total.toFixed(2)}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold">
+              Seña:
+            </Typography>
+            <Typography>${selectedBudget.deposit || "0.00"}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold">
+              Saldo:
+            </Typography>
+            <Typography>${selectedBudget.remaining.toFixed(2)}</Typography>
+          </Box>
+          <Box sx={{ gridColumn: "span 2" }}>
+            <Typography variant="subtitle2" fontWeight="bold">
+              Estado:
+            </Typography>
+            <CustomChip
+              label={selectedBudget.status}
+              color={
+                selectedBudget.status === "aprobado"
+                  ? "success"
+                  : selectedBudget.status === "rechazado"
+                  ? "error"
+                  : "warning"
+              }
+              size="small"
+            />
+          </Box>
+          {selectedBudget.notes && (
             <Box sx={{ gridColumn: "span 2" }}>
               <Typography variant="subtitle2" fontWeight="bold">
-                Estado:
+                Notas:
               </Typography>
-              <Chip
-                label={selectedBudget.status}
-                color={
-                  selectedBudget.status === "aprobado"
-                    ? "success"
-                    : selectedBudget.status === "rechazado"
-                    ? "error"
-                    : "warning"
-                }
-                size="small"
-              />
-            </Box>
-            {selectedBudget.notes && (
-              <Box sx={{ gridColumn: "span 2" }}>
-                <Typography variant="subtitle2" fontWeight="bold">
-                  Notas:
-                </Typography>
-                <Typography>{selectedBudget.notes}</Typography>
-              </Box>
-            )}
-          </Box>
-
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" fontWeight="medium" mb={2}>
-              Items del Presupuesto
-            </Typography>
-            {selectedBudget.items ? (
-              Array.isArray(selectedBudget.items) &&
-              selectedBudget.items.length > 0 ? (
-                <TableContainer component={Paper} sx={{ maxHeight: "35vh" }}>
-                  <Table stickyHeader size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                        >
-                          Descripción
-                        </TableCell>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                          align="center"
-                        >
-                          Cantidad
-                        </TableCell>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                          align="center"
-                        >
-                          Precio
-                        </TableCell>
-                        <TableCell
-                          sx={{ bgcolor: "primary.main", color: "white" }}
-                          align="center"
-                        >
-                          Total
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedBudget.items.map((item, index) => (
-                        <TableRow key={index} hover>
-                          <TableCell>{item.productName}</TableCell>
-                          <TableCell align="center">
-                            {item.quantity + " " + item.unit}
-                          </TableCell>
-                          <TableCell align="center">
-                            ${item.price.toFixed(2)}
-                          </TableCell>
-                          <TableCell align="center">
-                            ${(item.quantity * item.price).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Typography color="text.secondary">
-                  No hay items en este presupuesto
-                </Typography>
-              )
-            ) : (
-              <Typography color="text.secondary">
-                No se encontraron items
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      ) : (
-        <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
-          {customerBudgets.length > 0 ? (
-            <TableContainer component={Paper}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
-                      Fecha
-                    </TableCell>
-                    <TableCell
-                      sx={{ bgcolor: "primary.main", color: "white" }}
-                      align="center"
-                    >
-                      Total
-                    </TableCell>
-                    <TableCell
-                      sx={{ bgcolor: "primary.main", color: "white" }}
-                      align="center"
-                    >
-                      Estado
-                    </TableCell>
-                    <TableCell
-                      sx={{ bgcolor: "primary.main", color: "white" }}
-                      align="center"
-                    >
-                      Acciones
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {customerBudgets.map((budget) => (
-                    <TableRow key={budget.id} hover>
-                      <TableCell>
-                        {new Date(budget.date).toLocaleDateString("es-AR")}
-                      </TableCell>
-                      <TableCell align="center">
-                        ${budget.total.toFixed(2)}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={budget.status}
-                          color={
-                            budget.status === "aprobado"
-                              ? "success"
-                              : budget.status === "rechazado"
-                              ? "error"
-                              : "warning"
-                          }
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          onClick={() => handleViewBudgetItems(budget)}
-                          size="small"
-                          sx={{
-                            borderRadius: "4px",
-                            color: "primary.main",
-                            "&:hover": {
-                              backgroundColor: "primary.main",
-                              color: "white",
-                            },
-                          }}
-                          title="Ver detalles"
-                        >
-                          <Visibility fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Box sx={{ textAlign: "center", py: 4 }}>
-              <Assignment sx={{ fontSize: 64, color: "grey.400", mb: 2 }} />
-              <Typography color="text.secondary">
-                No hay presupuestos para este cliente
-              </Typography>
+              <Typography>{selectedBudget.notes}</Typography>
             </Box>
           )}
         </Box>
-      )}
-    </Modal>
-  );
 
-  const SalesModal = () => (
-    <Modal
-      isOpen={isSalesModalOpen}
-      onClose={() => {
-        setIsSalesModalOpen(false);
-        setSelectedCustomer(null);
-        setCustomerSales([]);
-      }}
-      title={`Historial de Compras - ${selectedCustomer?.name || ""}`}
-      bgColor="bg-white dark:bg-gray_b"
-      buttons={
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-          <Button
-            variant="text"
-            onClick={() => {
-              setIsSalesModalOpen(false);
-              setSelectedCustomer(null);
-            }}
-            sx={{
-              color: "text.secondary",
-              borderColor: "text.secondary",
-              "&:hover": {
-                backgroundColor: "action.hover",
-                borderColor: "text.primary",
-              },
-            }}
-          >
-            Cerrar
-          </Button>
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="h6" fontWeight="medium" mb={2}>
+            Items del Presupuesto
+          </Typography>
+          {selectedBudget.items ? (
+            Array.isArray(selectedBudget.items) &&
+            selectedBudget.items.length > 0 ? (
+              <TableContainer component={Paper} sx={{ maxHeight: "35vh" }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell
+                        sx={{ bgcolor: "primary.main", color: "white" }}
+                      >
+                        Descripción
+                      </TableCell>
+                      <TableCell
+                        sx={{ bgcolor: "primary.main", color: "white" }}
+                        align="center"
+                      >
+                        Cantidad
+                      </TableCell>
+                      <TableCell
+                        sx={{ bgcolor: "primary.main", color: "white" }}
+                        align="center"
+                      >
+                        Precio
+                      </TableCell>
+                      <TableCell
+                        sx={{ bgcolor: "primary.main", color: "white" }}
+                        align="center"
+                      >
+                        Total
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedBudget.items.map((item, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>{item.productName}</TableCell>
+                        <TableCell align="center">
+                          {item.quantity + " " + item.unit}
+                        </TableCell>
+                        <TableCell align="center">
+                          ${item.price.toFixed(2)}
+                        </TableCell>
+                        <TableCell align="center">
+                          ${(item.quantity * item.price).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography color="text.secondary">
+                No hay items en este presupuesto
+              </Typography>
+            )
+          ) : (
+            <Typography color="text.secondary">
+              No se encontraron items
+            </Typography>
+          )}
         </Box>
-      }
-    >
+      </Box>
+    ) : (
+      <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
+        {customerBudgets.length > 0 ? (
+          <TableContainer component={Paper}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                    Fecha
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Total
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Estado
+                  </TableCell>
+                  <TableCell
+                    sx={{ bgcolor: "primary.main", color: "white" }}
+                    align="center"
+                  >
+                    Acciones
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {customerBudgets.map((budget) => (
+                  <TableRow key={budget.id} hover>
+                    <TableCell>
+                      {new Date(budget.date).toLocaleDateString("es-AR")}
+                    </TableCell>
+                    <TableCell align="center">
+                      ${budget.total.toFixed(2)}
+                    </TableCell>
+                    <TableCell align="center">
+                      <CustomChip
+                        label={budget.status}
+                        color={
+                          budget.status === "aprobado"
+                            ? "success"
+                            : budget.status === "rechazado"
+                            ? "error"
+                            : "warning"
+                        }
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        onClick={() => handleViewBudgetItems(budget)}
+                        size="small"
+                        sx={{
+                          borderRadius: "4px",
+                          color: "primary.main",
+                          "&:hover": {
+                            backgroundColor: "primary.main",
+                            color: "white",
+                          },
+                        }}
+                        title="Ver detalles"
+                      >
+                        <Visibility fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <Assignment sx={{ fontSize: 64, color: "grey.400", mb: 2 }} />
+            <Typography color="text.secondary">
+              No hay presupuestos para este cliente
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  }, [
+    selectedCustomer,
+    selectedBudget,
+    customerBudgets,
+    handleViewBudgetItems,
+  ]);
+
+  const SalesModalContent = useMemo(() => {
+    if (!selectedCustomer) return null;
+
+    return (
       <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
         {customerSales.length > 0 ? (
           <TableContainer component={Paper}>
@@ -795,7 +753,7 @@ const ClientesPage = () => {
                       ${sale.total.toFixed(2)}
                     </TableCell>
                     <TableCell align="center">
-                      <Chip
+                      <CustomChip
                         label={sale.paid ? "Pagado" : "Pendiente"}
                         color={sale.paid ? "success" : "warning"}
                         size="small"
@@ -815,57 +773,62 @@ const ClientesPage = () => {
           </Box>
         )}
       </Box>
-    </Modal>
-  );
+    );
+  }, [selectedCustomer, customerSales]);
 
-  const DeleteCustomerModal = () => (
-    <Modal
-      isOpen={isDeleteModalOpen}
-      onClose={() => setIsDeleteModalOpen(false)}
-      title="Eliminar Cliente"
-      bgColor="bg-white dark:bg-gray_b"
-      buttons={
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-          <Button
-            variant="text"
-            onClick={() => setIsDeleteModalOpen(false)}
-            sx={{
-              color: "text.secondary",
-              borderColor: "text.secondary",
-              "&:hover": {
-                backgroundColor: "action.hover",
-                borderColor: "text.primary",
-              },
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleConfirmDelete}
-            isPrimaryAction={true}
-            sx={{
-              bgcolor: "error.main",
-              "&:hover": { bgcolor: "error.dark" },
-            }}
-          >
-            Sí, Eliminar
-          </Button>
+  const DeleteCustomerModalContent = useMemo(
+    () => (
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Eliminar Cliente"
+        bgColor="bg-white dark:bg-gray_b"
+        buttons={
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+            <Button
+              variant="text"
+              onClick={() => setIsDeleteModalOpen(false)}
+              sx={{
+                color: "text.secondary",
+                borderColor: "text.secondary",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                  borderColor: "text.primary",
+                },
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleConfirmDelete}
+              isPrimaryAction={true}
+              sx={{
+                bgcolor: "error.main",
+                "&:hover": { bgcolor: "error.dark" },
+              }}
+            >
+              Sí, Eliminar
+            </Button>
+          </Box>
+        }
+      >
+        <Box sx={{ textAlign: "center", py: 2 }}>
+          <Delete
+            sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+          />
+          <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+            ¿Está seguro/a que desea eliminar al cliente?
+          </Typography>
+          <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+            <strong>{customerToDelete?.name}</strong> será eliminado
+            permanentemente.
+          </Typography>
         </Box>
-      }
-    >
-      <Box sx={{ textAlign: "center", py: 2 }}>
-        <Delete sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }} />
-        <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-          ¿Está seguro/a que desea eliminar al cliente?
-        </Typography>
-        <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
-          <strong>{customerToDelete?.name}</strong> será eliminado
-          permanentemente.
-        </Typography>
-      </Box>
-    </Modal>
+      </Modal>
+    ),
+    [isDeleteModalOpen, customerToDelete, handleConfirmDelete]
   );
 
   return (
@@ -1037,7 +1000,7 @@ const ClientesPage = () => {
                             </Box>
                           </TableCell>
                           <TableCell align="center">
-                            <Chip
+                            <CustomChip
                               label={customer.status}
                               color={
                                 customer.status === "activo"
@@ -1074,10 +1037,9 @@ const ClientesPage = () => {
                                 }}
                               >
                                 <IconButton
-                                  onClick={() => {
-                                    setSelectedCustomer(customer);
-                                    setIsBudgetsModalOpen(true);
-                                  }}
+                                  onClick={() =>
+                                    handleOpenBudgetsModal(customer)
+                                  }
                                   size="small"
                                   sx={{
                                     borderRadius: "4px",
@@ -1186,7 +1148,7 @@ const ClientesPage = () => {
           )}
         </Box>
 
-        {/* Modal para agregar/editar cliente - Botones corregidos */}
+        {/* Modal para agregar/editar cliente */}
         <Modal
           isOpen={isModalOpen}
           onClose={() => {
@@ -1322,11 +1284,101 @@ const ClientesPage = () => {
           </Box>
         </Modal>
 
-        <DeleteCustomerModal />
+        {/* Modal de eliminar cliente */}
+        {DeleteCustomerModalContent}
 
-        {/* Modales de Material-UI */}
-        <BudgetsModal />
-        <SalesModal />
+        {/* Modales de presupuestos y compras */}
+        {isBudgetsModalOpen && (
+          <Modal
+            isOpen={isBudgetsModalOpen}
+            onClose={handleCloseBudgetsModal}
+            title={
+              selectedBudget
+                ? "Detalles del Presupuesto"
+                : `Presupuestos de ${selectedCustomer?.name || ""}`
+            }
+            bgColor="bg-white dark:bg-gray_b"
+            buttons={
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+                {selectedBudget ? (
+                  <>
+                    <Button
+                      variant="text"
+                      onClick={handleCloseBudgetsModal}
+                      sx={{
+                        color: "text.secondary",
+                        borderColor: "text.secondary",
+                        "&:hover": {
+                          backgroundColor: "action.hover",
+                          borderColor: "text.primary",
+                        },
+                      }}
+                    >
+                      Cerrar
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => setSelectedBudget(null)}
+                      isPrimaryAction={true}
+                      sx={{
+                        bgcolor: "primary.main",
+                        "&:hover": { bgcolor: "primary.dark" },
+                      }}
+                    >
+                      Volver
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="text"
+                    onClick={handleCloseBudgetsModal}
+                    sx={{
+                      color: "text.secondary",
+                      borderColor: "text.secondary",
+                      "&:hover": {
+                        backgroundColor: "action.hover",
+                        borderColor: "text.primary",
+                      },
+                    }}
+                  >
+                    Cerrar
+                  </Button>
+                )}
+              </Box>
+            }
+          >
+            {BudgetsModalContent}
+          </Modal>
+        )}
+
+        {isSalesModalOpen && (
+          <Modal
+            isOpen={isSalesModalOpen}
+            onClose={handleCloseSalesModal}
+            title={`Historial de Compras - ${selectedCustomer?.name || ""}`}
+            bgColor="bg-white dark:bg-gray_b"
+            buttons={
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+                <Button
+                  variant="text"
+                  onClick={handleCloseSalesModal}
+                  sx={{
+                    color: "text.secondary",
+                    borderColor: "text.secondary",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                      borderColor: "text.primary",
+                    },
+                  }}
+                >
+                  Cerrar
+                </Button>
+              </Box>
+            }
+          >
+            {SalesModalContent}
+          </Modal>
+        )}
 
         <Notification
           isOpen={isNotificationOpen}

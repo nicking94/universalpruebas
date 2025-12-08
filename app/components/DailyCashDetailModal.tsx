@@ -11,7 +11,6 @@ import {
   Typography,
   Box,
   FormControl,
-  Chip,
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@/app/lib/utils/currency";
@@ -25,6 +24,7 @@ import {
 import Select from "@/app/components/Select";
 import Button from "@/app/components/Button";
 import Modal from "@/app/components/Modal";
+import CustomChip from "./CustomChip";
 
 interface DailyCashDetailModalProps {
   isOpen: boolean;
@@ -129,10 +129,24 @@ const DailyCashDetailModal = ({
 
   const handleClose = () => {
     onClose();
-    // Reset filters when closing if desired, or keep them.
-    // The original code reset them.
     setFilterType("TODOS");
     setFilterPaymentMethod("TODOS");
+  };
+
+  // Función para formatear la hora desde el timestamp
+  const formatTime = (timestamp?: string) => {
+    if (!timestamp) return "-";
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    } catch (error) {
+      console.error("Error formateando hora:", error);
+      return "-";
+    }
   };
 
   const modalButtons = (
@@ -141,10 +155,10 @@ const DailyCashDetailModal = ({
       onClick={handleClose}
       sx={{
         color: "text.secondary",
-        borderColor: "divider", // Fixed consistency here too!
+        borderColor: "divider",
         "&:hover": {
           backgroundColor: "action.hover",
-          borderColor: "text.secondary", // Fixed consistency here too!
+          borderColor: "text.secondary",
         },
       }}
     >
@@ -239,6 +253,9 @@ const DailyCashDetailModal = ({
           <TableHead>
             <TableRow>
               <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
+                Hora
+              </TableCell>
+              <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
                 Tipo
               </TableCell>
               <TableCell
@@ -272,7 +289,12 @@ const DailyCashDetailModal = ({
               Object.values(groupedMovements).map((movement, index) => (
                 <TableRow key={index} hover>
                   <TableCell>
-                    <Chip
+                    <Typography variant="body2" fontWeight="medium">
+                      {formatTime(movement.createdAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <CustomChip
                       label={movement.type}
                       color={movement.type === "INGRESO" ? "success" : "error"}
                       size="small"
@@ -305,7 +327,7 @@ const DailyCashDetailModal = ({
                               variant="body2"
                               sx={{ minWidth: "5rem" }}
                             >
-                              Ã—{item.quantity} {item.unit}
+                              ×{item.quantity} {item.unit}
                             </Typography>
                           </Box>
                         ))}
@@ -330,14 +352,14 @@ const DailyCashDetailModal = ({
                           )}
                         </Typography>
                         <Typography variant="body2">
-                          Ã—{movement.quantity} {movement.unit}
+                          ×{movement.quantity} {movement.unit}
                         </Typography>
                       </Box>
                     ) : (
                       "-"
                     )}
                   </TableCell>
-                  <TableCell>{movement.description}</TableCell>
+                  <TableCell>{movement.description || "-"}</TableCell>
                   <TableCell>
                     {movement.isBudgetGroup ? (
                       <Box>
@@ -415,7 +437,7 @@ const DailyCashDetailModal = ({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   <Typography color="text.secondary">
                     No hay movimientos que coincidan con los filtros
                   </Typography>

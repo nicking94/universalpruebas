@@ -14,7 +14,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
   FormControl,
   Card,
@@ -50,7 +49,6 @@ import {
   LocalAtm as LocalAtmIcon,
   AccountCircle as AccountCircleIcon,
   Delete,
-  Delete,
 } from "@mui/icons-material";
 import {
   ChequeFilter,
@@ -79,6 +77,7 @@ import ProtectedRoute from "@/app/components/ProtectedRoute";
 import SearchBar from "@/app/components/SearchBar";
 import Pagination from "@/app/components/Pagination";
 import Notification from "@/app/components/Notification";
+import CustomChip from "@/app/components/CustomChip";
 
 const CUENTAS_CONFIG = {
   NOTIFICATION_DURATION: 2500,
@@ -345,7 +344,7 @@ const PaymentHistory = ({
                       currency: "ARS",
                     })}
                   </Typography>
-                  <Chip
+                  <CustomChip
                     label={payment.method}
                     size="small"
                     color={
@@ -374,7 +373,7 @@ const PaymentHistory = ({
                     {format(new Date(payment.date), "dd/MM/yyyy HH:mm")}
                   </Typography>
                   {payment.method === "CHEQUE" && payment.checkStatus && (
-                    <Chip
+                    <CustomChip
                       label={payment.checkStatus}
                       size="small"
                       variant="outlined"
@@ -543,7 +542,7 @@ const SaleCard = ({
               >
                 Venta #{sale.id}
               </Typography>
-              <Chip
+              <CustomChip
                 label={isPaid ? "Pagado" : "Pendiente"}
                 color={isPaid ? "success" : "warning"}
                 size="small"
@@ -1063,7 +1062,7 @@ const ChequesModal = ({
                         {format(new Date(cheque.date), "dd/MM/yyyy")}
                       </TableCell>
                       <TableCell align="center">
-                        <Chip
+                        <CustomChip
                           label={cheque.checkStatus || "pendiente"}
                           color={
                             cheque.checkStatus === "cobrado"
@@ -1260,7 +1259,7 @@ const PaymentModal = ({
             <Typography variant="body1" fontWeight="medium">
               Deuda pendiente:
             </Typography>
-            <Chip
+            <CustomChip
               label={calculateRemainingBalance(
                 currentCreditSale
               ).toLocaleString("es-AR", {
@@ -2755,15 +2754,10 @@ const CuentasCorrientesPage = () => {
         >
           <Box sx={{ textAlign: "center", py: 2 }}>
             <Delete
-            <Delete
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro/a que desea eliminar las cuentas corrientes?
-            </Typography>
-            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
-              Las cuentas corrientes de <strong>{customerToDelete}</strong>{" "}
-              serán eliminadas permanentemente.
+              ¿Está seguro que desea eliminar las cuentas corrientes?
             </Typography>
           </Box>
         </Modal>

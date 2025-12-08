@@ -7,13 +7,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   Typography,
 } from "@mui/material";
 import { Assignment } from "@mui/icons-material";
 import { Sale, Customer } from "@/app/lib/types/types";
 import Modal from "@/app/components/Modal";
 import Button from "@/app/components/Button";
+import CustomChip from "./CustomChip";
 
 interface ClientSalesModalProps {
   isOpen: boolean;
@@ -96,7 +96,7 @@ const ClientSalesModal = ({
                       ${sale.total.toFixed(2)}
                     </TableCell>
                     <TableCell align="center">
-                      <Chip
+                      <CustomChip
                         label={sale.paid ? "Pagado" : "Pendiente"}
                         color={sale.paid ? "success" : "warning"}
                         size="small"

@@ -12,7 +12,6 @@ import {
   Typography,
   Box,
   FormControl,
-  Chip,
   IconButton,
 } from "@mui/material";
 import { Add, Close, Info, PointOfSale } from "@mui/icons-material";
@@ -24,8 +23,6 @@ import {
   DailyCash,
   DailyCashMovement,
   MonthOption,
-  Option,
-  PaymentMethod,
 } from "@/app/lib/types/types";
 import { useNotification } from "@/app/hooks/useNotification";
 import { usePagination } from "@/app/context/PaginationContext";
@@ -33,12 +30,12 @@ import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 import { db } from "@/app/database/db";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import Button from "@/app/components/Button";
-import Modal from "@/app/components/Modal";
 import Select from "@/app/components/Select";
-import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Notification from "@/app/components/Notification";
 import Pagination from "@/app/components/Pagination";
+import CustomChip from "@/app/components/CustomChip";
+import DailyCashDetailModal from "@/app/components/DailyCashDetailModal"; // Importa el componente separado
 
 const CajaDiariaPage = () => {
   const { rubro } = useRubro();
@@ -60,20 +57,6 @@ const CajaDiariaPage = () => {
     DailyCashMovement[]
   >([]);
 
-  const [filterType, setFilterType] = useState<"TODOS" | "INGRESO" | "EGRESO">(
-    "TODOS"
-  );
-  const [filterPaymentMethod, setFilterPaymentMethod] = useState<
-    PaymentMethod | "TODOS"
-  >("TODOS");
-
-  const paymentOptions: Option[] = [
-    { value: "EFECTIVO", label: "Efectivo" },
-    { value: "TRANSFERENCIA", label: "Transferencia" },
-    { value: "TARJETA", label: "Tarjeta" },
-    { value: "CHEQUE", label: "Cheque" },
-  ];
-
   const { currentPage, itemsPerPage } = usePagination();
   const [selectedMonth, setSelectedMonth] = useState<number>(
     () => new Date().getMonth() + 1
@@ -82,67 +65,32 @@ const CajaDiariaPage = () => {
     new Date().getFullYear()
   );
 
-  const getFilteredMovements = useCallback(() => {
-    return selectedDayMovements.filter((movement) => {
-      const typeMatch =
-        filterType === "TODOS" ||
-        movement.type === filterType ||
-        (movement.paymentMethod === "CHEQUE" &&
-          movement.isCreditPayment &&
-          filterType === "INGRESO");
-
-      let paymentMatch = false;
-      if (filterPaymentMethod === "TODOS") {
-        paymentMatch = true;
-      } else {
-        if (movement.combinedPaymentMethods) {
-          paymentMatch = movement.combinedPaymentMethods.some(
-            (m) => m.method === filterPaymentMethod
-          );
-        } else {
-          paymentMatch = movement.paymentMethod === filterPaymentMethod;
-        }
-      }
-
-      return typeMatch && paymentMatch;
-    });
-  }, [selectedDayMovements, filterType, filterPaymentMethod]);
-
-  const calculateFilteredTotals = useCallback(() => {
-    const filtered = getFilteredMovements();
-
-    const totals = filtered.reduce(
-      (acc, movement) => {
-        if (
-          movement.type === "INGRESO" ||
-          (movement.paymentMethod === "CHEQUE" && movement.isCreditPayment)
-        ) {
-          acc.totalIngresos += Number(movement.amount) || 0;
-        } else if (movement.type === "EGRESO") {
-          acc.totalEgresos += Number(movement.amount) || 0;
-        }
-        return acc;
-      },
-      { totalIngresos: 0, totalEgresos: 0 }
-    );
-
-    return totals;
-  }, [getFilteredMovements]);
-
   const openDetailModal = useCallback((movements: DailyCashMovement[]) => {
     setSelectedDayMovements(movements);
     setIsDetailModalOpen(true);
   }, []);
 
-  const monthOptions: MonthOption[] = [...Array(12)].map((_, i) => ({
-    value: i + 1,
-    label: format(new Date(2022, i), "MMMM", { locale: es }),
-  }));
+  const closeDetailModal = useCallback(() => {
+    setIsDetailModalOpen(false);
+  }, []);
 
-  const yearOptions = Array.from({ length: 10 }, (_, i) => ({
-    value: new Date().getFullYear() - i,
-    label: String(new Date().getFullYear() - i),
-  }));
+  const monthOptions: MonthOption[] = useMemo(
+    () =>
+      [...Array(12)].map((_, i) => ({
+        value: i + 1,
+        label: format(new Date(2022, i), "MMMM", { locale: es }),
+      })),
+    []
+  );
+
+  const yearOptions = useMemo(
+    () =>
+      Array.from({ length: 10 }, (_, i) => ({
+        value: new Date().getFullYear() - i,
+        label: String(new Date().getFullYear() - i),
+      })),
+    []
+  );
 
   const checkAndCloseOldCashes = useCallback(async () => {
     const today = getLocalDateString();
@@ -404,353 +352,6 @@ const CajaDiariaPage = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = dailySummaries.slice(indexOfFirstItem, indexOfLastItem);
 
-  const DetailModal = useCallback(() => {
-    const filteredMovements = getFilteredMovements();
-    const { totalIngresos, totalEgresos } = calculateFilteredTotals();
-
-    const groupedMovements = filteredMovements.reduce((acc, movement) => {
-      const movementKey = movement.items
-        ? `sale-${movement.date}-${movement.items
-            .map((item) => item.productId)
-            .join("-")}`
-        : movement.id;
-
-      if (!acc[movementKey]) {
-        acc[movementKey] = {
-          ...movement,
-          subMovements: movement.combinedPaymentMethods ? [] : undefined,
-        };
-      }
-
-      if (movement.combinedPaymentMethods) {
-        movement.combinedPaymentMethods.forEach((paymentMethod) => {
-          acc[movementKey].subMovements!.push({
-            ...movement,
-            id: Math.random(),
-            paymentMethod: paymentMethod.method,
-            amount: paymentMethod.amount,
-            description: `${movement.description} - ${paymentMethod.method}`,
-          });
-        });
-      }
-
-      return acc;
-    }, {} as Record<string, DailyCashMovement>);
-
-    const modalButtons = (
-      <Button
-        variant="text"
-        onClick={() => {
-          setIsDetailModalOpen(false);
-          setFilterType("TODOS");
-          setFilterPaymentMethod("TODOS");
-        }}
-        sx={{
-          color: "text.secondary",
-          borderColor: "text.secondary",
-          "&:hover": {
-            backgroundColor: "action.hover",
-            borderColor: "text.primary",
-          },
-        }}
-      >
-        Cerrar
-      </Button>
-    );
-
-    return (
-      <Modal
-        isOpen={isDetailModalOpen}
-        title="Detalles del día"
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setFilterType("TODOS");
-          setFilterPaymentMethod("TODOS");
-        }}
-        buttons={modalButtons}
-        bgColor="bg-white dark:bg-gray_b"
-      >
-        <Box mb={2} sx={{ display: "flex", gap: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <Card
-              sx={{
-                bgcolor: "success.main",
-                color: "white",
-                "& .MuiTypography-root": {
-                  color: "white !important",
-                },
-              }}
-            >
-              <CardContent>
-                <Typography variant="h6" fontWeight="bold">
-                  Total Ingresos
-                </Typography>
-                <Typography variant="h5" fontWeight="bold">
-                  {formatCurrency(totalIngresos)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Card
-              sx={{
-                bgcolor: "error.main",
-                color: "white",
-                "& .MuiTypography-root": {
-                  color: "white !important",
-                },
-              }}
-            >
-              <CardContent>
-                <Typography variant="h6" fontWeight="bold">
-                  Total Egresos
-                </Typography>
-                <Typography variant="h5" fontWeight="bold">
-                  {formatCurrency(totalEgresos)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Box>
-        </Box>
-
-        <Box mb={2} sx={{ display: "flex", gap: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <FormControl fullWidth size="small">
-              <Select
-                label="Tipo"
-                value={filterType}
-                options={[
-                  { value: "TODOS", label: "Todos" },
-                  { value: "INGRESO", label: "Ingreso" },
-                  { value: "EGRESO", label: "Egreso" },
-                ]}
-                onChange={(value) =>
-                  setFilterType(value as "TODOS" | "INGRESO" | "EGRESO")
-                }
-              />
-            </FormControl>
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <FormControl fullWidth size="small">
-              <Select
-                label="Método de Pago"
-                value={filterPaymentMethod}
-                options={[
-                  { value: "TODOS", label: "Todos" },
-                  ...paymentOptions,
-                ]}
-                onChange={(value) =>
-                  setFilterPaymentMethod(value as PaymentMethod | "TODOS")
-                }
-              />
-            </FormControl>
-          </Box>
-        </Box>
-
-        <TableContainer component={Paper} sx={{ maxHeight: "61vh" }}>
-          <Table stickyHeader size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ bgcolor: "primary.main", color: "white" }}>
-                  Tipo
-                </TableCell>
-                <TableCell
-                  sx={{ bgcolor: "primary.main", color: "white" }}
-                  align="center"
-                >
-                  Producto
-                </TableCell>
-                <TableCell
-                  sx={{ bgcolor: "primary.main", color: "white" }}
-                  align="center"
-                >
-                  Descripción
-                </TableCell>
-                <TableCell
-                  sx={{ bgcolor: "primary.main", color: "white" }}
-                  align="center"
-                >
-                  Métodos de Pago
-                </TableCell>
-                <TableCell
-                  sx={{ bgcolor: "primary.main", color: "white" }}
-                  align="center"
-                >
-                  Total
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {Object.values(groupedMovements).length > 0 ? (
-                Object.values(groupedMovements).map((movement, index) => (
-                  <TableRow key={index} hover>
-                    <TableCell>
-                      <Chip
-                        label={movement.type}
-                        color={
-                          movement.type === "INGRESO" ? "success" : "error"
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {movement.items && movement.items.length > 0 ? (
-                        <Box>
-                          {movement.items.map((item, i) => (
-                            <Box
-                              key={i}
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <Typography variant="body2">
-                                {getDisplayProductName(
-                                  {
-                                    name: item.productName,
-                                    size: item.size,
-                                    color: item.color,
-                                    rubro: rubro,
-                                  },
-                                  rubro,
-                                  true
-                                )}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{ minWidth: "5rem" }}
-                              >
-                                ×{item.quantity} {item.unit}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      ) : movement.productName ? (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                          }}
-                        >
-                          <Typography variant="body2" fontWeight="bold">
-                            {getDisplayProductName(
-                              {
-                                name: movement.productName,
-                                size: movement.size,
-                                color: movement.color,
-                                rubro: rubro,
-                              },
-                              rubro,
-                              true
-                            )}
-                          </Typography>
-                          <Typography variant="body2">
-                            ×{movement.quantity} {movement.unit}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>{movement.description}</TableCell>
-                    <TableCell>
-                      {movement.isBudgetGroup ? (
-                        <Box>
-                          {movement.subMovements?.map((sub, i) => (
-                            <Box key={i}>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  sx={{ textTransform: "uppercase" }}
-                                >
-                                  {sub.isDeposit ? "SEÑA" : "VENTA"}
-                                </Typography>
-                                <Typography variant="body2">
-                                  {sub.paymentMethod}:{" "}
-                                  {formatCurrency(sub.amount)}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          ))}
-                        </Box>
-                      ) : movement.combinedPaymentMethods ? (
-                        <Box>
-                          {movement.combinedPaymentMethods.map((method, i) => (
-                            <Box
-                              key={i}
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <Typography variant="body2">
-                                {method.method}:
-                              </Typography>
-                              <Typography variant="body2">
-                                {formatCurrency(method.amount)}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      ) : (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                          }}
-                        >
-                          <Typography variant="body2">
-                            {movement.paymentMethod}
-                          </Typography>
-                          <Typography variant="body2">
-                            {formatCurrency(movement.amount)}
-                          </Typography>
-                        </Box>
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Typography
-                        variant="body2"
-                        fontWeight="bold"
-                        color={
-                          movement.type === "INGRESO"
-                            ? "success.main"
-                            : "error.main"
-                        }
-                      >
-                        {formatCurrency(movement.amount)}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    <Typography color="text.secondary">
-                      No hay movimientos que coincidan con los filtros
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Modal>
-    );
-  }, [
-    isDetailModalOpen,
-    getFilteredMovements,
-    calculateFilteredTotals,
-    filterType,
-    filterPaymentMethod,
-    rubro,
-  ]);
-
   return (
     <ProtectedRoute>
       <Box
@@ -977,7 +578,7 @@ const CajaDiariaPage = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <Chip
+                          <CustomChip
                             label={day.closed ? "Cerrada" : "Abierta"}
                             color={day.closed ? "error" : "success"}
                             size="small"
@@ -1042,7 +643,13 @@ const CajaDiariaPage = () => {
           )}
         </Box>
 
-        <DetailModal />
+        {/* Modal Reutilizable */}
+        <DailyCashDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={closeDetailModal}
+          movements={selectedDayMovements}
+          rubro={rubro}
+        />
 
         <Notification
           isOpen={isNotificationOpen}

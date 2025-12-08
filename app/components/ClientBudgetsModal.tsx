@@ -8,13 +8,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
 } from "@mui/material";
 import { Visibility, Assignment } from "@mui/icons-material";
 import { Budget, Customer } from "@/app/lib/types/types";
 import Modal from "@/app/components/Modal";
 import Button from "@/app/components/Button";
+import CustomChip from "./CustomChip";
 
 interface ClientBudgetsModalProps {
   isOpen: boolean;
@@ -125,7 +125,7 @@ const ClientBudgetsModal = ({
               <Typography variant="subtitle2" fontWeight="bold">
                 Estado:
               </Typography>
-              <Chip
+              <CustomChip
                 label={selectedBudget.status}
                 color={
                   selectedBudget.status === "aprobado"
@@ -253,7 +253,7 @@ const ClientBudgetsModal = ({
                         ${budget.total.toFixed(2)}
                       </TableCell>
                       <TableCell align="center">
-                        <Chip
+                        <CustomChip
                           label={budget.status}
                           color={
                             budget.status === "aprobado"

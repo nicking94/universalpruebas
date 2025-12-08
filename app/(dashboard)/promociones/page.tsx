@@ -10,7 +10,6 @@ import {
   Card,
   Typography,
   Box,
-  Chip,
   IconButton,
   useTheme,
   CardContent,
@@ -41,6 +40,7 @@ import Select from "@/app/components/Select";
 import Input from "@/app/components/Input";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { useNotification } from "@/app/hooks/useNotification";
+import CustomChip from "@/app/components/CustomChip";
 
 const PromocionesPage = () => {
   const { rubro } = useRubro();
@@ -506,7 +506,7 @@ const PromocionesPage = () => {
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
-                            <Chip
+                            <CustomChip
                               label={statusInfo.label}
                               color={statusInfo.color}
                               size="small"

@@ -74,7 +74,7 @@ export type ModalProps = {
   onConfirm?: () => void;
   onClose: () => void;
   isOpen: boolean;
-  title?: string;
+  title?: React.ReactNode;
   children?: React.ReactNode;
   bgColor?: string;
   buttons?: React.ReactNode;
@@ -112,7 +112,7 @@ export type UserMenuProps = {
   handleCloseSession: () => void;
 };
 
-export type Rubro = "Todos los rubros" | "comercio" | "indumentaria" | "";
+export type Rubro = "Todos los rubros" | "comercio" | "indumentaria" | string;
 
 export type Product = {
   id: number;
@@ -324,8 +324,8 @@ export type DailyCashMovement = {
   budgetId?: string;
   fromBudget?: boolean;
   expenseCategory?: string;
-
   customerName?: string;
+  createdAt?: string;
 };
 
 export type DailyCash = {

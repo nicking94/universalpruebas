@@ -1,13 +1,16 @@
 "use client";
 import { formatCurrency } from "../lib/utils/currency";
-import { Budget, PaymentSplit, PaymentMethod } from "../lib/types/types";
-import { useState } from "react";
+import {
+  Budget,
+  PaymentSplit,
+  PaymentMethod,
+  SaleItem,
+} from "../lib/types/types";
+import { useState, useEffect, useMemo } from "react";
 import Modal from "./Modal";
 import InputCash from "./InputCash";
 import Button from "./Button";
 import Select, { SelectOption } from "./Select";
-
-// Material-UI imports
 import {
   Box,
   Typography,
@@ -19,12 +22,18 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Chip,
   Divider,
   Alert,
   useTheme,
+  Chip,
+  Card,
+  CardContent,
 } from "@mui/material";
-import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  ShoppingCart,
+} from "@mui/icons-material";
 
 interface ConvertToSaleModalProps {
   isOpen: boolean;
@@ -46,14 +55,22 @@ export const ConvertToSaleModal = ({
   onConfirm,
 }: ConvertToSaleModalProps) => {
   const theme = useTheme();
-  const totalToPay =
-    budget.total - (budget.deposit ? parseFloat(budget.deposit) : 0);
+  const totalToPay = useMemo(
+    () => budget.total - (budget.deposit ? parseFloat(budget.deposit) : 0),
+    [budget]
+  );
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentSplit[]>([
     { method: "EFECTIVO", amount: totalToPay },
   ]);
 
   const [error, setError] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setPaymentMethods([{ method: "EFECTIVO", amount: totalToPay }]);
+    setError("");
+  }, [totalToPay]);
 
   const handlePaymentMethodChange = (
     index: number,
@@ -74,7 +91,6 @@ export const ConvertToSaleModal = ({
           ...updated[index],
           amount: parseFloat(numericValue.toFixed(2)),
         };
-
         if (updated.length === 2) {
           const otherIndex = index === 0 ? 1 : 0;
           const remaining = totalToPay - numericValue;
@@ -167,11 +183,17 @@ export const ConvertToSaleModal = ({
     return isValid;
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!validatePaymentMethods()) {
       return;
     }
-    onConfirm(paymentMethods);
+
+    setIsSubmitting(true);
+    try {
+      await onConfirm(paymentMethods);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getPaymentMethodColor = (method: PaymentMethod) => {
@@ -193,288 +215,224 @@ export const ConvertToSaleModal = ({
   );
   const amountDifference = totalAmount - totalToPay;
 
+  const renderProductItem = (item: SaleItem, index: number) => (
+    <TableRow
+      key={index}
+      hover
+      sx={{
+        "&:last-child td, &:last-child th": { border: 0 },
+        "&:hover": {
+          backgroundColor: theme.palette.action.hover,
+        },
+      }}
+    >
+      <TableCell>
+        <Box>
+          <Typography variant="body2" fontWeight="medium">
+            {item.productName}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 0.5, mt: 0.5, flexWrap: "wrap" }}>
+            {item.size && (
+              <Chip
+                label={item.size}
+                size="small"
+                variant="outlined"
+                sx={{ height: 20 }}
+              />
+            )}
+            {item.color && (
+              <Chip
+                label={item.color}
+                size="small"
+                variant="outlined"
+                sx={{ height: 20 }}
+              />
+            )}
+          </Box>
+        </Box>
+      </TableCell>
+      <TableCell align="center">
+        <Typography variant="body2" color="text.secondary">
+          {item.quantity} {item.unit}
+        </Typography>
+      </TableCell>
+      <TableCell align="center">
+        <Typography variant="body2" color="text.secondary">
+          {item.discount || 0}%
+        </Typography>
+      </TableCell>
+      <TableCell align="right">
+        <Typography variant="body2" fontWeight="medium">
+          {formatCurrency(
+            item.price * item.quantity * (1 - (item.discount || 0) / 100)
+          )}
+        </Typography>
+      </TableCell>
+    </TableRow>
+  );
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Cobrar presupuesto de ${budget.customerName}`}
+      title={
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <ShoppingCart fontSize="small" />
+          <Typography variant="h6" component="span">
+            Cobrar presupuesto de {budget.customerName}
+          </Typography>
+        </Box>
+      }
+      bgColor="bg-white dark:bg-gray_b"
       buttons={
-        <>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
           <Button
-            variant="outlined"
+            variant="text"
             onClick={onClose}
-            text="Cancelar"
+            disabled={isSubmitting}
             sx={{
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
+              color: "text.secondary",
               "&:hover": {
-                backgroundColor: theme.palette.action.hover,
-                borderColor: theme.palette.action.active,
+                backgroundColor: "action.hover",
               },
             }}
-          />
+          >
+            Cancelar
+          </Button>
           <Button
             variant="contained"
             onClick={handleConfirm}
+            disabled={isSubmitting}
             isPrimaryAction={true}
-            text="Confirmar Cobro"
             sx={{
-              backgroundColor: theme.palette.primary.main,
-              "&:hover": {
-                backgroundColor: theme.palette.primary.dark,
-              },
+              bgcolor: "primary.main",
+              "&:hover": { bgcolor: "primary.dark" },
+              minWidth: 140,
             }}
-          />
-        </>
+          >
+            {isSubmitting ? "Procesando..." : "Confirmar Cobro"}
+          </Button>
+        </Box>
       }
     >
       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        {/* Productos del presupuesto */}
-        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-          <Typography
-            variant="h6"
-            component="h3"
-            gutterBottom
-            fontWeight="medium"
-          >
-            Productos del presupuesto
-          </Typography>
+        {/* Resumen del presupuesto */}
+        <Card variant="outlined">
+          <CardContent>
+            {/* Productos del presupuesto */}
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              fontWeight="medium"
+              sx={{ mb: 2 }}
+            >
+              Productos
+            </Typography>
 
-          <TableContainer sx={{ maxHeight: 200, mb: 2 }}>
-            <Table size="small" stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", fontSize: "0.75rem" }}>
-                    Producto
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: "bold", fontSize: "0.75rem" }}
-                  >
-                    Cantidad
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: "bold", fontSize: "0.75rem" }}
-                  >
-                    Descuento
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{ fontWeight: "bold", fontSize: "0.75rem" }}
-                  >
-                    Subtotal
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {budget.items.map((item, index) => (
-                  <TableRow
-                    key={index}
-                    hover
-                    sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                  >
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {item.productName}
-                        </Typography>
-                        <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
-                          {item.size && (
-                            <Chip
-                              label={item.size}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                          {item.color && (
-                            <Chip
-                              label={item.color}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-                      </Box>
+            <TableContainer
+              sx={{
+                maxHeight: 200,
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1,
+                overflow: "auto",
+              }}
+            >
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        fontWeight: "bold",
+                        fontSize: "0.75rem",
+                        bgcolor: "primary.main",
+                        color: "white",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Producto
                     </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="body2" color="text.secondary">
-                        {item.quantity} {item.unit}
-                      </Typography>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: "bold",
+                        fontSize: "0.75rem",
+                        bgcolor: "primary.main",
+                        color: "white",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Cantidad
                     </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="body2" color="text.secondary">
-                        {item.discount || 0}%
-                      </Typography>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: "bold",
+                        fontSize: "0.75rem",
+                        bgcolor: "primary.main",
+                        color: "white",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Descuento
                     </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" fontWeight="medium">
-                        {formatCurrency(
-                          item.price *
-                            item.quantity *
-                            (1 - (item.discount || 0) / 100)
-                        )}
-                      </Typography>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        fontWeight: "bold",
+                        fontSize: "0.75rem",
+                        bgcolor: "primary.main",
+                        color: "white",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Subtotal
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>{budget.items.map(renderProductItem)}</TableBody>
+              </Table>
+            </TableContainer>
 
-          <Box sx={{ mt: 2 }}>
+            {/* Totales */}
             <Box
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                py: 1,
+                mt: 3,
+                p: 2,
+                bgcolor: theme.palette.grey[50],
+                borderRadius: 1,
+                border: `1px solid ${theme.palette.divider}`,
               }}
             >
-              <Typography variant="body1" fontWeight="medium">
-                Seña:
-              </Typography>
-              <Typography variant="h6">
-                {formatCurrency(
-                  budget.deposit ? parseFloat(budget.deposit) : 0
-                )}
-              </Typography>
-            </Box>
-
-            <Divider sx={{ my: 1 }} />
-
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Typography variant="h6" fontWeight="bold">
-                Total a pagar:
-              </Typography>
-              <Typography variant="h5" fontWeight="bold" color="primary">
-                {formatCurrency(totalToPay)}
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-
-        {/* Métodos de pago */}
-        <Box>
-          <Typography
-            variant="h6"
-            component="h3"
-            gutterBottom
-            fontWeight="medium"
-          >
-            Métodos de pago
-          </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {paymentMethods.map((method, index) => (
               <Box
-                key={index}
-                sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
-                <Select<PaymentMethod>
-                  label="Método"
-                  options={paymentOptions}
-                  value={method.method}
-                  onChange={(value) =>
-                    handlePaymentMethodChange(index, "method", value)
-                  }
-                  size="small"
-                  sx={{ minWidth: 140 }}
-                />
-
-                <Box sx={{ flex: 1, position: "relative" }}>
-                  <InputCash
-                    value={method.amount}
-                    onChange={(value) =>
-                      handlePaymentMethodChange(index, "amount", value)
-                    }
-                    label="Monto"
-                  />
-
-                  {index === paymentMethods.length - 1 &&
-                    amountDifference > 0.1 && (
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        sx={{
-                          ml: 1,
-                          position: "absolute",
-                          bottom: -20,
-                          left: 0,
-                        }}
-                      >
-                        Exceso: {formatCurrency(amountDifference)}
-                      </Typography>
-                    )}
-                </Box>
-
-                {paymentMethods.length > 1 && (
-                  <IconButton
-                    onClick={() => removePaymentMethod(index)}
-                    color="error"
-                    size="small"
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                )}
+                <Typography variant="body2" color="text.secondary">
+                  Total presupuesto:
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {formatCurrency(budget.total)}
+                </Typography>
               </Box>
-            ))}
-          </Box>
 
-          {paymentMethods.length < paymentOptions.length && (
-            <Button
-              onClick={addPaymentMethod}
-              icon={<AddIcon />}
-              iconPosition="left"
-              variant="outlined"
-              size="small"
-              text="Agregar otro método de pago"
-              sx={{ mt: 2 }}
-            />
-          )}
-
-          {/* Resumen de montos */}
-          <Paper variant="outlined" sx={{ p: 2, mt: 2, borderRadius: 2 }}>
-            <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-              Resumen de pagos:
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {paymentMethods.map((method, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
+              <Box
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Seña abonada:
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="success.main"
+                  fontWeight="medium"
                 >
-                  <Chip
-                    label={
-                      paymentOptions.find((o) => o.value === method.method)
-                        ?.label
-                    }
-                    size="small"
-                    color={getPaymentMethodColor(method.method)}
-                    variant="outlined"
-                  />
-                  <Typography variant="body2" fontWeight="medium">
-                    {formatCurrency(method.amount)}
-                  </Typography>
-                </Box>
-              ))}
+                  {formatCurrency(
+                    budget.deposit ? parseFloat(budget.deposit) : 0
+                  )}
+                </Typography>
+              </Box>
+
               <Divider sx={{ my: 1 }} />
+
               <Box
                 sx={{
                   display: "flex",
@@ -482,24 +440,167 @@ export const ConvertToSaleModal = ({
                   alignItems: "center",
                 }}
               >
-                <Typography variant="body2" fontWeight="bold">
-                  Total:
+                <Typography variant="h6" fontWeight="bold">
+                  Total a pagar:
                 </Typography>
-                <Typography
-                  variant="body1"
-                  fontWeight="bold"
-                  color={
-                    Math.abs(totalAmount - totalToPay) < 0.01
-                      ? "success.main"
-                      : "error.main"
-                  }
-                >
-                  {formatCurrency(totalAmount)}
+                <Typography variant="h5" fontWeight="bold" color="primary">
+                  {formatCurrency(totalToPay)}
                 </Typography>
               </Box>
             </Box>
-          </Paper>
-        </Box>
+          </CardContent>
+        </Card>
+
+        {/* Métodos de pago */}
+        <Card variant="outlined">
+          <CardContent>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <Typography variant="subtitle1" fontWeight="medium">
+                Métodos de pago
+              </Typography>
+            </Box>
+
+            {error && (
+              <Alert
+                severity="error"
+                sx={{ mb: 2 }}
+                onClose={() => setError("")}
+              >
+                {error}
+              </Alert>
+            )}
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {paymentMethods.map((method, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    p: 1.5,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                    bgcolor: theme.palette.background.paper,
+                  }}
+                >
+                  <Box sx={{ minWidth: 140 }}>
+                    <Select<PaymentMethod>
+                      label="Método"
+                      options={paymentOptions}
+                      value={method.method}
+                      onChange={(value) =>
+                        handlePaymentMethodChange(index, "method", value)
+                      }
+                      size="small"
+                      fullWidth
+                    />
+                  </Box>
+
+                  <Box sx={{ flex: 1, position: "relative" }}>
+                    <InputCash
+                      value={method.amount}
+                      onChange={(value) =>
+                        handlePaymentMethodChange(index, "amount", value)
+                      }
+                      label="Monto"
+                      disabled={paymentMethods.length === 2 && index === 1}
+                    />
+                  </Box>
+
+                  {paymentMethods.length > 1 && (
+                    <IconButton
+                      onClick={() => removePaymentMethod(index)}
+                      color="error"
+                      size="small"
+                      sx={{ ml: 1 }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </Box>
+              ))}
+            </Box>
+
+            {paymentMethods.length < paymentOptions.length && (
+              <Button
+                onClick={addPaymentMethod}
+                icon={<AddIcon />}
+                iconPosition="left"
+                variant="text"
+                size="small"
+              >
+                Agregar otro método de pago
+              </Button>
+            )}
+
+            {/* Resumen de montos */}
+            <Paper variant="outlined" sx={{ p: 2, mt: 2, borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                Resumen de pagos:
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {paymentMethods.map((method, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Chip
+                      label={
+                        paymentOptions.find((o) => o.value === method.method)
+                          ?.label
+                      }
+                      size="small"
+                      color={getPaymentMethodColor(method.method)}
+                      variant="outlined"
+                      sx={{ fontWeight: "medium" }}
+                    />
+                    <Typography variant="body1" fontWeight="medium">
+                      {formatCurrency(method.amount)}
+                    </Typography>
+                  </Box>
+                ))}
+                <Divider sx={{ my: 1 }} />
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="body1" fontWeight="bold">
+                    Total a pagar:
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    fontWeight="bold"
+                    color={
+                      Math.abs(totalAmount - totalToPay) < 0.01
+                        ? "success.main"
+                        : "error.main"
+                    }
+                  >
+                    {formatCurrency(totalAmount)}
+                  </Typography>
+                </Box>
+
+                {Math.abs(totalAmount - totalToPay) >= 0.01 && (
+                  <Box sx={{ textAlign: "right", mt: 0.5 }}>
+                    <Typography variant="caption" color="error">
+                      {totalAmount > totalToPay
+                        ? `Excede por ${formatCurrency(amountDifference)}`
+                        : `Falta ${formatCurrency(-amountDifference)}`}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          </CardContent>
+        </Card>
       </Box>
     </Modal>
   );

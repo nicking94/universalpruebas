@@ -8,9 +8,7 @@ import {
   CardContent,
   Box,
   Typography,
-  Chip,
   IconButton,
-  Button,
   LinearProgress,
   Divider,
 } from "@mui/material";
@@ -21,6 +19,8 @@ import {
 } from "@mui/icons-material";
 import { PaymentHistory } from "./PaymentHistory";
 import { SaleProductsDetail } from "./SaleProductsDetail";
+import CustomChip from "./CustomChip";
+import Button from "./Button";
 
 interface SaleCardProps {
   sale: CreditSale;
@@ -81,7 +81,7 @@ export const SaleCard: React.FC<SaleCardProps> = ({
               >
                 Venta #{sale.id}
               </Typography>
-              <Chip
+              <CustomChip
                 label={isPaid ? "Pagado" : "Pendiente"}
                 color={isPaid ? "success" : "warning"}
                 size="small"
@@ -95,7 +95,7 @@ export const SaleCard: React.FC<SaleCardProps> = ({
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {!isPaid && (
               <Button
-                variant="contained"
+                text="Registrar Pago"
                 size="small"
                 onClick={(e) => {
                   e?.stopPropagation();
@@ -105,9 +105,7 @@ export const SaleCard: React.FC<SaleCardProps> = ({
                   bgcolor: "primary.main",
                   "&:hover": { bgcolor: "primary.dark" },
                 }}
-              >
-                Registrar Pago
-              </Button>
+              />
             )}
             <IconButton
               size="small"

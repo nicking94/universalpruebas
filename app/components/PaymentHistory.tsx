@@ -10,7 +10,6 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Chip,
 } from "@mui/material";
 import {
   LocalAtm as LocalAtmIcon,
@@ -19,6 +18,7 @@ import {
   Receipt as ReceiptIcon,
   CalendarToday as CalendarIcon,
 } from "@mui/icons-material";
+import CustomChip from "./CustomChip";
 
 interface PaymentHistoryProps {
   sale: CreditSale;
@@ -105,7 +105,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({
                       currency: "ARS",
                     })}
                   </Typography>
-                  <Chip
+                  <CustomChip
                     label={payment.method}
                     size="small"
                     color={getPaymentColor(payment.method)}
@@ -126,7 +126,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({
                     {format(new Date(payment.date), "dd/MM/yyyy HH:mm")}
                   </Typography>
                   {payment.method === "CHEQUE" && payment.checkStatus && (
-                    <Chip
+                    <CustomChip
                       label={payment.checkStatus}
                       size="small"
                       variant="outlined"

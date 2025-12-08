@@ -9,7 +9,7 @@ import {
   SortConfig,
   UnifiedFilter,
 } from "../lib/types/types";
-import { Box, Chip, Stack, useTheme } from "@mui/material";
+import { Box, Stack, useTheme } from "@mui/material";
 import {
   FilterList as FilterIcon,
   Clear as ClearIcon,
@@ -17,6 +17,7 @@ import {
 import Select, { SelectOption } from "./Select";
 import Button from "./Button";
 import Modal from "./Modal";
+import CustomChip from "./CustomChip";
 
 interface AdvancedFilterPanelProps<T> {
   data?: T[];
@@ -61,9 +62,16 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
 
   const expenseCategoryOptions: SelectOption<string>[] = useMemo(() => {
     if (!isExpense) return [];
+
+    const filteredData = (data as Expense[]).filter((expense) => {
+      if (rubro === "Todos los rubros") return true;
+
+      return expense.rubro === rubro;
+    });
+
     return Array.from(
       new Set(
-        (data as Expense[])
+        filteredData
           .map((e) => e.category)
           .filter((category): category is string => !!category)
       )
@@ -71,7 +79,7 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
       value: category,
       label: category,
     }));
-  }, [data, isExpense]);
+  }, [data, isExpense, rubro]); // Añadir rubro como dependencia
 
   const clearAllFilters = () => {
     if (isExpense) {
@@ -477,8 +485,8 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
               }}
             />
             {activeFiltersCount > 0 && (
-              <Chip
-                label={activeFiltersCount}
+              <CustomChip
+                label={activeFiltersCount.toString()}
                 size="small"
                 sx={{
                   position: "absolute",

@@ -114,12 +114,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     onClose();
   };
 
-  const getPaymentColor = () => {
-    if (registerCheck) return "warning";
-    if (isCredit) return "primary";
-    return "primary";
-  };
-
   const modalButtons = (
     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
       <Button variant="text" onClick={handleCloseModal} disabled={isProcessing}>
@@ -135,8 +129,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         }
         startIcon={isProcessing ? null : <CheckCircle />}
         sx={{
-          bgcolor: `${getPaymentColor()}.main`,
-          "&:hover": { bgcolor: `${getPaymentColor()}.dark` },
+          bgcolor: "primary.main",
+          "&:hover": { bgcolor: "primary.dark" },
           "&:disabled": {
             bgcolor: "action.disabledBackground",
             color: "action.disabled",
@@ -548,47 +542,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   Esta venta se registrará en la cuenta corriente del cliente.
                   El saldo pendiente deberá ser pagado posteriormente según los
                   términos acordados.
-                </Typography>
-              </Box>
-            </Card>
-          </Fade>
-        )}
-
-        {/* Información para cheque */}
-        {registerCheck && (
-          <Fade in={true} timeout={1500}>
-            <Card
-              sx={{
-                p: 2.5,
-                bgcolor: alpha(theme.palette.warning.main, 0.1),
-                border: 1,
-                borderColor: alpha(theme.palette.warning.main, 0.2),
-                borderRadius: 2,
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    bgcolor: alpha(theme.palette.warning.main, 0.2),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    color="warning.main"
-                    fontWeight="bold"
-                  >
-                    ðŸ¦
-                  </Typography>
-                </Box>
-                <Typography variant="body2" color="warning.dark">
-                  El cheque será registrado como pendiente de cobro. Deberá
-                  gestionar su cobro en el banco correspondiente.
                 </Typography>
               </Box>
             </Card>

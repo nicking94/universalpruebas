@@ -12,7 +12,6 @@ import {
   Typography,
   Box,
   FormControl,
-  Chip,
   IconButton,
   TextField,
   Autocomplete,
@@ -67,6 +66,7 @@ import {
   Option,
   PaymentMethod,
   Payment,
+  ProductOption,
 } from "@/app/lib/types/types";
 import Select from "@/app/components/Select";
 import { Settings } from "@mui/icons-material";
@@ -77,13 +77,8 @@ import Modal from "@/app/components/Modal";
 import Checkbox from "@/app/components/Checkbox";
 import { useNotification } from "@/app/hooks/useNotification";
 import BusinessDataModal from "@/app/components/BusinessDataModal";
-
-type SelectOption = {
-  value: number;
-  label: string;
-  product: Product;
-  isDisabled: boolean;
-};
+import CustomChip from "@/app/components/CustomChip";
+import ProductSearchAutocomplete from "@/app/components/ProductSearchAutocomplete";
 
 type CustomerOption = {
   value: string;
@@ -523,7 +518,7 @@ const VentasPage = () => {
           <Typography variant="body2" sx={{ fontWeight: "semibold" }}>
             Promoción aplicada:
           </Typography>
-          <Chip
+          <CustomChip
             label={selectedPromotions.name}
             color={isValid ? "success" : "error"}
             size="small"
@@ -669,7 +664,7 @@ const VentasPage = () => {
                           >
                             {promotion.name}
                           </Typography>
-                          <Chip
+                          <CustomChip
                             label={
                               promotion.type === "PERCENTAGE_DISCOUNT"
                                 ? `${promotion.discount}%`
@@ -683,7 +678,7 @@ const VentasPage = () => {
                             size="small"
                           />
                           {!isApplicable && (
-                            <Chip
+                            <CustomChip
                               label="No aplicable"
                               color="error"
                               size="small"
@@ -1105,28 +1100,6 @@ const VentasPage = () => {
     return parseFloat(newStock.toFixed(3));
   };
 
-  const productOptions = useMemo(() => {
-    return products
-      .filter(
-        (product) => rubro === "Todos los rubros" || product.rubro === rubro
-      )
-      .map((product) => {
-        const stock = Number(product.stock);
-        const isValidStock = !isNaN(stock);
-        const displayName = getDisplayProductName(product, rubro);
-
-        return {
-          value: product.id,
-          label:
-            isValidStock && stock > 0
-              ? displayName
-              : `${displayName} (agotado)`,
-          product: product,
-          isDisabled: !isValidStock || stock <= 0,
-        } as SelectOption;
-      });
-  }, [products, rubro]);
-
   const filteredSales = sales
     .filter((sale) => {
       const saleDate = new Date(sale.date);
@@ -1163,7 +1136,7 @@ const VentasPage = () => {
       const movement: DailyCashMovement = {
         id: Date.now(),
         amount: sale.total,
-        description: `VENTA - ${sale.concept || "Venta general"}`,
+        description: `Venta - ${sale.concept || "general"}`,
         type: "INGRESO",
         date: new Date().toISOString(),
         paymentMethod:
@@ -1532,70 +1505,6 @@ const VentasPage = () => {
     setIsInfoModalOpen(false);
     setSelectedSale(null);
   };
-
-  const handleProductSelect = useCallback(
-    (event: React.SyntheticEvent, selectedOptions: SelectOption[]) => {
-      setNewSale((prevState) => {
-        const enabledOptions = selectedOptions.filter((opt) => !opt.isDisabled);
-
-        const updatedProducts = enabledOptions
-          .map((option) => {
-            const product =
-              option.product || products.find((p) => p.id === option.value);
-            if (!product) return null;
-
-            const stockCheck = checkStockAvailability(product, 1, product.unit);
-            if (!stockCheck.available) {
-              showNotification(
-                `Stock insuficiente para ${getDisplayProductName(
-                  product,
-                  rubro
-                )}`,
-                "error"
-              );
-              return null;
-            }
-
-            const existingProduct = prevState.products.find(
-              (p) => p.id === product.id
-            );
-
-            return (
-              existingProduct || {
-                ...product,
-                quantity: 1,
-                unit: product.unit,
-                stock: Number(product.stock),
-                price: Number(product.price),
-                basePrice:
-                  Number(product.price) / convertToBaseUnit(1, product.unit),
-                costPrice: Number(product.costPrice),
-              }
-            );
-          })
-          .filter(Boolean) as Product[];
-
-        const newTotal = calculateFinalTotal(
-          updatedProducts || [],
-          prevState.manualAmount || 0,
-          selectedPromotions
-        );
-
-        const updatedPaymentMethods = synchronizePaymentMethods(
-          prevState.paymentMethods,
-          newTotal
-        );
-
-        return {
-          ...prevState,
-          products: updatedProducts,
-          total: newTotal,
-          paymentMethods: updatedPaymentMethods,
-        };
-      });
-    },
-    [products, rubro, selectedPromotions, showNotification]
-  );
 
   const handleQuantityChange = useCallback(
     (productId: number, quantity: number, unit: Product["unit"]) => {
@@ -2216,7 +2125,7 @@ const VentasPage = () => {
 
                           <TableCell align="center">
                             {sale.credit ? (
-                              <Chip
+                              <CustomChip
                                 label={
                                   sale.chequeInfo
                                     ? "Cheque"
@@ -2616,41 +2525,51 @@ const VentasPage = () => {
                 <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
                   Productos*
                 </Typography>
-                <Autocomplete
-                  multiple
-                  options={productOptions}
-                  getOptionLabel={(option) => option.label}
-                  getOptionDisabled={(option) => option.isDisabled}
-                  getOptionKey={(option) => `${option.value}-${option.label}`}
-                  value={newSale.products.map((p) => ({
-                    value: p.id,
-                    label: getDisplayProductName(p, rubro, true),
-                    product: p,
-                    isDisabled: false,
-                  }))}
-                  onChange={handleProductSelect}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="Seleccionar productos"
-                      variant="outlined"
-                      size="small"
-                    />
-                  )}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        {...getTagProps({ index })}
-                        key={`${option.value}-${option.label}-${index}`}
-                        label={option.label}
-                        disabled={option.isDisabled}
-                        size="small"
-                      />
-                    ))
-                  }
-                  isOptionEqualToValue={(option, value) =>
-                    option.value === value.value
-                  }
+                <ProductSearchAutocomplete
+                  products={products}
+                  selectedProducts={newSale.products.map((p) => {
+                    const product = products.find((prod) => prod.id === p.id);
+                    return {
+                      value: p.id,
+                      label: getDisplayProductName(p, rubro, true),
+                      product: product!,
+                      isDisabled: false,
+                    } as ProductOption;
+                  })}
+                  onProductSelect={(selectedOptions: ProductOption[]) => {
+                    // Adaptar la lógica actual al formato de ProductSearchAutocomplete
+                    const selectedProducts = selectedOptions
+                      .filter((option) => !option.isDisabled)
+                      .map((option) => ({
+                        ...option.product,
+                        quantity: 1,
+                      }));
+
+                    // Actualizar el estado de newSale con los productos seleccionados
+                    setNewSale((prev) => {
+                      const newTotal = calculateFinalTotal(
+                        selectedProducts,
+                        prev.manualAmount || 0,
+                        selectedPromotions
+                      );
+
+                      return {
+                        ...prev,
+                        products: selectedProducts,
+                        total: newTotal,
+                        paymentMethods: synchronizePaymentMethods(
+                          prev.paymentMethods,
+                          newTotal
+                        ),
+                      };
+                    });
+                  }}
+                  onSearchChange={(query) => {
+                    console.log("Búsqueda de productos:", query);
+                  }}
+                  rubro={rubro}
+                  placeholder="Seleccionar productos"
+                  maxDisplayed={50}
                 />
               </Box>
             </Box>
