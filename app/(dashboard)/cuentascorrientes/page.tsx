@@ -50,6 +50,7 @@ import {
   LocalAtm as LocalAtmIcon,
   AccountCircle as AccountCircleIcon,
   Delete,
+  Delete,
 } from "@mui/icons-material";
 import {
   ChequeFilter,
@@ -2753,6 +2754,7 @@ const CuentasCorrientesPage = () => {
           }
         >
           <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
             <Delete
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />

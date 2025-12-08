@@ -44,6 +44,7 @@ import {
 } from "@/app/lib/utils/calculations";
 import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 import Checkbox from "@/app/components/Checkbox";
+import { toCapitalize } from "@/app/lib/utils/capitalizeText";
 import {
   Autocomplete,
   IconButton,
@@ -177,7 +178,11 @@ const useProductForm = (rubro: Rubro, initialProduct?: Product) => {
         | { name: string; rubro: Rubro }[]
         | Product["unit"]
     ) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      if (field === "customCategory" && typeof value === "string") {
+        setFormData((prev) => ({ ...prev, [field]: toCapitalize(value) }));
+      } else {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+      }
     },
     []
   );
@@ -1295,7 +1300,7 @@ const ProductsPage = () => {
         if (cat.name?.trim()) {
           const key = `${cat.name.toLowerCase().trim()}_${cat.rubro}`;
           allCategories.set(key, {
-            name: cat.name.trim(),
+            name: toCapitalize(cat.name.trim()),
             rubro: cat.rubro || "comercio",
           });
         }
@@ -1310,7 +1315,7 @@ const ProductsPage = () => {
               }`;
               if (!allCategories.has(key)) {
                 allCategories.set(key, {
-                  name: cat.name.trim(),
+                  name: toCapitalize(cat.name.trim()),
                   rubro: cat.rubro || product.rubro || "comercio",
                 });
               }
@@ -1324,7 +1329,7 @@ const ProductsPage = () => {
           }`;
           if (!allCategories.has(key)) {
             allCategories.set(key, {
-              name: product.category.trim(),
+              name: toCapitalize(product.category.trim()),
               rubro: product.rubro || "comercio",
             });
           }
@@ -1738,7 +1743,7 @@ const ProductsPage = () => {
   const handleAddCategory = useCallback(async () => {
     if (!newProduct.customCategory?.trim()) return;
 
-    const trimmedCategory = newProduct.customCategory.trim();
+    const trimmedCategory = toCapitalize(newProduct.customCategory.trim());
     const lowerName = trimmedCategory.toLowerCase();
     const alreadyExists = globalCustomCategories.some(
       (cat) => cat.name.toLowerCase() === lowerName && cat.rubro === rubro
@@ -1886,14 +1891,14 @@ const ProductsPage = () => {
       setNewColor(product.color || "");
 
       let categoriesToSet = (product.customCategories || []).map((cat) => ({
-        name: cat.name,
+        name: toCapitalize(cat.name),
         rubro: cat.rubro || product.rubro || rubro || "comercio",
       }));
 
       if (categoriesToSet.length === 0 && product.category) {
         categoriesToSet = [
           {
-            name: product.category,
+            name: toCapitalize(product.category),
             rubro: product.rubro || rubro || "comercio",
           },
         ];
@@ -2083,7 +2088,7 @@ const ProductsPage = () => {
       const stringValue = value.toString();
       setNewBrand(stringValue);
       if (stringValue) {
-        updateField("brand", stringValue);
+        updateField("brand", toCapitalize(stringValue));
       }
     },
     [updateField]
@@ -2094,7 +2099,7 @@ const ProductsPage = () => {
       const stringValue = value.toString();
       setNewColor(stringValue);
       if (stringValue) {
-        updateField("color", stringValue);
+        updateField("color", toCapitalize(stringValue));
       }
     },
     [updateField]
@@ -2104,7 +2109,7 @@ const ProductsPage = () => {
     (value: string | number) => {
       const stringValue = value.toString();
       setNewSize(stringValue);
-      updateField("size", stringValue);
+      updateField("size", toCapitalize(stringValue));
     },
     [updateField]
   );
@@ -2916,7 +2921,6 @@ const ProductsPage = () => {
             <Button
               variant="text"
               onClick={() => setIsPriceModalOpen(false)}
-              isPrimaryAction={true}
               sx={{
                 color: "text.secondary",
                 borderColor: "text.secondary",
