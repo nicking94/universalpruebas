@@ -1,4 +1,4 @@
-// components/SaleProductsDetail.tsx
+﻿// components/SaleProductsDetail.tsx
 import React from "react";
 import { CreditSale, Rubro } from "@/app/lib/types/types";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";

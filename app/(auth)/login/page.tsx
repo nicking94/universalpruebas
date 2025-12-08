@@ -2,12 +2,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import AuthForm from "@/app/components/AuthForm";
-import Notification from "@/app/components/Notification";
-import { AuthData } from "@/app/lib/types/types";
-import { TRIAL_CREDENTIALS, USERS } from "@/app/lib/constants/constants";
 import { db } from "../../database/db";
+import { TRIAL_CREDENTIALS, USERS } from "@/app/lib/constants/constants";
+import { AuthData } from "@/app/lib/types/types";
+import AuthForm from "@/app/components/AuthForm";
 import Navidad from "@/app/components/LoginScreens/Navidad";
+import Notification from "@/app/components/Notification";
 
 const LoginPage = () => {
   const router = useRouter();

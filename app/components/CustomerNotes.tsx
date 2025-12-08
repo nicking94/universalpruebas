@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { db } from "@/app/database/db";
 import { CustomerNotesProps, Note } from "@/app/lib/types/types";
 import {

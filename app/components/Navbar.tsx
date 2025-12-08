@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useSidebar } from "../context/SidebarContext";
 import { NavbarProps } from "../lib/types/types";
 import UserMenu from "./userMenu";
-import logo from "../../public/logo.png";
+import logo from "@/public/logo.png";
 import { useRubro } from "../context/RubroContext";
 import NotificationIcon from "./Notifications/NotificationIcon";
 
@@ -20,8 +20,10 @@ import {
   useTheme,
   useMediaQuery,
   SelectChangeEvent,
+  IconButton,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import { Menu as MenuIcon } from "@mui/icons-material";
 
 const rubroOptions = [
   { value: "Todos los rubros", label: "Todos los rubros" },
@@ -101,7 +103,7 @@ const Navbar: React.FC<NavbarProps> = ({
   handleTheme,
   handleCloseSession,
 }) => {
-  const { isSidebarOpen } = useSidebar();
+  const { isSidebarOpen, toggleSidebar } = useSidebar();
   const { rubro, setRubro } = useRubro();
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
@@ -117,8 +119,16 @@ const Navbar: React.FC<NavbarProps> = ({
     <StyledAppBar
       position="fixed"
       sx={{
-        width: isSidebarOpen ? "calc(100% - 256px)" : "calc(100% - 120px)",
-        left: isSidebarOpen ? 256 : 120,
+        width: {
+          xs: "100%", // Mobile: full width
+          sm: "100%", // Tablet: full width
+          md: isSidebarOpen ? "calc(100% - 256px)" : "calc(100% - 120px)", // Desktop: sidebar offset
+        },
+        left: {
+          xs: 0, // Mobile: no offset
+          sm: 0, // Tablet: no offset
+          md: isSidebarOpen ? 256 : 120, // Desktop: sidebar offset
+        },
         transition: muiTheme.transitions.create(["width", "left"], {
           duration: muiTheme.transitions.duration.standard,
         }),
@@ -134,8 +144,20 @@ const Navbar: React.FC<NavbarProps> = ({
           },
         }}
       >
-        {/* Logo y título */}
-        <LogoContainer>
+        {/* Hamburger menu button for mobile - Always visible */}
+        <IconButton
+          onClick={toggleSidebar}
+          sx={{
+            display: { xs: "block", md: "none" },
+            color: "text.primary",
+          }}
+          aria-label="Toggle menu"
+        >
+          <MenuIcon />
+        </IconButton>
+
+        {/* Logo y título - Hidden on mobile to save space */}
+        <LogoContainer sx={{ display: { xs: "none", md: "flex" } }}>
           <LogoImage src={logo} alt="User Logo" width={32} height={32} />
           <Box>
             <Typography

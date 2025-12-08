@@ -1,4 +1,4 @@
-// components/SaleCard.tsx
+﻿// components/SaleCard.tsx
 import React from "react";
 import { CreditSale, Payment, Rubro } from "@/app/lib/types/types";
 import { format } from "date-fns";

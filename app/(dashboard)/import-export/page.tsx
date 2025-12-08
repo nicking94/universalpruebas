@@ -1,13 +1,7 @@
 "use client";
-
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-import { db } from "@/app/database/db";
 import { saveAs } from "file-saver";
 import { useState } from "react";
-import ImportFileButton from "@/app/components/ImportFileButton";
 import { format } from "date-fns";
-import Notification from "@/app/components/Notification";
-import { Payment, Product, Sale } from "@/app/lib/types/types";
 
 import {
   Button,
@@ -17,6 +11,11 @@ import {
   useTheme,
 } from "@mui/material";
 import { Download as DownloadIcon } from "@mui/icons-material";
+import { db } from "@/app/database/db";
+import { Payment, Product, Sale } from "@/app/lib/types/types";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+import ImportFileButton from "@/app/components/ImportFileButton";
+import Notification from "@/app/components/Notification";
 
 export default function ImportExportPage() {
   const [loading, setLoading] = useState(false);

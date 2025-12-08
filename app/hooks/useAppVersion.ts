@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { APP_VERSION } from "@/app/lib/constants/constants";
-import { db } from "../database/db";
+import { db } from "@/app/database/db";
 
 export const useAppVersion = () => {
   const [setShowUpdateModal] = useState(false);
@@ -30,7 +30,7 @@ export const useAppVersion = () => {
         });
       }
     } catch (error) {
-      console.error("❌ Error guardando versión:", error);
+      console.error("âŒ Error guardando versión:", error);
       throw error;
     }
   }, []);
@@ -71,7 +71,7 @@ export const useAppVersion = () => {
         window.location.reload();
       }, 300);
     } catch (error) {
-      console.error("❌ Error durante la actualización automática:", error);
+      console.error("âŒ Error durante la actualización automática:", error);
       if (minLoadTimer) clearTimeout(minLoadTimer);
       setIsUpdating(false);
       setIsAutoUpdate(false);
@@ -101,7 +101,7 @@ export const useAppVersion = () => {
 
       return false;
     } catch (error) {
-      console.error("❌ Error checking app version:", error);
+      console.error("âŒ Error checking app version:", error);
       return false;
     }
   }, [updateStoredVersion, autoUpdate]);
@@ -141,7 +141,7 @@ export const useAppVersion = () => {
         window.location.href = "/login";
       }, 300);
     } catch (error) {
-      console.error("❌ Error durante logout y update:", error);
+      console.error("âŒ Error durante logout y update:", error);
       if (minLoadTimer) clearTimeout(minLoadTimer);
       setIsUpdating(false);
       setMinLoadTimePassed(false);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -73,6 +73,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         onClose();
         return;
       }
+
+      // F6 shortcut for Total button
+      if (e.key === "F6" && !isCredit && !registerCheck) {
+        e.preventDefault();
+        handlePaymentAmountChange(total);
+        return;
+      }
     };
 
     if (isOpen) {
@@ -82,7 +89,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, isProcessing, onClose, handleConfirmPayment]);
+  }, [
+    isOpen,
+    isProcessing,
+    onClose,
+    handleConfirmPayment,
+    isCredit,
+    registerCheck,
+    total,
+  ]);
 
   const calculateChange = (payment: number, total: number): number => {
     return Math.max(0, payment - total);
@@ -101,27 +116,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const getPaymentColor = () => {
     if (registerCheck) return "warning";
-    if (isCredit) return "info";
+    if (isCredit) return "primary";
     return "primary";
   };
 
   const modalButtons = (
     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-      <Button
-        variant="outlined"
-        onClick={handleCloseModal}
-        disabled={isProcessing}
-        sx={{
-          color: "text.secondary",
-          borderColor: "border.main",
-          "&:hover": {
-            backgroundColor: alpha(theme.palette.primary.main, 0.08),
-            borderColor: "primary.main",
-            color: "primary.main",
-          },
-        }}
-      >
-        Cancelar
+      <Button variant="text" onClick={handleCloseModal} disabled={isProcessing}>
+        Volver
       </Button>
       <Button
         ref={confirmButtonRef}
@@ -174,47 +176,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     >
       <Box sx={{ p: { xs: 2, sm: 3 }, spaceY: 3 }}>
         {/* Información de tipo de venta */}
-        {(isCredit || registerCheck) && (
-          <Fade in={true} timeout={500}>
-            <Card
-              sx={{
-                p: 2.5,
-                bgcolor: alpha(theme.palette.warning.main, 0.1),
-                border: 1,
-                borderColor: alpha(theme.palette.warning.main, 0.3),
-                borderRadius: 2,
-                backdropFilter: "blur(10px)",
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <Warning
-                  sx={{
-                    color: "warning.main",
-                    fontSize: 24,
-                    mt: 0.5,
-                  }}
-                />
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight="bold"
-                    color="warning.dark"
-                    gutterBottom
-                  >
-                    {registerCheck
-                      ? "📋 Venta con Cheque"
-                      : "📝 Venta a Crédito"}
-                  </Typography>
-                  <Typography variant="body2" color="warning.dark">
-                    {registerCheck
-                      ? "El cheque se registrará con estado pendiente y deberá ser cobrado posteriormente."
-                      : "Esta venta se registrará en la cuenta corriente del cliente."}
-                  </Typography>
-                </Box>
-              </Box>
-            </Card>
-          </Fade>
-        )}
 
         {/* Total a pagar */}
         <Fade in={true} timeout={700}>
@@ -287,7 +248,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Monto recibido (solo para no crédito) */}
         {!isCredit && !registerCheck && (
           <Fade in={true} timeout={900}>
-            <Box>
+            <Box sx={{ pb: 3 }}>
               <Typography
                 variant="subtitle1"
                 fontWeight="semibold"
@@ -334,18 +295,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 />
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     color="success"
                     onClick={() => handlePaymentAmountChange(total)}
                     size="small"
                     disabled={isProcessing}
-                    sx={{
-                      borderRadius: 1.5,
-                      minWidth: 80,
-                      boxShadow: theme.shadows[1],
-                    }}
                   >
-                    Total
+                    Total [F6]
                   </Button>
                   <Button
                     variant="outlined"
@@ -429,9 +385,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   color={localChange >= 0 ? "success.dark" : "error.dark"}
                   sx={{ mb: 1 }}
                 >
-                  {localChange >= 0
-                    ? "🎉 Cambio a Entregar"
-                    : "⚠️ Pago Insuficiente"}
+                  {localChange >= 0 ? "Cambio a Entregar" : "Pago Insuficiente"}
                 </Typography>
                 <Typography
                   variant="h4"
@@ -590,25 +544,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
             >
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    bgcolor: alpha(theme.palette.info.main, 0.2),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    color="info.main"
-                    fontWeight="bold"
-                  >
-                    ℹ️
-                  </Typography>
-                </Box>
                 <Typography variant="body2" color="info.dark">
                   Esta venta se registrará en la cuenta corriente del cliente.
                   El saldo pendiente deberá ser pagado posteriormente según los
@@ -648,7 +583,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     color="warning.main"
                     fontWeight="bold"
                   >
-                    🏦
+                    ðŸ¦
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="warning.dark">

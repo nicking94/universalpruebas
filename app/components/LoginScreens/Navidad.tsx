@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import logo from "../../../public/logo.png";
+import logo from "@/public/logo.png";
 import Image from "next/image";
 import { Globe, MessageCircle } from "lucide-react";
 
@@ -308,7 +308,7 @@ const Navidad: React.FC<CommonProps> = ({
         >
           {["🎄", "🎄", "🎄", "🎄", "🎄", "🎄", "🎄"].map((icon, index) => (
             <motion.span
-              key={icon}
+              key={index}
               className="text-2xl text-[#2d78b9]"
               animate={{
                 scale: [1, 1.2, 1],

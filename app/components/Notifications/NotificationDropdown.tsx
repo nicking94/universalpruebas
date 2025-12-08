@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { NotificationType } from "@/app/lib/types/types";
 import { formatDistanceToNow } from "date-fns";

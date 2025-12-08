@@ -8,7 +8,7 @@ import {
   Slide,
   SlideProps,
 } from "@mui/material";
-import { db } from "../database/db";
+import { db } from "@/app/database/db";
 import { TRIAL_CREDENTIALS } from "../lib/constants/constants";
 import { Tags, Zap, AlertTriangle } from "lucide-react";
 

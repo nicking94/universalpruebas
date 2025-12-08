@@ -1,34 +1,9 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { db } from "@/app/database/db";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-import Modal from "@/app/components/Modal";
-import Select from "@/app/components/Select";
-import Button from "@/app/components/Button";
-import Notification from "@/app/components/Notification";
-import SearchBar from "@/app/components/SearchBar";
-import Pagination from "@/app/components/Pagination";
-import Input from "@/app/components/Input";
-import { useRubro } from "@/app/context/RubroContext";
-import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
-import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
-import { usePagination } from "@/app/context/PaginationContext";
-import { ClienteCuentaCorrientePDF } from "@/app/components/ClienteCuentaCorrientePDF";
 import { pdf } from "@react-pdf/renderer";
-import {
-  ChequeFilter,
-  ChequeWithDetails,
-  CreditSale,
-  Customer,
-  DailyCashMovement,
-  Payment,
-  PaymentMethod,
-  PaymentSplit,
-  SaleItem,
-  Rubro,
-} from "@/app/lib/types/types";
+
 import {
   Box,
   Typography,
@@ -74,8 +49,35 @@ import {
   CreditCard as CreditCardIcon,
   LocalAtm as LocalAtmIcon,
   AccountCircle as AccountCircleIcon,
+  Delete,
 } from "@mui/icons-material";
+import {
+  ChequeFilter,
+  ChequeWithDetails,
+  CreditSale,
+  Customer,
+  DailyCashMovement,
+  Payment,
+  PaymentMethod,
+  PaymentSplit,
+  Rubro,
+  SaleItem,
+} from "@/app/lib/types/types";
+import { db } from "@/app/database/db";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import Button from "@/app/components/Button";
+import Modal from "@/app/components/Modal";
+import Select from "@/app/components/Select";
+import Input from "@/app/components/Input";
+import { useRubro } from "@/app/context/RubroContext";
+import { usePagination } from "@/app/context/PaginationContext";
 import { useNotification } from "@/app/hooks/useNotification";
+import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
+import { ClienteCuentaCorrientePDF } from "@/app/components/ClienteCuentaCorrientePDF";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+import SearchBar from "@/app/components/SearchBar";
+import Pagination from "@/app/components/Pagination";
+import Notification from "@/app/components/Notification";
 
 const CUENTAS_CONFIG = {
   NOTIFICATION_DURATION: 2500,
@@ -2112,7 +2114,6 @@ const CuentasCorrientesPage = () => {
           const chequesWithDetails = await Promise.all(
             customerCheques.map(async (cheque) => {
               const sale = await db.sales.get(cheque.saleId);
-
               const saleItems: SaleItem[] =
                 sale?.products?.map((product) => ({
                   productId: product.id,
@@ -2752,11 +2753,15 @@ const CuentasCorrientesPage = () => {
           }
         >
           <Box sx={{ textAlign: "center", py: 2 }}>
-            <DeleteIcon
+            <Delete
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar las cuentas corrientes?
+              ¿Está seguro/a que desea eliminar las cuentas corrientes?
+            </Typography>
+            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+              Las cuentas corrientes de <strong>{customerToDelete}</strong>{" "}
+              serán eliminadas permanentemente.
             </Typography>
           </Box>
         </Modal>

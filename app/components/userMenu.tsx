@@ -1,8 +1,7 @@
 "use client";
 import { Sun, Moon, LogOut, Settings, HelpCircle, Ticket } from "lucide-react";
-import { useState, useEffect } from "react";
-import { BusinessData, UserMenuProps } from "../lib/types/types";
-import Input from "./Input";
+import { useState } from "react";
+import { UserMenuProps } from "../lib/types/types";
 // Material-UI imports
 import {
   IconButton,
@@ -12,16 +11,11 @@ import {
   ListItemText,
   Typography,
   Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   useTheme,
   Divider,
-  Button as MuiButton,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { useBusinessData } from "../context/BusinessDataContext";
+import BusinessDataModal from "./BusinessDataModal";
 
 // Styled components
 const StyledIconButton = styled(IconButton)(({ theme }) => ({
@@ -59,18 +53,6 @@ const StyledMenu = styled(Menu)(({ theme }) => ({
   },
 }));
 
-// Styled Button para mantener consistencia con tu diseño
-const StyledButton = styled(MuiButton)(({ theme }) => ({
-  textTransform: "none",
-  borderRadius: theme.shape.borderRadius,
-  fontWeight: 600,
-  transition: "all 0.2s ease-in-out",
-  "&:hover": {
-    transform: "translateY(-1px)",
-    boxShadow: theme.shadows[2],
-  },
-}));
-
 const UserMenu: React.FC<UserMenuProps> = ({
   theme: currentTheme,
   handleTheme,
@@ -78,13 +60,6 @@ const UserMenu: React.FC<UserMenuProps> = ({
 }) => {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [isTicketDataModalOpen, setIsTicketDataModalOpen] = useState(false);
-  const { businessData, setBusinessData } = useBusinessData();
-  const [localBusinessData, setLocalBusinessData] = useState<BusinessData>({
-    name: "",
-    address: "",
-    phone: "",
-    cuit: "",
-  });
 
   const theme = useTheme();
   const isMenuOpen = Boolean(menuAnchor);
@@ -95,31 +70,6 @@ const UserMenu: React.FC<UserMenuProps> = ({
 
   const handleMenuClose = () => {
     setMenuAnchor(null);
-  };
-
-  useEffect(() => {
-    if (isTicketDataModalOpen && businessData) {
-      setLocalBusinessData(businessData);
-    }
-  }, [isTicketDataModalOpen, businessData]);
-
-  // Nueva función adaptada para el Input component
-  const handleInputChange =
-    (field: keyof BusinessData) => (value: string | number) => {
-      setLocalBusinessData((prev) => ({
-        ...prev,
-        [field]: value.toString(), // Convertir a string siempre
-      }));
-    };
-
-  const saveBusinessData = async () => {
-    try {
-      await setBusinessData(localBusinessData);
-      setIsTicketDataModalOpen(false);
-      handleMenuClose();
-    } catch (error) {
-      console.error("Error al guardar los datos del negocio:", error);
-    }
   };
 
   const handleThemeToggle = () => {
@@ -140,22 +90,19 @@ const UserMenu: React.FC<UserMenuProps> = ({
     handleMenuClose();
   };
 
-  // Manejar la tecla Enter en el modal
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === "Enter" && isTicketDataModalOpen) {
-        saveBusinessData();
-      }
-    };
+  const handleOpenBusinessDataModal = () => {
+    setIsTicketDataModalOpen(true);
+    handleMenuClose();
+  };
 
-    if (isTicketDataModalOpen) {
-      document.addEventListener("keydown", handleKeyPress);
-    }
+  const handleCloseBusinessDataModal = () => {
+    setIsTicketDataModalOpen(false);
+  };
 
-    return () => {
-      document.removeEventListener("keydown", handleKeyPress);
-    };
-  }, [isTicketDataModalOpen, localBusinessData]);
+  const handleBusinessDataSaveSuccess = () => {
+    // Opcional: Puedes mostrar una notificación o realizar alguna acción adicional
+    console.log("Datos del negocio guardados exitosamente");
+  };
 
   return (
     <Box sx={{ position: "relative" }}>
@@ -206,13 +153,13 @@ const UserMenu: React.FC<UserMenuProps> = ({
         </StyledMenuItem>
 
         {/* Datos del negocio */}
-        <StyledMenuItem onClick={() => setIsTicketDataModalOpen(true)}>
+        <StyledMenuItem onClick={handleOpenBusinessDataModal}>
           <ListItemIcon sx={{ minWidth: 36 }}>
             <Ticket size={18} color={theme.palette.text.primary} />
           </ListItemIcon>
           <ListItemText>
             <Typography variant="body2" color="text.primary">
-              Datos del negocio
+              Datos del negocioss
             </Typography>
           </ListItemText>
         </StyledMenuItem>
@@ -245,94 +192,14 @@ const UserMenu: React.FC<UserMenuProps> = ({
       </StyledMenu>
 
       {/* Modal de datos del negocio */}
-      <Dialog
-        open={isTicketDataModalOpen}
-        onClose={() => setIsTicketDataModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: theme.palette.background.paper,
-            backgroundImage: "none",
-            color: theme.palette.text.primary,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            pb: 2,
-          }}
-        >
-          <Typography variant="h6" component="h2" color="text.primary">
-            Datos del negocio
-          </Typography>
-        </DialogTitle>
-
-        <DialogContent sx={{ pt: 3 }}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <Input
-              label="Nombre del Negocio"
-              name="name"
-              value={localBusinessData.name}
-              onChange={handleInputChange("name")}
-              placeholder="Ingrese el nombre del negocio"
-            />
-            <Input
-              label="Dirección"
-              name="address"
-              value={localBusinessData.address}
-              onChange={handleInputChange("address")}
-              placeholder="Ingrese la dirección"
-            />
-            <Input
-              label="Teléfono"
-              name="phone"
-              value={localBusinessData.phone}
-              onChange={handleInputChange("phone")}
-              placeholder="Ingrese el teléfono"
-            />
-            <Input
-              label="CUIT"
-              name="cuit"
-              value={localBusinessData.cuit}
-              onChange={handleInputChange("cuit")}
-              placeholder="Ingrese el CUIT"
-            />
-          </Box>
-        </DialogContent>
-
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <StyledButton
-            variant="outlined"
-            onClick={() => setIsTicketDataModalOpen(false)}
-            sx={{
-              borderColor: theme.palette.divider,
-              color: theme.palette.text.secondary,
-              "&:hover": {
-                borderColor: theme.palette.primary.main,
-                backgroundColor: theme.palette.action.hover,
-                color: theme.palette.text.primary,
-              },
-            }}
-          >
-            Cancelar
-          </StyledButton>
-          <StyledButton
-            variant="contained"
-            onClick={saveBusinessData}
-            sx={{
-              backgroundColor: theme.palette.primary.main,
-              color: "white",
-              "&:hover": {
-                backgroundColor: theme.palette.primary.dark,
-              },
-            }}
-          >
-            Guardar
-          </StyledButton>
-        </DialogActions>
-      </Dialog>
+      <BusinessDataModal
+        isOpen={isTicketDataModalOpen}
+        onClose={handleCloseBusinessDataModal}
+        title="Datos del negocios"
+        onSaveSuccess={handleBusinessDataSaveSuccess}
+        showNotificationOnSave={true}
+        autoFocus={true}
+      />
     </Box>
   );
 };

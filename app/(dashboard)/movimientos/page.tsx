@@ -1,17 +1,6 @@
 "use client";
-import Modal from "@/app/components/Modal";
-import Notification from "@/app/components/Notification";
-import {
-  DailyCashMovement,
-  Expense,
-  ExpenseCategory,
-  PaymentMethod,
-  Product,
-  Supplier,
-  UnifiedFilter,
-} from "@/app/lib/types/types";
 import { useCallback, useEffect, useState } from "react";
-import { db } from "@/app/database/db";
+
 import {
   format,
   parseISO,
@@ -21,14 +10,6 @@ import {
   getYear,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-import Pagination from "@/app/components/Pagination";
-import Select from "@/app/components/Select";
-import InputCash from "@/app/components/InputCash";
-import { useRubro } from "@/app/context/RubroContext";
-import { formatCurrency } from "@/app/lib/utils/currency";
-import CustomDatePicker from "@/app/components/CustomDatePicker";
-import { ensureCashIsOpen } from "@/app/lib/utils/cash";
 import { useRouter } from "next/navigation";
 import {
   Chart as ChartJS,
@@ -40,9 +21,6 @@ import {
   BarElement,
 } from "chart.js";
 import { Pie, Bar } from "react-chartjs-2";
-import { usePagination } from "@/app/context/PaginationContext";
-import AdvancedFilterPanel from "@/app/components/AdvancedFilterPanel";
-import { toCapitalize } from "@/app/lib/utils/capitalizeText";
 import Image from "next/image";
 
 import {
@@ -69,9 +47,31 @@ import {
   Analytics,
   InsertDriveFile,
 } from "@mui/icons-material";
-
+import { useRubro } from "@/app/context/RubroContext";
+import {
+  DailyCashMovement,
+  Expense,
+  ExpenseCategory,
+  PaymentMethod,
+  Product,
+  Supplier,
+  UnifiedFilter,
+} from "@/app/lib/types/types";
+import { usePagination } from "@/app/context/PaginationContext";
+import { db } from "@/app/database/db";
+import { ensureCashIsOpen } from "@/app/lib/utils/cash";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+import Select from "@/app/components/Select";
 import Button from "@/app/components/Button";
+import { toCapitalize } from "@/app/lib/utils/capitalizeText";
+import AdvancedFilterPanel from "@/app/components/AdvancedFilterPanel";
+import { formatCurrency } from "@/app/lib/utils/currency";
+import Pagination from "@/app/components/Pagination";
+import Modal from "@/app/components/Modal";
+import InputCash from "@/app/components/InputCash";
+import CustomDatePicker from "@/app/components/CustomDatePicker";
 import Input from "@/app/components/Input";
+import Notification from "@/app/components/Notification";
 
 ChartJS.register(
   ArcElement,
@@ -1161,7 +1161,7 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsCategoryDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
@@ -1200,7 +1200,11 @@ const MovimientosPage = () => {
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar la categoría?
+              ¿Está seguro/a que desea eliminar la categoría?
+            </Typography>
+            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+              La categoría <strong>{categoryToDelete?.name}</strong> será
+              eliminada permanentemente.
             </Typography>
           </Box>
         </Modal>
@@ -1452,7 +1456,7 @@ const MovimientosPage = () => {
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
-                variant="outlined"
+                variant="text"
                 onClick={() => setIsDeleteModalOpen(false)}
                 sx={{
                   color: "text.secondary",
@@ -1481,9 +1485,17 @@ const MovimientosPage = () => {
             </Box>
           }
         >
-          <Typography>
-            ¿Está seguro que desea eliminar el movimiento?
-          </Typography>
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro/a que desea eliminar el movimiento?
+            </Typography>
+            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+              Este movimiento será eliminado permanentemente.
+            </Typography>
+          </Box>
         </Modal>
 
         {/* Modal de estadísticas */}

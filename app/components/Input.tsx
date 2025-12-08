@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState } from "react";
 import {
   TextField,
@@ -8,6 +8,7 @@ import {
   TextFieldProps,
   useTheme,
 } from "@mui/material";
+import { toCapitalize } from "@/app/lib/utils/capitalizeText";
 
 export interface InputProps
   extends Omit<
@@ -34,6 +35,7 @@ export interface InputProps
   buttonTitle?: string;
   buttonDisabled?: boolean;
   customSx?: TextFieldProps["sx"];
+  capitalize?: boolean;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -68,10 +70,14 @@ const Input: React.FC<InputProps> = ({
   select,
   children,
   customSx,
+  capitalize = true,
   ...textFieldProps
 }) => {
   const theme = useTheme();
   const [isFocused, setIsFocused] = useState(false);
+  const [previousValue, setPreviousValue] = useState<string | number>(
+    value || ""
+  );
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -84,13 +90,58 @@ const Input: React.FC<InputProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onRawChange?.(e);
+    let newValue: string | number = e.target.value;
+    if (
+      capitalize &&
+      type === "text" &&
+      typeof newValue === "string" &&
+      newValue !== "" &&
+      newValue !== previousValue
+    ) {
+      const words = newValue.split(" ");
+      const lastIndex = words.length - 1;
+
+      if (words.length > 1 && words[lastIndex] === "") {
+        const capitalizedWords = words.slice(0, -1).map((word, index) => {
+          if (index === 0 || words[index - 1] === "") {
+            return toCapitalize(word);
+          }
+          return word;
+        });
+        newValue = capitalizedWords.join(" ") + " ";
+      } else if (newValue.endsWith(" ")) {
+        const capitalizedWords = words.map((word) => {
+          if (word.trim() !== "") {
+            return toCapitalize(word);
+          }
+          return word;
+        });
+        newValue = capitalizedWords.join(" ");
+      } else if (words.length === 1 && newValue.length === 1) {
+        newValue = toCapitalize(newValue);
+      }
+
+      setPreviousValue(newValue);
+    }
 
     if (type === "number") {
-      const numValue = e.target.value === "" ? 0 : Number(e.target.value);
+      const numValue = newValue === "" ? 0 : Number(newValue);
       onChange(numValue);
     } else {
-      onChange(e.target.value);
+      onChange(newValue);
     }
+  };
+
+  const handleBlurWithCapitalization = (
+    e: React.FocusEvent<HTMLInputElement>
+  ) => {
+    if (capitalize && type === "text" && value && typeof value === "string") {
+      const capitalizedValue = toCapitalize(value.toString().trim());
+      if (capitalizedValue !== value) {
+        onChange(capitalizedValue);
+      }
+    }
+    handleBlur(e);
   };
 
   const shouldShrink =
@@ -199,7 +250,7 @@ const Input: React.FC<InputProps> = ({
         onChange={readOnly ? undefined : handleChange}
         onKeyDown={onKeyDown}
         onFocus={handleFocus}
-        onBlur={handleBlur}
+        onBlur={handleBlurWithCapitalization}
         placeholder={placeholder}
         label={label}
         required={required}

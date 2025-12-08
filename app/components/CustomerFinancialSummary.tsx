@@ -1,4 +1,4 @@
-// components/CustomerFinancialSummary.tsx
+﻿// components/CustomerFinancialSummary.tsx
 import React from "react";
 import { CreditSale, Payment } from "@/app/lib/types/types";
 import {

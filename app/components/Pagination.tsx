@@ -4,24 +4,20 @@ import React, { useMemo, useCallback } from "react";
 import { PaginationProps } from "../lib/types/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../database/db";
+import { db } from "@/app/database/db";
 import { usePagination } from "../context/PaginationContext";
 import {
   Box,
   Pagination as MuiPagination,
   PaginationItem,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Typography,
   Stack,
   useTheme,
   useMediaQuery,
   CircularProgress,
-  SelectChangeEvent,
 } from "@mui/material";
 import { PaginationRenderItemParams } from "@mui/material/Pagination";
+import Select, { SelectOption } from "./Select"; // Ajusta la ruta según sea necesario
 
 const Pagination: React.FC<
   Omit<
@@ -63,8 +59,7 @@ const Pagination: React.FC<
   }, [currentPage, totalPages, setCurrentPage]);
 
   const handleItemsPerPageChange = useCallback(
-    async (event: SelectChangeEvent<number>) => {
-      const newItemsPerPage = Number(event.target.value);
+    async (newItemsPerPage: number) => {
       setItemsPerPage(newItemsPerPage);
       setCurrentPage(1);
 
@@ -101,6 +96,17 @@ const Pagination: React.FC<
       }
     },
     [currentPage, setCurrentPage]
+  );
+
+  // Opciones para el Select personalizado
+  const itemsPerPageOptions: SelectOption<number>[] = useMemo(
+    () => [
+      { value: 5, label: "5" },
+      { value: 10, label: "10" },
+      { value: 20, label: "20" },
+      { value: 30, label: "30" },
+    ],
+    []
   );
 
   // Función para renderizar los botones de paginación personalizados
@@ -157,54 +163,19 @@ const Pagination: React.FC<
         <Typography variant="body2" color="text.secondary">
           {text}
         </Typography>
-        <FormControl size="small" sx={{ minWidth: 80 }}>
-          <InputLabel
-            id="items-per-page-label"
-            sx={{ color: "text.secondary" }}
-          >
-            Items
-          </InputLabel>
-          <Select
-            labelId="items-per-page-label"
-            id="items-per-page"
-            value={itemsPerPage}
-            label="Items"
-            onChange={handleItemsPerPageChange}
-            sx={{
-              cursor: "pointer",
-              "& .MuiSelect-select": {
-                py: 1,
-                color: "text.primary",
-                backgroundColor: "background.paper",
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: "divider",
-              },
-              "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: "primary.main",
-              },
-            }}
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  backgroundColor: "background.paper",
-                  "& .MuiMenuItem-root": {
-                    color: "text.primary",
-                    "&:hover": {
-                      backgroundColor: "action.hover",
-                    },
-                  },
-                },
-              },
-            }}
-          >
-            {[5, 10, 20, 30].map((number) => (
-              <MenuItem key={number} value={number}>
-                {number}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Select<number>
+          label="Items"
+          options={itemsPerPageOptions}
+          value={itemsPerPage}
+          onChange={handleItemsPerPageChange}
+          size="small"
+          sx={{
+            minWidth: 80,
+            "& .MuiOutlinedInput-root": {
+              height: 40,
+            },
+          }}
+        />
       </Stack>
 
       {/* Paginación */}
@@ -225,21 +196,41 @@ const Pagination: React.FC<
               color: "text.primary",
               backgroundColor: "background.paper",
               border: `1px solid ${theme.palette.divider}`,
+              minWidth: 32,
+              height: 32,
+              borderRadius: theme.shape.borderRadius,
               "&:hover": {
                 backgroundColor: "action.hover",
+                borderColor: "primary.light",
               },
               "&.Mui-selected": {
-                background: "linear-gradient(135deg, #1976d2, #1565c0)",
-                color: "white",
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                borderColor: "primary.main",
                 "&:hover": {
-                  background: "linear-gradient(135deg, #1565c0, #0d47a1)",
+                  backgroundColor: "primary.dark",
+                  borderColor: "primary.dark",
                 },
               },
               "&.Mui-disabled": {
                 color: "text.disabled",
                 backgroundColor: "action.disabledBackground",
+                borderColor: "divider",
+              },
+              "& .MuiSvgIcon-root": {
+                color: "inherit",
               },
             },
+            "& .MuiPaginationItem-firstLast, & .MuiPaginationItem-previousNext":
+              {
+                backgroundColor: "background.paper",
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: "action.disabledBackground",
+                },
+              },
           }}
         />
       </Box>
@@ -251,7 +242,14 @@ const Pagination: React.FC<
           component="span"
           fontWeight="medium"
           variant="body2"
-          color="text.primary"
+          color="primary.main"
+          sx={{
+            backgroundColor: "background.paper",
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            mx: 0.5,
+          }}
         >
           {totalItems}
         </Typography>

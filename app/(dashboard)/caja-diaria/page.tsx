@@ -17,16 +17,9 @@ import {
 } from "@mui/material";
 import { Add, Close, Info, PointOfSale } from "@mui/icons-material";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { db } from "@/app/database/db";
 import { format, parseISO, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-import { formatCurrency } from "@/app/lib/utils/currency";
 import { useRubro } from "@/app/context/RubroContext";
-import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
-import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
-import { usePagination } from "@/app/context/PaginationContext";
-import Notification from "@/app/components/Notification";
 import {
   DailyCash,
   DailyCashMovement,
@@ -34,11 +27,18 @@ import {
   Option,
   PaymentMethod,
 } from "@/app/lib/types/types";
-import Pagination from "@/app/components/Pagination";
-import Select from "@/app/components/Select";
+import { useNotification } from "@/app/hooks/useNotification";
+import { usePagination } from "@/app/context/PaginationContext";
+import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
+import { db } from "@/app/database/db";
+import { formatCurrency } from "@/app/lib/utils/currency";
 import Button from "@/app/components/Button";
 import Modal from "@/app/components/Modal";
-import { useNotification } from "@/app/hooks/useNotification";
+import Select from "@/app/components/Select";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+import Notification from "@/app/components/Notification";
+import Pagination from "@/app/components/Pagination";
 
 const CajaDiariaPage = () => {
   const { rubro } = useRubro();

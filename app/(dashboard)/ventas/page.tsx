@@ -1,4 +1,5 @@
 "use client";
+
 import {
   Table,
   TableBody,
@@ -34,7 +35,7 @@ import Pagination from "@/app/components/Pagination";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
 import { ensureCashIsOpen } from "@/app/lib/utils/cash";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/app/lib/utils/currency";
+import { formatCurrency, parseCurrencyInput } from "@/app/lib/utils/currency";
 import InputCash from "@/app/components/InputCash";
 import PaymentModal from "@/app/components/PaymentModal";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
@@ -75,6 +76,7 @@ import Notification from "@/app/components/Notification";
 import Modal from "@/app/components/Modal";
 import Checkbox from "@/app/components/Checkbox";
 import { useNotification } from "@/app/hooks/useNotification";
+import BusinessDataModal from "@/app/components/BusinessDataModal";
 
 type SelectOption = {
   value: number;
@@ -91,7 +93,7 @@ type CustomerOption = {
 const VentasPage = () => {
   const cobrarButtonRef = useRef<HTMLButtonElement>(null);
   const imprimirButtonRef = useRef<HTMLButtonElement>(null);
-  const { businessData, setBusinessData } = useBusinessData();
+  const { businessData } = useBusinessData();
   const { rubro } = useRubro();
   const theme = useTheme();
   const currentYear = new Date().getFullYear();
@@ -148,6 +150,12 @@ const VentasPage = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isBusinessDataModalOpen, setIsBusinessDataModalOpen] = useState(false);
+  const [isDeleteProductModalOpen, setIsDeleteProductModalOpen] =
+    useState(false);
+  const [productToDelete, setProductToDelete] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   const CONVERSION_FACTORS = {
     Gr: { base: "Kg", factor: 0.001 },
@@ -428,19 +436,57 @@ const VentasPage = () => {
     setSelectedPromotions(null);
     showNotification("Promoción removida", "info");
   };
+  const handleDeleteProductClick = (productId: number, productName: string) => {
+    setProductToDelete({ id: productId, name: productName });
+    setIsDeleteProductModalOpen(true);
+  };
+  const handleConfirmProductDelete = () => {
+    if (!productToDelete) return;
 
-  const handleOpenBusinessDataModal = () => {
-    setIsBusinessDataModalOpen(true);
+    setNewSale((prev) => {
+      const updatedProducts = prev.products.filter(
+        (p) => p.id !== productToDelete.id
+      );
+      const newTotal = calculateFinalTotal(
+        updatedProducts,
+        prev.manualAmount || 0,
+        selectedPromotions
+      );
+
+      return {
+        ...prev,
+        products: updatedProducts,
+        total: newTotal,
+        paymentMethods: synchronizePaymentMethods(
+          prev.paymentMethods,
+          newTotal
+        ),
+      };
+    });
+
+    showNotification(`Producto ${productToDelete.name} eliminado`, "success");
+    setIsDeleteProductModalOpen(false);
+    setProductToDelete(null);
   };
 
-  const handleCloseBusinessDataModal = () => {
-    setIsBusinessDataModalOpen(false);
-
+  const handleSaveBusinessDataSuccess = () => {
     if (selectedSale) {
       setTimeout(() => {
         setIsInfoModalOpen(true);
       }, 100);
     }
+  };
+
+  const handleOpenBusinessDataModal = (sale?: Sale) => {
+    if (sale) {
+      setSelectedSale(sale);
+    }
+    setIsBusinessDataModalOpen(true);
+  };
+
+  const handleCloseBusinessDataModal = () => {
+    setIsBusinessDataModalOpen(false);
+    setSelectedSale(null);
   };
 
   const handlePromotionSelect = (promotion: Promotion) => {
@@ -1248,6 +1294,7 @@ const VentasPage = () => {
   };
 
   const handleManualAmountChange = (value: number) => {
+    console.log("Manual amount received:", value, typeof value);
     setNewSale((prev) => {
       const newTotal = calculateFinalTotal(
         prev.products,
@@ -1306,10 +1353,12 @@ const VentasPage = () => {
       }
 
       if (field === "amount") {
-        const numericValue =
-          typeof value === "string"
-            ? parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0
-            : value;
+        let numericValue: number;
+        if (typeof value === "string") {
+          numericValue = parseCurrencyInput(value, 2);
+        } else {
+          numericValue = value;
+        }
 
         updatedMethods[index] = {
           ...updatedMethods[index],
@@ -1645,24 +1694,6 @@ const VentasPage = () => {
     },
     [selectedPromotions]
   );
-
-  const handleRemoveProduct = (productId: number) => {
-    setNewSale((prev) => {
-      const updatedProducts = prev.products.filter((p) => p.id !== productId);
-      const newTotal =
-        calculateCombinedTotal(updatedProducts) + (prev.manualAmount || 0);
-
-      return {
-        ...prev,
-        products: updatedProducts,
-        total: newTotal,
-        paymentMethods: synchronizePaymentMethods(
-          prev.paymentMethods,
-          newTotal
-        ),
-      };
-    });
-  };
 
   useEffect(() => {
     const fetchPromotions = async () => {
@@ -2324,6 +2355,63 @@ const VentasPage = () => {
         </Box>
 
         {/* Modales */}
+
+        <Modal
+          isOpen={isDeleteProductModalOpen}
+          onClose={() => {
+            setIsDeleteProductModalOpen(false);
+            setProductToDelete(null);
+          }}
+          title="Confirmar Eliminación"
+          buttons={
+            <>
+              <Button
+                variant="text"
+                onClick={() => {
+                  setIsDeleteProductModalOpen(false);
+                  setProductToDelete(null);
+                }}
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "divider",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.secondary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmProductDelete}
+                isPrimaryAction={true}
+                sx={{
+                  backgroundColor: "error.main",
+                  "&:hover": {
+                    backgroundColor: "error.dark",
+                  },
+                }}
+              >
+                Sí, Eliminar
+              </Button>
+            </>
+          }
+          bgColor="bg-white dark:bg-gray_b"
+        >
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro/a que desea eliminar el producto de la venta?
+            </Typography>
+            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+              <strong>{productToDelete?.name}</strong> será eliminado de la
+              venta.
+            </Typography>
+          </Box>
+        </Modal>
         <Modal
           isOpen={isInfoModalOpen}
           onClose={handleCloseInfoModal}
@@ -2377,7 +2465,11 @@ const VentasPage = () => {
               >
                 <Typography
                   variant="body2"
-                  sx={{ mb: 1, fontWeight: "medium" }}
+                  sx={{
+                    mb: 1,
+                    fontWeight: "medium",
+                    color: "white",
+                  }}
                 >
                   Cambia los datos de tu ticket haciendo click Aquí
                 </Typography>
@@ -2386,7 +2478,7 @@ const VentasPage = () => {
                   size="small"
                   onClick={() => {
                     handleCloseInfoModal();
-                    handleOpenBusinessDataModal();
+                    handleOpenBusinessDataModal(selectedSale);
                   }}
                   startIcon={<Settings sx={{ fontSize: 16 }} />}
                   sx={{
@@ -2422,6 +2514,23 @@ const VentasPage = () => {
           onClose={handleCloseModal}
           title="Nueva Venta"
           bgColor="bg-white dark:bg-gray_b"
+          fixedTotal={
+            <Box
+              sx={{
+                ...getCardStyle("primary"),
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+                p: 2,
+                width: "100%",
+              }}
+            >
+              <Typography variant="h4" fontWeight="bold">
+                TOTAL: {formatCurrency(newSale.total)}
+              </Typography>
+            </Box>
+          }
           buttons={
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
               <Button
@@ -2454,661 +2563,416 @@ const VentasPage = () => {
             </Box>
           }
         >
-          <Box
-            sx={{ display: "flex", flexDirection: "column", height: "100%" }}
-          >
-            {/* Contenido principal con scroll */}
-            <Box sx={{ flex: 1, overflow: "auto", pb: 8 }}>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {/* Sección de Promociones */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
+          {/* Contenido principal SIN la sección del TOTAL */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pb: 2 }}>
+            {/* Sección de Promociones */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Button
+                variant="contained"
+                startIcon={<LocalOffer fontSize="small" />}
+                onClick={() => setIsPromotionModalOpen(true)}
+                disabled={newSale.products.length === 0}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Seleccionar Promociones
+              </Button>
+              <Box sx={{ flex: 1 }}>
+                <SelectedPromotionsBadge />
+              </Box>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box sx={{ width: "100%" }}>
+                <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
+                  Escanear código de barras
+                </Typography>
+                <BarcodeScanner
+                  value={newSale.barcode || ""}
+                  onChange={(value) =>
+                    setNewSale({ ...newSale, barcode: value })
+                  }
+                  onScanComplete={(code) => {
+                    const productToAdd = products.find(
+                      (p) => p.barcode === code
+                    );
+                    if (productToAdd) {
+                      handleProductScan(productToAdd.id);
+                    } else {
+                      showNotification("Producto no encontrado", "error");
+                    }
                   }}
-                >
-                  <Button
-                    variant="contained"
-                    startIcon={<LocalOffer fontSize="small" />}
-                    onClick={() => setIsPromotionModalOpen(true)}
-                    disabled={newSale.products.length === 0}
-                    sx={{
-                      bgcolor: "primary.main",
-                      "&:hover": { bgcolor: "primary.dark" },
-                    }}
-                  >
-                    Seleccionar Promociones
-                  </Button>
-                  <Box sx={{ flex: 1 }}>
-                    <SelectedPromotionsBadge />
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Box sx={{ width: "100%" }}>
-                    <Typography
-                      variant="body2"
-                      fontWeight="medium"
-                      sx={{ mb: 1 }}
-                    >
-                      Escanear código de barras
-                    </Typography>
-                    <BarcodeScanner
-                      value={newSale.barcode || ""}
-                      onChange={(value) =>
-                        setNewSale({ ...newSale, barcode: value })
-                      }
-                      onScanComplete={(code) => {
-                        const productToAdd = products.find(
-                          (p) => p.barcode === code
-                        );
-                        if (productToAdd) {
-                          handleProductScan(productToAdd.id);
-                        } else {
-                          showNotification("Producto no encontrado", "error");
-                        }
-                      }}
+                />
+              </Box>
+              <Box sx={{ width: "100%" }}>
+                <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
+                  Productos*
+                </Typography>
+                <Autocomplete
+                  multiple
+                  options={productOptions}
+                  getOptionLabel={(option) => option.label}
+                  getOptionDisabled={(option) => option.isDisabled}
+                  getOptionKey={(option) => `${option.value}-${option.label}`}
+                  value={newSale.products.map((p) => ({
+                    value: p.id,
+                    label: getDisplayProductName(p, rubro, true),
+                    product: p,
+                    isDisabled: false,
+                  }))}
+                  onChange={handleProductSelect}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Seleccionar productos"
+                      variant="outlined"
+                      size="small"
                     />
-                  </Box>
-                  <Box sx={{ width: "100%" }}>
-                    <Typography
-                      variant="body2"
-                      fontWeight="medium"
-                      sx={{ mb: 1 }}
-                    >
-                      Productos*
-                    </Typography>
-                    <Autocomplete
-                      multiple
-                      options={productOptions}
-                      getOptionLabel={(option) => option.label}
-                      getOptionDisabled={(option) => option.isDisabled}
-                      getOptionKey={(option) =>
-                        `${option.value}-${option.label}`
-                      }
-                      value={newSale.products.map((p) => ({
-                        value: p.id,
-                        label: getDisplayProductName(p, rubro, true),
-                        product: p,
-                        isDisabled: false,
-                      }))}
-                      onChange={handleProductSelect}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          placeholder="Seleccionar productos"
-                          variant="outlined"
-                          size="small"
-                        />
-                      )}
-                      renderTags={(value, getTagProps) =>
-                        value.map((option, index) => (
-                          <Chip
-                            {...getTagProps({ index })}
-                            key={`${option.value}-${option.label}-${index}`}
-                            label={option.label}
-                            disabled={option.isDisabled}
-                            size="small"
-                          />
-                        ))
-                      }
-                      isOptionEqualToValue={(option, value) =>
-                        option.value === value.value
-                      }
-                    />
-                  </Box>
-                </Box>
-
-                {newSale.products.length > 0 && (
-                  <TableContainer
-                    component={Paper}
-                    sx={{
-                      maxHeight: "25vh",
-                      bgcolor: "background.paper",
-                    }}
-                  >
-                    <Table size="small" stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={tableHeaderStyle}>Producto</TableCell>
-                          <TableCell sx={tableHeaderStyle} align="center">
-                            Unidad
-                          </TableCell>
-                          <TableCell sx={tableHeaderStyle} align="center">
-                            Cantidad
-                          </TableCell>
-                          <TableCell sx={tableHeaderStyle} align="center">
-                            % descuento
-                          </TableCell>
-                          <TableCell sx={tableHeaderStyle} align="center">
-                            % recargo
-                          </TableCell>
-                          <TableCell sx={tableHeaderStyle} align="center">
-                            Total
-                          </TableCell>
-                          <TableCell sx={tableHeaderStyle} align="center">
-                            Acciones
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {newSale.products.map((product) => (
-                          <TableRow
-                            key={product.id}
-                            hover
-                            sx={{
-                              border: "1px solid",
-                              borderColor: "divider",
-                              "&:hover": { backgroundColor: "action.hover" },
-                            }}
-                          >
-                            <TableCell>
-                              <Typography variant="body2">
-                                {getDisplayProductName(product, rubro)}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              {[
-                                "Kg",
-                                "gr",
-                                "L",
-                                "ml",
-                                "mm",
-                                "cm",
-                                "m",
-                                "pulg",
-                                "ton",
-                              ].includes(product.unit) ? (
-                                <Select
-                                  label="Unidad"
-                                  options={getCompatibleUnitOptions(
-                                    product.unit
-                                  )}
-                                  value={product.unit}
-                                  onChange={(value) =>
-                                    handleUnitChange(
-                                      product.id,
-                                      value,
-                                      product.quantity
-                                    )
-                                  }
-                                  fullWidth
-                                  size="small"
-                                />
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                  align="center"
-                                >
-                                  {product.unit}
-                                </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                type="number"
-                                value={product.quantity.toString() || ""}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (value === "" || !isNaN(Number(value))) {
-                                    handleQuantityChange(
-                                      product.id,
-                                      value === "" ? 0 : Number(value),
-                                      product.unit
-                                    );
-                                  }
-                                }}
-                                inputProps={{
-                                  step:
-                                    product.unit === "Kg" ||
-                                    product.unit === "L"
-                                      ? "0.001"
-                                      : "1",
-                                }}
-                                onBlur={(
-                                  e: React.FocusEvent<HTMLInputElement>
-                                ) => {
-                                  if (e.target.value === "") {
-                                    handleQuantityChange(
-                                      product.id,
-                                      0,
-                                      product.unit
-                                    );
-                                  }
-                                }}
-                                size="small"
-                                fullWidth
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                type="number"
-                                value={product.discount?.toString() || "0"}
-                                onChange={(e) => {
-                                  const value = Math.min(
-                                    100,
-                                    Math.max(0, Number(e.target.value))
-                                  );
-                                  setNewSale((prev) => {
-                                    const updatedProducts = prev.products.map(
-                                      (p) =>
-                                        p.id === product.id
-                                          ? { ...p, discount: value }
-                                          : p
-                                    );
-                                    const newTotal = calculateFinalTotal(
-                                      updatedProducts,
-                                      prev.manualAmount || 0,
-                                      selectedPromotions
-                                    );
-                                    return {
-                                      ...prev,
-                                      products: updatedProducts,
-                                      total: newTotal,
-                                    };
-                                  });
-                                }}
-                                inputProps={{ min: 0, max: 100, step: "1" }}
-                                size="small"
-                                fullWidth
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                type="number"
-                                value={product.surcharge?.toString() || "0"}
-                                onChange={(e) => {
-                                  const value = Math.min(
-                                    100,
-                                    Math.max(0, Number(e.target.value))
-                                  );
-                                  setNewSale((prev) => {
-                                    const updatedProducts = prev.products.map(
-                                      (p) =>
-                                        p.id === product.id
-                                          ? { ...p, surcharge: value }
-                                          : p
-                                    );
-                                    const newTotal = calculateFinalTotal(
-                                      updatedProducts,
-                                      prev.manualAmount || 0,
-                                      selectedPromotions
-                                    );
-                                    return {
-                                      ...prev,
-                                      products: updatedProducts,
-                                      total: newTotal,
-                                    };
-                                  });
-                                }}
-                                inputProps={{ min: 0, max: 100, step: "1" }}
-                                size="small"
-                                fullWidth
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Typography variant="body2" fontWeight="bold">
-                                {formatCurrency(
-                                  calculatePrice(
-                                    {
-                                      ...product,
-                                      price: product.price || 0,
-                                      quantity: product.quantity || 0,
-                                      unit: product.unit || "Unid.",
-                                      costPrice: product.costPrice || 0,
-                                    },
-                                    product.quantity || 0,
-                                    product.unit || "Unid."
-                                  ).finalPrice
-                                )}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="center">
-                              <IconButton
-                                onClick={() => handleRemoveProduct(product.id)}
-                                size="small"
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "error.main",
-                                    color: "white",
-                                  },
-                                }}
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  {!isCredit && (
-                    <Box sx={{ width: "100%" }}>
-                      <Typography
-                        variant="body2"
-                        fontWeight="medium"
-                        sx={{ mb: 1 }}
-                      >
-                        Cliente
-                      </Typography>
-                      <Autocomplete
-                        options={customerOptions}
-                        value={selectedCustomer}
-                        onChange={(
-                          event: React.SyntheticEvent,
-                          newValue: CustomerOption | null
-                        ) => {
-                          setSelectedCustomer(newValue);
-                          if (newValue) {
-                            const customer = customers.find(
-                              (c) => c.id === newValue.value
-                            );
-                            setCustomerName(customer?.name || "");
-                            setCustomerPhone(customer?.phone || "");
-                          }
-                        }}
-                        getOptionLabel={(option) => option.label}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            placeholder="Ningún cliente seleccionado"
-                            variant="outlined"
-                            size="small"
-                          />
-                        )}
-                        isOptionEqualToValue={(option, value) =>
-                          option.value === value.value
-                        }
-                      />
-                    </Box>
                   )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        {...getTagProps({ index })}
+                        key={`${option.value}-${option.label}-${index}`}
+                        label={option.label}
+                        disabled={option.isDisabled}
+                        size="small"
+                      />
+                    ))
+                  }
+                  isOptionEqualToValue={(option, value) =>
+                    option.value === value.value
+                  }
+                />
+              </Box>
+            </Box>
 
-                  <Box sx={{ width: "100%" }}>
-                    {isCredit ? (
-                      <Card sx={{ p: 2, bgcolor: "grey.50" }}>
-                        <Typography variant="body2" fontWeight="semibold">
-                          Monto manual deshabilitado
-                        </Typography>
-                      </Card>
-                    ) : (
-                      <Box
+            {newSale.products.length > 0 && (
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "25vh",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={tableHeaderStyle}>Producto</TableCell>
+                      <TableCell sx={tableHeaderStyle} align="center">
+                        Unidad
+                      </TableCell>
+                      <TableCell sx={tableHeaderStyle} align="center">
+                        Cantidad
+                      </TableCell>
+                      <TableCell sx={tableHeaderStyle} align="center">
+                        % descuento
+                      </TableCell>
+                      <TableCell sx={tableHeaderStyle} align="center">
+                        % recargo
+                      </TableCell>
+                      <TableCell sx={tableHeaderStyle} align="center">
+                        Total
+                      </TableCell>
+                      <TableCell sx={tableHeaderStyle} align="center">
+                        Acciones
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {newSale.products.map((product) => (
+                      <TableRow
+                        key={product.id}
+                        hover
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 2,
-                          marginTop: 3,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          "&:hover": { backgroundColor: "action.hover" },
                         }}
                       >
-                        <Box sx={{ width: "100%" }}>
-                          <InputCash
-                            label="Monto manual"
-                            value={newSale.manualAmount || 0}
-                            onChange={handleManualAmountChange}
-                            disabled={isCredit}
-                          />
-                        </Box>
-                        <Box sx={{ width: "100%" }}>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {getDisplayProductName(product, rubro)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {[
+                            "Kg",
+                            "gr",
+                            "L",
+                            "ml",
+                            "mm",
+                            "cm",
+                            "m",
+                            "pulg",
+                            "ton",
+                          ].includes(product.unit) ? (
+                            <Select
+                              label="Unidad"
+                              options={getCompatibleUnitOptions(product.unit)}
+                              value={product.unit}
+                              onChange={(value) =>
+                                handleUnitChange(
+                                  product.id,
+                                  value,
+                                  product.quantity
+                                )
+                              }
+                              fullWidth
+                              size="small"
+                            />
+                          ) : (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              align="center"
+                            >
+                              {product.unit}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <TextField
                             type="number"
-                            value={
-                              newSale.manualProfitPercentage?.toString() || "0"
-                            }
+                            value={product.quantity.toString() || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || !isNaN(Number(value))) {
+                                handleQuantityChange(
+                                  product.id,
+                                  value === "" ? 0 : Number(value),
+                                  product.unit
+                                );
+                              }
+                            }}
+                            inputProps={{
+                              step:
+                                product.unit === "Kg" || product.unit === "L"
+                                  ? "0.001"
+                                  : "1",
+                            }}
+                            onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                              if (e.target.value === "") {
+                                handleQuantityChange(
+                                  product.id,
+                                  0,
+                                  product.unit
+                                );
+                              }
+                            }}
+                            size="small"
+                            fullWidth
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            value={product.discount?.toString() || "0"}
                             onChange={(e) => {
                               const value = Math.min(
                                 100,
                                 Math.max(0, Number(e.target.value))
                               );
-                              setNewSale((prev) => ({
-                                ...prev,
-                                manualProfitPercentage: value || 0,
-                                total: calculateFinalTotal(
-                                  prev.products,
+                              setNewSale((prev) => {
+                                const updatedProducts = prev.products.map((p) =>
+                                  p.id === product.id
+                                    ? { ...p, discount: value }
+                                    : p
+                                );
+                                const newTotal = calculateFinalTotal(
+                                  updatedProducts,
                                   prev.manualAmount || 0,
                                   selectedPromotions
-                                ),
-                              }));
+                                );
+                                return {
+                                  ...prev,
+                                  products: updatedProducts,
+                                  total: newTotal,
+                                };
+                              });
                             }}
-                            label="% Ganancia"
                             inputProps={{ min: 0, max: 100, step: "1" }}
                             size="small"
                             fullWidth
-                            disabled={isCredit}
                           />
-                        </Box>
-                      </Box>
-                    )}
-                  </Box>
-                </Box>
-
-                <Box sx={{ width: "100%" }}>
-                  {isCredit && (
-                    <Checkbox
-                      label="Registrar cheque"
-                      checked={registerCheck}
-                      onChange={handleRegisterCheckChange}
-                    />
-                  )}
-                  {isCredit && registerCheck ? (
-                    <Box sx={{ p: 1 }}>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Select
-                          label="Método"
-                          options={[{ value: "CHEQUE", label: "Cheque" }]}
-                          value="CHEQUE"
-                          onChange={() => {}}
-                          disabled
-                          fullWidth
-                          size="small"
-                        />
-                        <InputCash
-                          value={newSale.paymentMethods[0]?.amount || 0}
-                          onChange={(value) =>
-                            handlePaymentMethodChange(0, "amount", value)
-                          }
-                          placeholder="Monto del cheque"
-                        />
-                      </Box>
-                    </Box>
-                  ) : !isCredit ? (
-                    <>
-                      {newSale.paymentMethods.map((payment, index) => (
-                        <Box
-                          key={index}
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            my: 1,
-                          }}
-                        >
-                          <Select
-                            label="Método"
-                            options={paymentOptions}
-                            value={payment.method}
-                            onChange={(value) =>
-                              handlePaymentMethodChange(index, "method", value)
-                            }
-                            disabled={isCredit}
-                            fullWidth
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            value={product.surcharge?.toString() || "0"}
+                            onChange={(e) => {
+                              const value = Math.min(
+                                100,
+                                Math.max(0, Number(e.target.value))
+                              );
+                              setNewSale((prev) => {
+                                const updatedProducts = prev.products.map((p) =>
+                                  p.id === product.id
+                                    ? { ...p, surcharge: value }
+                                    : p
+                                );
+                                const newTotal = calculateFinalTotal(
+                                  updatedProducts,
+                                  prev.manualAmount || 0,
+                                  selectedPromotions
+                                );
+                                return {
+                                  ...prev,
+                                  products: updatedProducts,
+                                  total: newTotal,
+                                };
+                              });
+                            }}
+                            inputProps={{ min: 0, max: 100, step: "1" }}
                             size="small"
+                            fullWidth
                           />
-
-                          <Box sx={{ position: "relative", width: "100%" }}>
-                            <InputCash
-                              value={payment.amount}
-                              onChange={(value) =>
-                                handlePaymentMethodChange(
-                                  index,
-                                  "amount",
-                                  value
-                                )
-                              }
-                              placeholder="Monto"
-                              disabled={isCredit}
-                            />
-                            {index === newSale.paymentMethods.length - 1 &&
-                              newSale.paymentMethods.reduce(
-                                (sum, m) => sum + m.amount,
-                                0
-                              ) >
-                                newSale.total + 0.1 && (
-                                <Typography
-                                  variant="caption"
-                                  color="error"
-                                  sx={{ ml: 1 }}
-                                >
-                                  Exceso:{" "}
-                                  {formatCurrency(
-                                    newSale.paymentMethods.reduce(
-                                      (sum, m) => sum + m.amount,
-                                      0
-                                    ) - newSale.total
-                                  )}
-                                </Typography>
-                              )}
-                          </Box>
-
-                          {newSale.paymentMethods.length > 1 && (
-                            <IconButton
-                              onClick={() => removePaymentMethod(index)}
-                              size="small"
-                              sx={{
-                                borderRadius: "4px",
-                                color: "text.secondary",
-                                "&:hover": {
-                                  backgroundColor: "error.main",
-                                  color: "white",
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography variant="body2" fontWeight="bold">
+                            {formatCurrency(
+                              calculatePrice(
+                                {
+                                  ...product,
+                                  price: product.price || 0,
+                                  quantity: product.quantity || 0,
+                                  unit: product.unit || "Unid.",
+                                  costPrice: product.costPrice || 0,
                                 },
-                              }}
-                            >
-                              <Delete fontSize="small" />
-                            </IconButton>
-                          )}
-                        </Box>
-                      ))}
-                      {!isCredit && newSale.paymentMethods.length < 3 && (
-                        <Button
-                          variant="outlined"
-                          startIcon={<Add fontSize="small" />}
-                          onClick={addPaymentMethod}
-                          sx={{
-                            justifyContent: "flex-start",
-                            px: 1,
-                            minWidth: "auto",
-                          }}
-                        >
-                          Agregar otro método de pago
-                        </Button>
-                      )}
-                    </>
-                  ) : null}
-                </Box>
+                                product.quantity || 0,
+                                product.unit || "Unid."
+                              ).finalPrice
+                            )}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            onClick={() => {
+                              handleDeleteProductClick(
+                                product.id,
+                                getDisplayProductName(product, rubro)
+                              );
+                            }}
+                            size="small"
+                            sx={{
+                              borderRadius: "4px",
+                              color: "text.secondary",
+                              "&:hover": {
+                                backgroundColor: "error.main",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
 
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              {!isCredit && (
                 <Box sx={{ width: "100%" }}>
-                  <TextField
-                    value={newSale.concept || ""}
-                    onChange={(e) =>
-                      setNewSale((prev) => ({
-                        ...prev,
-                        concept: e.target.value,
-                      }))
+                  <Typography
+                    variant="body2"
+                    fontWeight="medium"
+                    sx={{ mb: 1 }}
+                  >
+                    Cliente
+                  </Typography>
+                  <Autocomplete
+                    options={customerOptions}
+                    value={selectedCustomer}
+                    onChange={(
+                      event: React.SyntheticEvent,
+                      newValue: CustomerOption | null
+                    ) => {
+                      setSelectedCustomer(newValue);
+                      if (newValue) {
+                        const customer = customers.find(
+                          (c) => c.id === newValue.value
+                        );
+                        setCustomerName(customer?.name || "");
+                        setCustomerPhone(customer?.phone || "");
+                      }
+                    }}
+                    getOptionLabel={(option) => option.label}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Ningún cliente seleccionado"
+                        variant="outlined"
+                        size="small"
+                      />
+                    )}
+                    isOptionEqualToValue={(option, value) =>
+                      option.value === value.value
                     }
-                    label="Concepto (Opcional)"
-                    placeholder="Ingrese un concepto para esta venta..."
-                    multiline
-                    rows={3}
-                    inputProps={{ maxLength: 50 }}
-                    variant="outlined"
-                    fullWidth
                   />
                 </Box>
+              )}
 
-                <Checkbox
-                  label="Registrar Cuenta corriente"
-                  checked={isCredit}
-                  onChange={handleCreditChange}
-                />
-
-                {isCredit && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      fontWeight="medium"
-                      sx={{ mb: 1 }}
-                    >
-                      Cliente existente*
+              <Box sx={{ width: "100%" }}>
+                {isCredit ? (
+                  <Card sx={{ p: 2, bgcolor: "grey.50" }}>
+                    <Typography variant="body2" fontWeight="semibold">
+                      Monto manual deshabilitado
                     </Typography>
-                    <Autocomplete
-                      options={customerOptions}
-                      value={selectedCustomer}
-                      onChange={(
-                        event: React.SyntheticEvent,
-                        newValue: CustomerOption | null
-                      ) => {
-                        setSelectedCustomer(newValue);
-                        if (newValue) {
-                          const customer = customers.find(
-                            (c) => c.id === newValue.value
-                          );
-                          setCustomerName(customer?.name || "");
-                          setCustomerPhone(customer?.phone || "");
-                        }
-                      }}
-                      getOptionLabel={(option) => option.label}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          placeholder="Buscar cliente"
-                          variant="outlined"
-                          size="small"
-                        />
-                      )}
-                      isOptionEqualToValue={(option, value) =>
-                        option.value === value.value
-                      }
-                    />
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        mt: 2,
-                      }}
-                    >
-                      <TextField
-                        label="Nuevo cliente"
-                        placeholder="Nombre del cliente"
-                        value={customerName}
-                        onChange={(e) => {
-                          setCustomerName(e.target.value);
-                          setSelectedCustomer(null);
-                        }}
-                        disabled={!!selectedCustomer}
-                        onBlur={(e) => {
-                          setCustomerName(e.target.value.trim());
-                        }}
-                        variant="outlined"
-                        size="small"
-                        fullWidth
+                  </Card>
+                ) : (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      marginTop: 3,
+                    }}
+                  >
+                    <Box sx={{ width: "100%" }}>
+                      <InputCash
+                        label="Monto manual"
+                        value={newSale.manualAmount || 0}
+                        onChange={handleManualAmountChange}
+                        disabled={isCredit}
                       />
-
+                    </Box>
+                    <Box sx={{ width: "100%" }}>
                       <TextField
-                        label="Teléfono del cliente"
-                        placeholder="Teléfono del cliente"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        variant="outlined"
+                        type="number"
+                        value={
+                          newSale.manualProfitPercentage?.toString() || "0"
+                        }
+                        onChange={(e) => {
+                          const value = Math.min(
+                            100,
+                            Math.max(0, Number(e.target.value))
+                          );
+                          setNewSale((prev) => ({
+                            ...prev,
+                            manualProfitPercentage: value || 0,
+                            total: calculateFinalTotal(
+                              prev.products,
+                              prev.manualAmount || 0,
+                              selectedPromotions
+                            ),
+                          }));
+                        }}
+                        label="% Ganancia"
+                        inputProps={{ min: 0, max: 100, step: "1" }}
                         size="small"
                         fullWidth
+                        disabled={isCredit}
                       />
                     </Box>
                   </Box>
@@ -3116,21 +2980,222 @@ const VentasPage = () => {
               </Box>
             </Box>
 
-            {/* Sección fija del TOTAL - CENTRADO */}
-            <Box
-              sx={{
-                ...getCardStyle("primary"),
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                textAlign: "center",
-                p: 2,
-              }}
-            >
-              <Typography variant="h4" fontWeight="bold">
-                TOTAL: {formatCurrency(newSale.total)}
-              </Typography>
+            <Box sx={{ width: "100%" }}>
+              {isCredit && (
+                <Checkbox
+                  label="Registrar cheque"
+                  checked={registerCheck}
+                  onChange={handleRegisterCheckChange}
+                />
+              )}
+              {isCredit && registerCheck ? (
+                <Box sx={{ p: 1 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Select
+                      label="Método"
+                      options={[{ value: "CHEQUE", label: "Cheque" }]}
+                      value="CHEQUE"
+                      onChange={() => {}}
+                      disabled
+                      fullWidth
+                      size="small"
+                    />
+                    <InputCash
+                      value={newSale.paymentMethods[0]?.amount || 0}
+                      onChange={(value) =>
+                        handlePaymentMethodChange(0, "amount", value)
+                      }
+                      placeholder="Monto del cheque"
+                    />
+                  </Box>
+                </Box>
+              ) : !isCredit ? (
+                <>
+                  {newSale.paymentMethods.map((payment, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        my: 1,
+                      }}
+                    >
+                      <Select
+                        label="Método"
+                        options={paymentOptions}
+                        value={payment.method}
+                        onChange={(value) =>
+                          handlePaymentMethodChange(index, "method", value)
+                        }
+                        disabled={isCredit}
+                        fullWidth
+                        size="small"
+                      />
+
+                      <Box sx={{ position: "relative", width: "100%" }}>
+                        <InputCash
+                          value={payment.amount}
+                          onChange={(value) =>
+                            handlePaymentMethodChange(index, "amount", value)
+                          }
+                          placeholder="Monto"
+                          disabled={isCredit}
+                        />
+                        {index === newSale.paymentMethods.length - 1 &&
+                          newSale.paymentMethods.reduce(
+                            (sum, m) => sum + m.amount,
+                            0
+                          ) >
+                            newSale.total + 0.1 && (
+                            <Typography
+                              variant="caption"
+                              color="error"
+                              sx={{ ml: 1 }}
+                            >
+                              Exceso:{" "}
+                              {formatCurrency(
+                                newSale.paymentMethods.reduce(
+                                  (sum, m) => sum + m.amount,
+                                  0
+                                ) - newSale.total
+                              )}
+                            </Typography>
+                          )}
+                      </Box>
+
+                      {newSale.paymentMethods.length > 1 && (
+                        <IconButton
+                          onClick={() => removePaymentMethod(index)}
+                          size="small"
+                          sx={{
+                            borderRadius: "4px",
+                            color: "text.secondary",
+                            "&:hover": {
+                              backgroundColor: "error.main",
+                              color: "white",
+                            },
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                  {!isCredit && newSale.paymentMethods.length < 3 && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<Add fontSize="small" />}
+                      onClick={addPaymentMethod}
+                      sx={{
+                        justifyContent: "flex-start",
+                        px: 1,
+                        minWidth: "auto",
+                      }}
+                    >
+                      Agregar otro método de pago
+                    </Button>
+                  )}
+                </>
+              ) : null}
             </Box>
+
+            <Box sx={{ width: "100%" }}>
+              <TextField
+                value={newSale.concept || ""}
+                onChange={(e) =>
+                  setNewSale((prev) => ({
+                    ...prev,
+                    concept: e.target.value,
+                  }))
+                }
+                label="Concepto (Opcional)"
+                placeholder="Ingrese un concepto para esta venta..."
+                multiline
+                rows={3}
+                inputProps={{ maxLength: 50 }}
+                variant="outlined"
+                fullWidth
+              />
+            </Box>
+
+            <Checkbox
+              label="Registrar Cuenta corriente"
+              checked={isCredit}
+              onChange={handleCreditChange}
+            />
+
+            {isCredit && (
+              <Box>
+                <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
+                  Cliente existente*
+                </Typography>
+                <Autocomplete
+                  options={customerOptions}
+                  value={selectedCustomer}
+                  onChange={(
+                    event: React.SyntheticEvent,
+                    newValue: CustomerOption | null
+                  ) => {
+                    setSelectedCustomer(newValue);
+                    if (newValue) {
+                      const customer = customers.find(
+                        (c) => c.id === newValue.value
+                      );
+                      setCustomerName(customer?.name || "");
+                      setCustomerPhone(customer?.phone || "");
+                    }
+                  }}
+                  getOptionLabel={(option) => option.label}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Buscar cliente"
+                      variant="outlined"
+                      size="small"
+                    />
+                  )}
+                  isOptionEqualToValue={(option, value) =>
+                    option.value === value.value
+                  }
+                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    mt: 2,
+                  }}
+                >
+                  <TextField
+                    label="Nuevo cliente"
+                    placeholder="Nombre del cliente"
+                    value={customerName}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      setSelectedCustomer(null);
+                    }}
+                    disabled={!!selectedCustomer}
+                    onBlur={(e) => {
+                      setCustomerName(e.target.value.trim());
+                    }}
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                  />
+
+                  <TextField
+                    label="Teléfono del cliente"
+                    placeholder="Teléfono del cliente"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                  />
+                </Box>
+              </Box>
+            )}
           </Box>
         </Modal>
         <PaymentModal
@@ -3158,98 +3223,13 @@ const VentasPage = () => {
         />
 
         {/* Modal de Datos del Negocio */}
-        <Modal
+        <BusinessDataModal
           isOpen={isBusinessDataModalOpen}
           onClose={handleCloseBusinessDataModal}
           title="Datos del negocio para tickets"
-          bgColor="bg-white dark:bg-gray_b"
-          buttons={
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-              <Button
-                variant="text"
-                onClick={handleCloseBusinessDataModal}
-                sx={{
-                  color: "text.secondary",
-                  borderColor: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.primary",
-                  },
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="contained"
-                onClick={async () => {
-                  try {
-                    await setBusinessData(businessData);
-                    handleCloseBusinessDataModal();
-                    showNotification(
-                      "Datos del negocio actualizados correctamente",
-                      "success"
-                    );
-
-                    if (selectedSale) {
-                      setIsInfoModalOpen(true);
-                    }
-                  } catch {
-                    showNotification("Error al guardar los datos", "error");
-                  }
-                }}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                Guardar Cambios
-              </Button>
-            </Box>
-          }
-        >
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 4 }}>
-            <TextField
-              label="Nombre del Negocio"
-              value={businessData.name}
-              onChange={(e) =>
-                setBusinessData({ ...businessData, name: e.target.value })
-              }
-              placeholder="Ingrese el nombre del negocio"
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Dirección"
-              value={businessData.address}
-              onChange={(e) =>
-                setBusinessData({ ...businessData, address: e.target.value })
-              }
-              placeholder="Ingrese la dirección"
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Teléfono"
-              value={businessData.phone}
-              onChange={(e) =>
-                setBusinessData({ ...businessData, phone: e.target.value })
-              }
-              placeholder="Ingrese el teléfono"
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="CUIT"
-              value={businessData.cuit}
-              onChange={(e) =>
-                setBusinessData({ ...businessData, cuit: e.target.value })
-              }
-              placeholder="Ingrese el CUIT"
-              fullWidth
-              size="small"
-            />
-          </Box>
-        </Modal>
+          onSaveSuccess={handleSaveBusinessDataSuccess}
+          showNotificationOnSave={true}
+        />
       </Box>
     </ProtectedRoute>
   );

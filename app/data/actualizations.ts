@@ -1,4 +1,4 @@
-import { db } from "../database/db";
+import { db } from "@/app/database/db";
 
 export type Actualization = {
   id: number;

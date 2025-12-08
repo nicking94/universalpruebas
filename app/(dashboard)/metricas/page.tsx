@@ -1,12 +1,4 @@
 "use client";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-import { db } from "@/app/database/db";
-import {
-  DailyCash,
-  DailyCashMovement,
-  Product,
-  Rubro,
-} from "@/app/lib/types/types";
 import {
   parseISO,
   isSameYear,
@@ -20,10 +12,6 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { useEffect, useState, useMemo } from "react";
-import { formatCurrency } from "@/app/lib/utils/currency";
-import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
-import { useRubro } from "@/app/context/RubroContext";
-import { calculatePrice, calculateProfit } from "@/app/lib/utils/calculations";
 
 import {
   BarChart,
@@ -69,8 +57,19 @@ import {
   DateRange,
   Analytics,
 } from "@mui/icons-material";
-
+import { formatCurrency } from "@/app/lib/utils/currency";
 import Select, { SelectOption } from "@/app/components/Select";
+import {
+  DailyCash,
+  DailyCashMovement,
+  Product,
+  Rubro,
+} from "@/app/lib/types/types";
+import { useRubro } from "@/app/context/RubroContext";
+import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
+import { calculatePrice, calculateProfit } from "@/app/lib/utils/calculations";
+import { db } from "@/app/database/db";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Notification from "@/app/components/Notification";
 
 const WEEK_STARTS_ON = 1;
@@ -1591,7 +1590,7 @@ const Metrics = () => {
           </Box>
         </Box>
 
-        {/* Notification personalizada */}
+        {/* Notification */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}

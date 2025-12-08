@@ -2456,12 +2456,18 @@ const ProductsPage = () => {
             </Box>
           }
         >
-          <div className="space-y-4">
-            <p>
-              ¿Está seguro que desea eliminar el talle{" "}
-              <span className="font-bold">{sizeToDelete}</span>?
-            </p>
-          </div>
+          <Box sx={{ textAlign: "center", py: 2 }}>
+            <Delete
+              sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
+            />
+            <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
+              ¿Está seguro/a que desea eliminar el talle?
+            </Typography>
+            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+              El talle <strong>{sizeToDelete}</strong> será eliminado
+              permanentemente.
+            </Typography>
+          </Box>
         </Modal>
 
         <Modal
@@ -2843,7 +2849,11 @@ const ProductsPage = () => {
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar la categoría?
+              ¿Está seguro/a que desea eliminar la categoría?
+            </Typography>
+            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+              La categoría <strong>{categoryToDelete?.name}</strong> será
+              eliminada permanentemente.
             </Typography>
           </Box>
         </Modal>
@@ -2888,7 +2898,11 @@ const ProductsPage = () => {
               sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }}
             />
             <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-              ¿Está seguro que desea eliminar el producto?
+              ¿Está seguro/a que desea eliminar el producto?
+            </Typography>
+            <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+              <strong>{productToDelete?.name}</strong> será eliminado
+              permanentemente.
             </Typography>
           </Box>
         </Modal>

@@ -1,4 +1,4 @@
-// components/PaymentHistory.tsx
+﻿// components/PaymentHistory.tsx
 import React from "react";
 import { CreditSale, Payment } from "@/app/lib/types/types";
 import { format } from "date-fns";

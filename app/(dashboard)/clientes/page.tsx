@@ -1,13 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { db } from "@/app/database/db";
-import { Budget, CreditSale, Customer, Sale } from "@/app/lib/types/types";
-import ProtectedRoute from "@/app/components/ProtectedRoute";
-import Pagination from "@/app/components/Pagination";
-import SearchBar from "@/app/components/SearchBar";
-import { useRubro } from "@/app/context/RubroContext";
-import { usePagination } from "@/app/context/PaginationContext";
-import { calculateCustomerBalance } from "@/app/lib/utils/balanceCalculations";
+
 import {
   Box,
   Typography,
@@ -23,12 +16,7 @@ import {
   FormControl,
   useTheme,
 } from "@mui/material";
-import Modal from "@/app/components/Modal";
-import Input from "@/app/components/Input";
-import Select from "@/app/components/Select";
-import Button from "@/app/components/Button";
-import Notification from "@/app/components/Notification";
-import { useNotification } from "@/app/hooks/useNotification";
+
 import {
   Add,
   Edit,
@@ -39,6 +27,20 @@ import {
   Groups,
   Assignment,
 } from "@mui/icons-material";
+import { useRubro } from "@/app/context/RubroContext";
+import { Budget, CreditSale, Customer, Sale } from "@/app/lib/types/types";
+import { useNotification } from "@/app/hooks/useNotification";
+import { db } from "@/app/database/db";
+import Modal from "@/app/components/Modal";
+import Button from "@/app/components/Button";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
+import { calculateCustomerBalance } from "@/app/lib/utils/balanceCalculations";
+import { usePagination } from "@/app/context/PaginationContext";
+import SearchBar from "@/app/components/SearchBar";
+import Pagination from "@/app/components/Pagination";
+import Input from "@/app/components/Input";
+import Select from "@/app/components/Select";
+import Notification from "@/app/components/Notification";
 
 const ClientesPage = () => {
   const { rubro } = useRubro();
@@ -68,8 +70,7 @@ const ClientesPage = () => {
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
     null
   );
-  const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
-  const [isDeleteBudgetModalOpen, setIsDeleteBudgetModalOpen] = useState(false);
+
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
@@ -266,24 +267,6 @@ const ClientesPage = () => {
 
   const getCustomerPendingBalance = (customer: Customer): number => {
     return customerBalances[customer.name] || 0;
-  };
-
-  const handleConfirmDeleteBudget = async () => {
-    if (!budgetToDelete) return;
-
-    try {
-      await db.budgets.delete(budgetToDelete.id);
-      setCustomerBudgets(
-        customerBudgets.filter((b) => b.id !== budgetToDelete.id)
-      );
-      showNotification("Presupuesto eliminado correctamente", "success");
-    } catch (error) {
-      console.error("Error al eliminar presupuesto:", error);
-      showNotification("Error al eliminar presupuesto", "error");
-    } finally {
-      setIsDeleteBudgetModalOpen(false);
-      setBudgetToDelete(null);
-    }
   };
 
   const handleDeleteClick = (customer: Customer) => {
@@ -835,60 +818,6 @@ const ClientesPage = () => {
     </Modal>
   );
 
-  const DeleteBudgetModal = () => (
-    <Modal
-      isOpen={isDeleteBudgetModalOpen}
-      onClose={() => setIsDeleteBudgetModalOpen(false)}
-      title="Eliminar Presupuesto"
-      bgColor="bg-white dark:bg-gray_b"
-      buttons={
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-          <Button
-            variant="text"
-            onClick={() => setIsDeleteBudgetModalOpen(false)}
-            sx={{
-              color: "text.secondary",
-              borderColor: "text.secondary",
-              "&:hover": {
-                backgroundColor: "action.hover",
-                borderColor: "text.primary",
-              },
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleConfirmDeleteBudget}
-            sx={{
-              bgcolor: "error.main",
-              "&:hover": { bgcolor: "error.dark" },
-            }}
-          >
-            Eliminar
-          </Button>
-        </Box>
-      }
-    >
-      <Box sx={{ textAlign: "center", py: 2 }}>
-        <Delete sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }} />
-        <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-          ¿Está seguro que desea eliminar el presupuesto?
-        </Typography>
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          {budgetToDelete?.date &&
-            `Del ${new Date(budgetToDelete.date).toLocaleDateString("es-AR")}`}
-          {budgetToDelete && (
-            <Typography sx={{ mt: 1, fontWeight: "semibold" }}>
-              Total: ${budgetToDelete.total.toFixed(2)}
-            </Typography>
-          )}
-        </Typography>
-      </Box>
-    </Modal>
-  );
-
   const DeleteCustomerModal = () => (
     <Modal
       isOpen={isDeleteModalOpen}
@@ -929,7 +858,11 @@ const ClientesPage = () => {
       <Box sx={{ textAlign: "center", py: 2 }}>
         <Delete sx={{ fontSize: 48, color: "error.main", mb: 2, mx: "auto" }} />
         <Typography variant="h6" fontWeight="semibold" sx={{ mb: 1 }}>
-          ¿Está seguro que desea eliminar el cliente?
+          ¿Está seguro/a que desea eliminar al cliente?
+        </Typography>
+        <Typography variant="body2" fontWeight="semibold" sx={{ mb: 1 }}>
+          <strong>{customerToDelete?.name}</strong> será eliminado
+          permanentemente.
         </Typography>
       </Box>
     </Modal>
@@ -1389,15 +1322,12 @@ const ClientesPage = () => {
           </Box>
         </Modal>
 
-        {/* Modales de confirmación - CORREGIDOS para ser consistentes */}
-        <DeleteBudgetModal />
         <DeleteCustomerModal />
 
         {/* Modales de Material-UI */}
         <BudgetsModal />
         <SalesModal />
 
-        {/* REEMPLAZADO: Usar closeNotification del hook en lugar de la función local */}
         <Notification
           isOpen={isNotificationOpen}
           message={notificationMessage}

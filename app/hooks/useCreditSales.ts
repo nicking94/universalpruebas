@@ -1,4 +1,4 @@
-// hooks/useCreditSales.ts
+﻿// hooks/useCreditSales.ts
 import { useState, useCallback } from "react";
 import { db } from "@/app/database/db";
 import { CreditSale, Payment, Customer } from "@/app/lib/types/types";

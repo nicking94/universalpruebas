@@ -507,7 +507,7 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
               icon={<ClearIcon />}
               iconPosition="left"
               onClick={clearAllFilters}
-              variant="outlined"
+              variant="text"
               size="small"
               sx={{
                 color: theme.palette.text.secondary,

@@ -6,7 +6,7 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { db } from "../database/db";
+import { db } from "@/app/database/db";
 
 interface PaginationContextType {
   currentPage: number;

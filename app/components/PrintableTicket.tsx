@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import {
   forwardRef,
   useEffect,
@@ -6,11 +6,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { BusinessData, Rubro, Sale } from "@/app/lib/types/types";
+
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
-import { formatCurrency } from "@/app/lib/utils/currency";
+import { BusinessData, Rubro, Sale } from "../lib/types/types";
+import getDisplayProductName from "../lib/utils/DisplayProductName";
+import { formatCurrency } from "../lib/utils/currency";
 
 type PrintableTicketProps = {
   sale: Sale;
@@ -189,7 +190,7 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
           max-height: none !important;
         }
         
-        /* ELEMENTOS ESPECÍFICOS EN BOLD */
+        /* ELEMENTOS ESPECÃFICOS EN BOLD */
         .business-name {
           font-size: ${ticketConfig.fontSize.large} !important;
           font-weight: bold !important;
@@ -309,7 +310,7 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
                 break-inside: avoid;
               }
               
-              /* ELEMENTOS ESPECÍFICOS EN BOLD */
+              /* ELEMENTOS ESPECÃFICOS EN BOLD */
               .business-name {
                 font-size: ${ticketConfig.fontSize.large} !important;
                 font-weight: bold !important;
@@ -469,7 +470,7 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
       },
       paperSelectorText: {
         fontSize: "15px",
-        color: "#2563eb",
+        color: "#2d78b9",
         fontWeight: 600 as const,
       },
       paperOptions: {
@@ -814,7 +815,6 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
               <div
                 style={{
                   ...styles.paperOptionBox,
-                  borderColor: paperSize === "57mm" ? "#268ed4" : "#d1d5db",
                   backgroundColor: paperSize === "57mm" ? "#eaf6ff" : "white",
                 }}
               >
@@ -827,13 +827,13 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
                     handlePaperSizeChange(e.target.value as "57mm" | "80mm")
                   }
                   style={{
-                    color: "#268ed4",
+                    color: "#2d78b9",
                   }}
                 />
                 <span
                   style={{
                     ...styles.paperOptionText,
-                    color: paperSize === "57mm" ? "#2d78b9" : "#2c2c2c",
+                    color: "#2d78b9",
                   }}
                 >
                   57mm
@@ -846,8 +846,8 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
               <div
                 style={{
                   ...styles.paperOptionBox,
-                  borderColor: paperSize === "80mm" ? "#3b82f6" : "#d1d5db",
-                  backgroundColor: paperSize === "80mm" ? "#eff6ff" : "white",
+
+                  backgroundColor: paperSize === "80mm" ? "#eaf6ff" : "white",
                 }}
               >
                 <input
@@ -859,13 +859,13 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
                     handlePaperSizeChange(e.target.value as "57mm" | "80mm")
                   }
                   style={{
-                    color: "#3b82f6",
+                    color: "#eaf6ff",
                   }}
                 />
                 <span
                   style={{
                     ...styles.paperOptionText,
-                    color: paperSize === "80mm" ? "#1d4ed8" : "#374151",
+                    color: "2d78b9",
                   }}
                 >
                   80mm

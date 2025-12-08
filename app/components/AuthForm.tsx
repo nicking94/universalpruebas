@@ -2,14 +2,11 @@
 import React, { useState } from "react";
 import {
   Box,
-  TextField,
   Button,
   Typography,
   FormControlLabel,
   Checkbox,
   Link,
-  InputAdornment,
-  IconButton,
   Paper,
   useTheme,
 } from "@mui/material";
@@ -19,7 +16,8 @@ import {
 } from "@mui/icons-material";
 import { AuthData } from "../lib/types/types";
 import Image from "next/image";
-import Logo from "../../public/logo.png";
+import Logo from "@/public/logo.png";
+import Input from "./Input";
 
 interface AuthFormProps {
   type?: "login" | "register";
@@ -43,9 +41,6 @@ const AuthForm: React.FC<AuthFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const theme = useTheme();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -98,67 +93,29 @@ const AuthForm: React.FC<AuthFormProps> = ({
         {type === "login" ? "Iniciar sesión" : "Registrarse"}
       </Typography>
 
-      <TextField
+      <Input
         label="Usuario"
-        id="username"
         name="username"
         value={formData.username}
-        onChange={handleChange}
-        required
+        onChange={(value) => setFormData({ ...formData, username: value.toString() })}
         placeholder="Escribe tu nombre de usuario"
-        variant="outlined"
         fullWidth
-        sx={{
-          "& .MuiOutlinedInput-root": {
-            backgroundColor: "white",
-            "&:hover fieldset": {
-              borderColor: theme.palette.primary.light,
-            },
-            "&.Mui-focused fieldset": {
-              borderColor: theme.palette.primary.main,
-            },
-          },
-        }}
+        required
+        capitalize={false}
       />
 
-      <TextField
+      <Input
         label="Contraseña"
-        id="password"
         name="password"
         type={showPassword ? "text" : "password"}
         value={formData.password}
-        onChange={handleChange}
-        required
+        onChange={(value) => setFormData({ ...formData, password: value.toString() })}
         placeholder="Escribe tu contraseña"
-        variant="outlined"
         fullWidth
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position="end">
-              <IconButton
-                aria-label={
-                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                }
-                onClick={handleClickShowPassword}
-                edge="end"
-                sx={{ color: "text.secondary" }}
-              >
-                {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-              </IconButton>
-            </InputAdornment>
-          ),
-        }}
-        sx={{
-          "& .MuiOutlinedInput-root": {
-            backgroundColor: "white",
-            "&:hover fieldset": {
-              borderColor: theme.palette.primary.light,
-            },
-            "&.Mui-focused fieldset": {
-              borderColor: theme.palette.primary.main,
-            },
-          },
-        }}
+        required
+        buttonIcon={showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+        onButtonClick={handleClickShowPassword}
+        buttonTitle={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
       />
 
       {showTermsCheckbox && (
