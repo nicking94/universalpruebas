@@ -72,7 +72,7 @@ export const SaleCard: React.FC<SaleCardProps> = ({
           onClick={() => onToggleExpand(sale.id)}
         >
           <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
               <ReceiptIcon color="primary" fontSize="small" />
               <Typography
                 variant="subtitle1"
@@ -92,7 +92,7 @@ export const SaleCard: React.FC<SaleCardProps> = ({
             </Typography>
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             {!isPaid && (
               <Button
                 text="Registrar Pago"
@@ -123,7 +123,7 @@ export const SaleCard: React.FC<SaleCardProps> = ({
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 1,
+            gap: 2,
             mb: 2,
           }}
         >

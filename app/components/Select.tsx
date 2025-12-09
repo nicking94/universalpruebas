@@ -11,6 +11,7 @@ import {
   useTheme,
   IconButton,
   Box,
+  Tooltip,
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 
@@ -213,25 +214,25 @@ function Select<T = string | number, M = SelectOptionMetadata>({
                   {option.label}
                 </Box>
 
-                {/* Botón a la derecha - solo se muestra si es necesario */}
                 {showDelete && (
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleDelete(e, option)}
-                    sx={{
-                      color: theme.palette.error.main,
-                      flexShrink: 0,
-                      transition: "transform 0.2s, background-color 0.2s",
-                      "&:hover": {
-                        backgroundColor: theme.palette.error.light,
-                        transform: "scale(1.1)",
-                      },
-                      padding: "4px",
-                    }}
-                    title="Eliminar"
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
+                  <Tooltip title="Eliminar">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleDelete(e, option)}
+                      sx={{
+                        color: theme.palette.error.main,
+                        flexShrink: 0,
+                        transition: "transform 0.2s, background-color 0.2s",
+                        "&:hover": {
+                          backgroundColor: theme.palette.error.light,
+                          transform: "scale(1.1)",
+                        },
+                        padding: "4px",
+                      }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 )}
               </Box>
             </MenuItem>

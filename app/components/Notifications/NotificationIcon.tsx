@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { IconButton, Badge, useTheme } from "@mui/material";
+import { IconButton, Badge, useTheme, Tooltip } from "@mui/material";
 import {
   Notifications as NotificationsIcon,
   NotificationsActive as NotificationsActiveIcon,
@@ -33,48 +33,49 @@ const NotificationIcon = () => {
 
   return (
     <div className="relative">
-      <IconButton
-        onClick={() => setIsOpen(!isOpen)}
-        sx={{
-          color: theme.palette.text.secondary,
-          "&:hover": {
-            color: theme.palette.text.secondary,
-            transform: "scale(1.05)",
-            backgroundColor: "transparent",
-          },
-          transition: "all 0.3s ease",
-          padding: "4px",
-        }}
-        title="Notificaciones"
-      >
-        <Badge
-          badgeContent={unreadCount}
-          color="error"
+      <Tooltip title="Notificaciones">
+        <IconButton
+          onClick={() => setIsOpen(!isOpen)}
           sx={{
-            "& .MuiBadge-badge": {
-              fontSize: "0.75rem",
-              height: "20px",
-              minWidth: "20px",
-              borderRadius: "10px",
+            color: theme.palette.text.secondary,
+            "&:hover": {
+              color: theme.palette.text.secondary,
+              transform: "scale(1.05)",
+              backgroundColor: "transparent",
             },
+            transition: "all 0.3s ease",
+            padding: "4px",
           }}
         >
-          {unreadCount > 0 ? (
-            <NotificationsActiveIcon
-              sx={{
-                fontSize: "24px",
-                color: theme.palette.primary.main,
-              }}
-            />
-          ) : (
-            <NotificationsIcon
-              sx={{
-                fontSize: "24px",
-              }}
-            />
-          )}
-        </Badge>
-      </IconButton>
+          <Badge
+            badgeContent={unreadCount}
+            color="error"
+            sx={{
+              "& .MuiBadge-badge": {
+                fontSize: "0.75rem",
+                height: "20px",
+                minWidth: "20px",
+                borderRadius: "10px",
+              },
+            }}
+          >
+            {unreadCount > 0 ? (
+              <NotificationsActiveIcon
+                sx={{
+                  fontSize: "24px",
+                  color: theme.palette.primary.main,
+                }}
+              />
+            ) : (
+              <NotificationsIcon
+                sx={{
+                  fontSize: "24px",
+                }}
+              />
+            )}
+          </Badge>
+        </IconButton>
+      </Tooltip>
 
       {isOpen && (
         <NotificationDropdown

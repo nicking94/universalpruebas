@@ -39,9 +39,8 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
     if (isUpdating) {
       setProgress(0);
 
-      // Simular progreso durante 4 segundos
       const startTime = Date.now();
-      const duration = 4000; // 4 segundos
+      const duration = 2000;
 
       progressInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
@@ -76,7 +75,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
       }}
       BackdropProps={{
         sx: {
-          backgroundColor: "rgba(25, 55, 109, 0.8)", // blue_b con opacidad
+          backgroundColor: "rgba(25, 55, 109, 0.8)",
         },
       }}
     >

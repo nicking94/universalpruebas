@@ -13,6 +13,7 @@ import {
   IconButton,
   useTheme,
   CardContent,
+  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -297,7 +298,7 @@ const PromocionesPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -406,6 +407,7 @@ const PromocionesPage = () => {
         </Box>
 
         {/* Tabla de promociones */}
+
         <Box
           sx={{
             display: "flex",
@@ -417,7 +419,7 @@ const PromocionesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ minHeight: "59vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", mb: 2, flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -481,7 +483,7 @@ const PromocionesPage = () => {
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                gap: 1,
+                                gap: 2,
                               }}
                             >
                               {promotion.type === "PERCENTAGE_DISCOUNT" ? (
@@ -541,38 +543,42 @@ const PromocionesPage = () => {
                                   gap: 0.5,
                                 }}
                               >
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleEditPromotion(promotion)}
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Editar promoción"
-                                >
-                                  <Edit fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    handleDeletePromotion(promotion)
-                                  }
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "error.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Eliminar promoción"
-                                >
-                                  <Delete fontSize="small" />
-                                </IconButton>
+                                <Tooltip title="Editar promoción">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      handleEditPromotion(promotion)
+                                    }
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Eliminar promoción">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      handleDeletePromotion(promotion)
+                                    }
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "error.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
                             </TableCell>
                           )}

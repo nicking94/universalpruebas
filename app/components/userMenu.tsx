@@ -1,8 +1,7 @@
 "use client";
-import { Sun, Moon, LogOut, Settings, HelpCircle, Ticket } from "lucide-react";
 import { useState } from "react";
 import { UserMenuProps } from "../lib/types/types";
-// Material-UI imports
+
 import {
   IconButton,
   Menu,
@@ -15,9 +14,16 @@ import {
   Divider,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import {
+  Brightness7, // Sun
+  Brightness4, // Moon
+  Logout, // LogOut
+  Settings, // Settings
+  Help, // HelpCircle
+  Receipt, // Ticket
+} from "@mui/icons-material";
 import BusinessDataModal from "./BusinessDataModal";
 
-// Styled components
 const StyledIconButton = styled(IconButton)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   boxShadow: theme.shadows[1],
@@ -100,7 +106,6 @@ const UserMenu: React.FC<UserMenuProps> = ({
   };
 
   const handleBusinessDataSaveSuccess = () => {
-    // Opcional: Puedes mostrar una notificación o realizar alguna acción adicional
     console.log("Datos del negocio guardados exitosamente");
   };
 
@@ -113,7 +118,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
         size="small"
       >
         <Settings
-          style={{
+          sx={{
             width: 18,
             height: 18,
             color: theme.palette.text.primary,
@@ -121,7 +126,6 @@ const UserMenu: React.FC<UserMenuProps> = ({
         />
       </StyledIconButton>
 
-      {/* Menú desplegable */}
       <StyledMenu
         anchorEl={menuAnchor}
         open={isMenuOpen}
@@ -140,9 +144,15 @@ const UserMenu: React.FC<UserMenuProps> = ({
         <StyledMenuItem onClick={handleThemeToggle}>
           <ListItemIcon sx={{ minWidth: 36 }}>
             {currentTheme === "dark" ? (
-              <Sun size={18} color={theme.palette.text.primary} />
+              <Brightness7
+                fontSize="small"
+                sx={{ color: theme.palette.text.primary }}
+              />
             ) : (
-              <Moon size={18} color={theme.palette.text.primary} />
+              <Brightness4
+                fontSize="small"
+                sx={{ color: theme.palette.text.primary }}
+              />
             )}
           </ListItemIcon>
           <ListItemText>
@@ -155,11 +165,14 @@ const UserMenu: React.FC<UserMenuProps> = ({
         {/* Datos del negocio */}
         <StyledMenuItem onClick={handleOpenBusinessDataModal}>
           <ListItemIcon sx={{ minWidth: 36 }}>
-            <Ticket size={18} color={theme.palette.text.primary} />
+            <Receipt
+              fontSize="small"
+              sx={{ color: theme.palette.text.primary }}
+            />
           </ListItemIcon>
           <ListItemText>
             <Typography variant="body2" color="text.primary">
-              Datos del negocioss
+              Datos del negocio
             </Typography>
           </ListItemText>
         </StyledMenuItem>
@@ -167,7 +180,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
         {/* Tutoriales */}
         <StyledMenuItem onClick={handleTutorialClick}>
           <ListItemIcon sx={{ minWidth: 36 }}>
-            <HelpCircle size={18} color={theme.palette.text.primary} />
+            <Help fontSize="small" sx={{ color: theme.palette.text.primary }} />
           </ListItemIcon>
           <ListItemText>
             <Typography variant="body2" color="text.primary">
@@ -181,7 +194,10 @@ const UserMenu: React.FC<UserMenuProps> = ({
         {/* Cerrar sesión */}
         <StyledMenuItem onClick={handleLogout}>
           <ListItemIcon sx={{ minWidth: 36 }}>
-            <LogOut size={18} color={theme.palette.text.primary} />
+            <Logout
+              fontSize="small"
+              sx={{ color: theme.palette.text.primary }}
+            />
           </ListItemIcon>
           <ListItemText>
             <Typography variant="body2" color="text.primary">
@@ -195,7 +211,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
       <BusinessDataModal
         isOpen={isTicketDataModalOpen}
         onClose={handleCloseBusinessDataModal}
-        title="Datos del negocios"
+        title="Datos del negocio"
         onSaveSuccess={handleBusinessDataSaveSuccess}
         showNotificationOnSave={true}
         autoFocus={true}

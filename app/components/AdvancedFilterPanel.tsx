@@ -79,7 +79,7 @@ const AdvancedFilterPanel = <T extends Product | Expense>({
       value: category,
       label: category,
     }));
-  }, [data, isExpense, rubro]); // Añadir rubro como dependencia
+  }, [data, isExpense, rubro]);
 
   const clearAllFilters = () => {
     if (isExpense) {

@@ -74,7 +74,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         return;
       }
 
-      // F6 shortcut for Total button
       if (e.key === "F6" && !isCredit && !registerCheck) {
         e.preventDefault();
         handlePaymentAmountChange(total);
@@ -140,7 +139,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         }}
       >
         {isProcessing ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Box
               sx={{
                 width: 16,
@@ -221,7 +220,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 fontWeight="bold"
                 sx={{
                   textShadow: theme.shadows[2],
-                  fontSize: { xs: "2.5rem", sm: "3rem" },
+                  fontSize: "2rem",
                 }}
               >
                 {formatCurrency(total)}
@@ -246,7 +245,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <Typography
                 variant="subtitle1"
                 fontWeight="semibold"
-                sx={{ mt: 3, display: "flex", alignItems: "center", gap: 1 }}
+                sx={{ mt: 3, display: "flex", alignItems: "center", gap: 2 }}
               >
                 Monto Recibido
               </Typography>
@@ -287,7 +286,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   disabled={isProcessing}
                   autoFocus
                 />
-                <Box sx={{ display: "flex", gap: 1 }}>
+                <Box sx={{ display: "flex", gap: 2 }}>
                   <Button
                     variant="outlined"
                     color="success"
@@ -424,7 +423,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               sx={{
                 display: "grid",
                 gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                gap: 3,
+                gap: 2,
               }}
             >
               <Box

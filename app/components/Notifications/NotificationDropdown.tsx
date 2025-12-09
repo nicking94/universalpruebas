@@ -11,6 +11,7 @@ import {
   ListItem,
   useTheme,
   alpha,
+  Tooltip,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -69,35 +70,37 @@ const NotificationDropdown = ({
         <Typography variant="h6" component="h3" color="text.primary">
           Notificaciones
         </Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           {unreadNotifications.length > 0 && (
+            <Tooltip title="Marcar todas como leídas">
+              <IconButton
+                onClick={onMarkAllAsRead}
+                size="small"
+                sx={{
+                  color: "primary.main",
+                  "&:hover": {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  },
+                }}
+              >
+                <CheckIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title="Cerrar">
             <IconButton
-              onClick={onMarkAllAsRead}
+              onClick={onClose}
               size="small"
-              title="Marcar todas como leídas"
               sx={{
-                color: "primary.main",
+                color: "text.secondary",
                 "&:hover": {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  backgroundColor: alpha(theme.palette.text.secondary, 0.1),
                 },
               }}
             >
-              <CheckIcon fontSize="small" />
+              <CloseIcon fontSize="small" />
             </IconButton>
-          )}
-          <IconButton
-            onClick={onClose}
-            size="small"
-            title="Cerrar"
-            sx={{
-              color: "text.secondary",
-              "&:hover": {
-                backgroundColor: alpha(theme.palette.text.secondary, 0.1),
-              },
-            }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
+          </Tooltip>
         </Box>
       </Box>
 
@@ -256,35 +259,37 @@ const NotificationItem = ({
         </Box>
       </Box>
       <Box sx={{ ml: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-        <IconButton
-          onClick={() => notification.id && onDelete(notification.id)}
-          size="small"
-          title="Eliminar"
-          sx={{
-            color: "text.secondary",
-            "&:hover": {
-              color: "error.main",
-              backgroundColor: alpha(theme.palette.error.main, 0.1),
-            },
-          }}
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
-        {isUnread && notification.id && (
+        <Tooltip title="Eliminar">
           <IconButton
-            onClick={() => onMarkAsRead(notification.id!)}
+            onClick={() => notification.id && onDelete(notification.id)}
             size="small"
-            title="Marcar como leída"
             sx={{
               color: "text.secondary",
               "&:hover": {
-                color: "success.main",
-                backgroundColor: alpha(theme.palette.success.main, 0.1),
+                color: "error.main",
+                backgroundColor: alpha(theme.palette.error.main, 0.1),
               },
             }}
           >
-            <CheckCircleIcon fontSize="small" />
+            <DeleteIcon fontSize="small" />
           </IconButton>
+        </Tooltip>
+        {isUnread && notification.id && (
+          <Tooltip title="Marcar como leída">
+            <IconButton
+              onClick={() => onMarkAsRead(notification.id!)}
+              size="small"
+              sx={{
+                color: "text.secondary",
+                "&:hover": {
+                  color: "success.main",
+                  backgroundColor: alpha(theme.palette.success.main, 0.1),
+                },
+              }}
+            >
+              <CheckCircleIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         )}
       </Box>
     </ListItem>

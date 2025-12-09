@@ -4,7 +4,6 @@ import { NotificationProps } from "../lib/types/types";
 import { forwardRef } from "react";
 import { useTheme } from "@mui/material/styles";
 
-// Transition component for smooth slide-in
 const SlideTransition = forwardRef<HTMLDivElement, SlideProps>(
   function Transition(props, ref) {
     return <Slide {...props} direction="left" ref={ref} />;
@@ -43,7 +42,6 @@ export default function Notification({
     onClose?.();
   };
 
-  // Estilos adaptados al theme
   const getAlertStyles = () => ({
     boxShadow: theme.shadows[3],
     borderRadius: theme.shape.borderRadius,
@@ -71,7 +69,7 @@ export default function Notification({
         },
       },
     },
-    // Estilos específicos para cada tipo de notificación
+
     ...(type === "success" && {
       backgroundColor: theme.palette.success.main,
       "& .MuiAlert-icon": {
@@ -90,7 +88,7 @@ export default function Notification({
         color: "white",
       },
     }),
-    // Responsive styles
+
     [theme.breakpoints.down("sm")]: {
       minWidth: "auto",
       width: "100%",
@@ -105,7 +103,7 @@ export default function Notification({
     "& .MuiSnackbar-root": {
       position: "fixed",
     },
-    // Responsive positioning
+
     "&.MuiSnackbar-anchorOriginBottomRight": {
       [theme.breakpoints.down("sm")]: {
         bottom: 16,

@@ -3,19 +3,14 @@ import { saveAs } from "file-saver";
 import { useState } from "react";
 import { format } from "date-fns";
 
-import {
-  Button,
-  Box,
-  Typography,
-  CircularProgress,
-  useTheme,
-} from "@mui/material";
+import { Box, Typography, CircularProgress, useTheme } from "@mui/material";
 import { Download as DownloadIcon } from "@mui/icons-material";
 import { db } from "@/app/database/db";
 import { Payment, Product, Sale } from "@/app/lib/types/types";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import ImportFileButton from "@/app/components/ImportFileButton";
 import Notification from "@/app/components/Notification";
+import Button from "@/app/components/Button";
 
 export default function ImportExportPage() {
   const [loading, setLoading] = useState(false);
@@ -254,10 +249,10 @@ export default function ImportExportPage() {
     <ProtectedRoute>
       <Box
         sx={{
-          px: 5,
-          py: 3,
+          px: 4,
+          py: 2,
           color: "text.secondary",
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           position: "relative",
         }}
       >
@@ -275,23 +270,26 @@ export default function ImportExportPage() {
 
         <Box
           sx={{
-            height: "calc(100vh - 160px)",
+            height: "75vh",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 5,
+            gap: 2,
           }}
         >
-          <ImportFileButton onImport={importData} />
-
           <Button
-            variant="outlined"
-            startIcon={
-              loading ? <CircularProgress size={20} /> : <DownloadIcon />
-            }
+            text="Exportar Datos"
+            icon={<DownloadIcon />}
+            iconPosition="left"
             onClick={exportData}
             disabled={loading}
+            loading={loading}
+            variant="text"
+            size="large"
+            title="Exportar todos los datos a un archivo JSON"
+            ariaLabel="Exportar datos de respaldo"
             sx={{
+              // Mantener estilos similares al anterior
               color: theme.palette.mode === "dark" ? "white" : "text.primary",
               borderColor:
                 theme.palette.mode === "dark" ? "grey.600" : "grey.300",
@@ -306,10 +304,13 @@ export default function ImportExportPage() {
               minWidth: "200px",
               height: "56px",
               fontSize: "1rem",
+              // Sobrescribir algunos estilos del botón personalizado para mantener consistencia
+              textTransform: "none", // Cambiar de "uppercase" a "none" para mantener el estilo original
+              fontWeight: 400,
+              borderRadius: 1,
             }}
-          >
-            Exportar Datos
-          </Button>
+          />
+          <ImportFileButton onImport={importData} />
         </Box>
 
         <Typography

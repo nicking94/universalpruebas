@@ -71,10 +71,8 @@ const Button = forwardRef<HTMLButtonElement, CustomButtonProps>(
     },
     ref
   ) => {
-    // Referencia interna para manejar el focus
     const buttonRef = useRef<HTMLButtonElement>(null);
 
-    // Combinar refs
     const combinedRef = (instance: HTMLButtonElement | null) => {
       if (typeof ref === "function") {
         ref(instance);
@@ -84,7 +82,6 @@ const Button = forwardRef<HTMLButtonElement, CustomButtonProps>(
       buttonRef.current = instance;
     };
 
-    // Manejar tecla Enter
     useHotkeys(
       "enter",
       (event) => {
@@ -106,7 +103,6 @@ const Button = forwardRef<HTMLButtonElement, CustomButtonProps>(
       [disabled, loading, onClick, isPrimaryAction]
     );
 
-    // Hotkey específica si se proporciona
     useHotkeys(
       hotkey || "",
       (event) => {

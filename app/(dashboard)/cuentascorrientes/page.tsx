@@ -533,7 +533,7 @@ const SaleCard = ({
           onClick={() => onToggleExpand(sale.id)}
         >
           <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
               <ReceiptIcon color="primary" fontSize="small" />
               <Typography
                 variant="subtitle1"
@@ -553,7 +553,7 @@ const SaleCard = ({
             </Typography>
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             {!isPaid && (
               <Button
                 variant="contained"
@@ -586,7 +586,7 @@ const SaleCard = ({
           sx={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 1,
+            gap: 2,
             mb: 2,
           }}
         >
@@ -733,7 +733,7 @@ const InfoModal = ({
       bgColor="bg-white dark:bg-gray-800"
       buttons={
         <Box sx={{ display: "flex", justifyContent: "end", width: "100%" }}>
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 2 }}>
             <Button
               variant="text"
               onClick={onClose}
@@ -821,7 +821,7 @@ const InfoModal = ({
           </Tabs>
         </Card>
 
-        <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
+        <Box sx={{ maxHeight: "63vh", mb: 2, overflow: "auto" }}>
           {infoModalTab === 0 && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {currentCustomerInfo.sales.length === 0 ? (
@@ -1004,7 +1004,7 @@ const ChequesModal = ({
             </FormControl>
           </Box>
 
-          <TableContainer component={Paper} sx={{ maxHeight: "55vh" }}>
+          <TableContainer component={Paper} sx={{ maxHeight: "48vh" }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
@@ -1130,37 +1130,39 @@ const ChequesModal = ({
                           }}
                         >
                           {cheque.checkStatus === "pendiente" && (
+                            <Tooltip title="Marcar como cobrado">
+                              <IconButton
+                                onClick={() => onMarkCheckAsPaid(cheque.id)}
+                                size="small"
+                                sx={{
+                                  borderRadius: "4px",
+                                  color: "success.main",
+                                  "&:hover": {
+                                    backgroundColor: "success.main",
+                                    color: "white",
+                                  },
+                                }}
+                              >
+                                <CheckCircleIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Tooltip title="Eliminar cheque">
                             <IconButton
-                              onClick={() => onMarkCheckAsPaid(cheque.id)}
+                              onClick={() => onDeleteCheck(cheque.id)}
                               size="small"
                               sx={{
                                 borderRadius: "4px",
-                                color: "success.main",
+                                color: "error.main",
                                 "&:hover": {
-                                  backgroundColor: "success.main",
+                                  backgroundColor: "error.main",
                                   color: "white",
                                 },
                               }}
-                              title="Marcar como cobrado"
                             >
-                              <CheckCircleIcon fontSize="small" />
+                              <DeleteIcon fontSize="small" />
                             </IconButton>
-                          )}
-                          <IconButton
-                            onClick={() => onDeleteCheck(cheque.id)}
-                            size="small"
-                            sx={{
-                              borderRadius: "4px",
-                              color: "error.main",
-                              "&:hover": {
-                                backgroundColor: "error.main",
-                                color: "white",
-                              },
-                            }}
-                            title="Eliminar cheque"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1247,7 +1249,7 @@ const PaymentModal = ({
         </Box>
       }
     >
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Box
           sx={{
             display: "flex",
@@ -1255,7 +1257,7 @@ const PaymentModal = ({
             alignItems: "center",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Typography variant="body1" fontWeight="medium">
               Deuda pendiente:
             </Typography>
@@ -2382,7 +2384,7 @@ const CuentasCorrientesPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -2422,7 +2424,7 @@ const CuentasCorrientesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "71vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -2563,23 +2565,27 @@ const CuentasCorrientesPage = () => {
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Descargar PDF">
-                                  <IconButton
-                                    onClick={() =>
-                                      handleExportCustomerPDF(customerName)
-                                    }
-                                    size="small"
-                                    sx={{
-                                      borderRadius: "4px",
-                                      color: "text.secondary",
-                                      "&:hover": {
-                                        backgroundColor: "primary.main",
-                                        color: "white",
-                                      },
-                                    }}
-                                    disabled={isGeneratingPDF}
-                                  >
-                                    <DownloadIcon fontSize="small" />
-                                  </IconButton>
+                                  <span>
+                                    {" "}
+                                    {/* Wrapper necesario para tooltip con elemento deshabilitado */}
+                                    <IconButton
+                                      onClick={() =>
+                                        handleExportCustomerPDF(customerName)
+                                      }
+                                      size="small"
+                                      sx={{
+                                        borderRadius: "4px",
+                                        color: "text.secondary",
+                                        "&:hover": {
+                                          backgroundColor: "primary.main",
+                                          color: "white",
+                                        },
+                                      }}
+                                      disabled={isGeneratingPDF}
+                                    >
+                                      <DownloadIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
                                 <Tooltip title="Ver cheques">
                                   <IconButton

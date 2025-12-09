@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search as SearchIcon } from "@mui/icons-material";
 import { SearchBarProps } from "../lib/types/types";
 import { TextField, InputAdornment, Box, useTheme, alpha } from "@mui/material";
 
@@ -32,7 +32,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <Search size={20} color={theme.palette.text.secondary} />
+              <SearchIcon
+                fontSize="small"
+                sx={{ color: theme.palette.text.secondary }}
+              />
             </InputAdornment>
           ),
           sx: {

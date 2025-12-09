@@ -34,7 +34,6 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
     const ticketRef = useRef<HTMLDivElement>(null);
     const [paperSize, setPaperSize] = useState<"57mm" | "80mm">("80mm");
 
-    // Validar que sale existe antes de acceder a sus propiedades
     const fecha = sale?.date
       ? format(parseISO(sale.date), "dd/MM/yyyy HH:mm", { locale: es })
       : "Fecha no disponible";
@@ -51,7 +50,6 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
       }
     }, []);
 
-    // Guardar en localStorage cuando cambia el tamaño
     const handlePaperSizeChange = (size: "57mm" | "80mm") => {
       setPaperSize(size);
       localStorage.setItem("ticketPaperSize", size);
@@ -68,7 +66,7 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
       if (!discount) return price * quantity;
       return price * quantity * (1 - discount / 100);
     };
-    // Agregar esta función dentro del componente PrintableTicket
+
     const calculatePromotionDiscount = (sale: Sale): number => {
       if (!sale.appliedPromotion) return 0;
 
@@ -124,31 +122,30 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
       printWithBrowserDialog();
     };
 
-    // Configuraciones estándar para cada tamaño de ticket
     const getTicketConfig = () => {
       if (paperSize === "57mm") {
         return {
           width: "57mm",
           fontSize: {
-            large: "14px", // Para nombre del negocio
-            medium: "12px", // Para texto principal
-            small: "10px", // Para detalles
-            xsmall: "8px", // Para texto muy pequeño
+            large: "14px",
+            medium: "12px",
+            small: "10px",
+            xsmall: "8px",
           },
           padding: "5px",
-          maxCharsPerLine: 32, // Caracteres máx por línea en 57mm
+          maxCharsPerLine: 32,
         };
       } else {
         return {
           width: "80mm",
           fontSize: {
-            large: "16px", // Para nombre del negocio
-            medium: "14px", // Para texto principal
-            small: "12px", // Para detalles
-            xsmall: "10px", // Para texto muy pequeño
+            large: "16px",
+            medium: "14px",
+            small: "12px",
+            xsmall: "10px",
           },
           padding: "6px",
-          maxCharsPerLine: 48, // Caracteres máx por línea en 80mm
+          maxCharsPerLine: 48,
         };
       }
     };
@@ -449,7 +446,6 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
       }
     }, [autoPrint]);
 
-    // Estilos CSS para el componente - Todo en color negro y semibold
     const styles = {
       container: {
         display: "flex",
@@ -795,7 +791,7 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
         textAlign: "right" as const,
         minWidth: "fit-content",
         fontWeight: "bold" as const,
-        color: "#e53e3e", // Rojo para indicar descuento
+        color: "#e53e3e",
         fontSize: ticketConfig.fontSize.medium,
       },
     };

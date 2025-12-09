@@ -13,6 +13,7 @@ import {
   Box,
   FormControl,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import { Add, Close, Info, PointOfSale } from "@mui/icons-material";
 import { useEffect, useState, useCallback, useMemo } from "react";
@@ -359,7 +360,7 @@ const CajaDiariaPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -390,7 +391,7 @@ const CajaDiariaPage = () => {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  gap: 1,
+                  gap: 2,
                 }}
               >
                 <Typography variant="h6" fontWeight="bold">
@@ -494,7 +495,7 @@ const CajaDiariaPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "61vh", flex: 1 }}
+              sx={{ maxHeight: "47vh", mb: 2, flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -586,21 +587,22 @@ const CajaDiariaPage = () => {
                           />
                         </TableCell>
                         <TableCell align="center">
-                          <IconButton
-                            onClick={() => openDetailModal(day.movements)}
-                            size="small"
-                            sx={{
-                              borderRadius: "4px",
-                              color: "text.secondary",
-                              "&:hover": {
-                                backgroundColor: "primary.main",
-                                color: "white",
-                              },
-                            }}
-                            title="Ver detalles"
-                          >
-                            <Info fontSize="small" />
-                          </IconButton>
+                          <Tooltip title="Ver detalles">
+                            <IconButton
+                              onClick={() => openDetailModal(day.movements)}
+                              size="small"
+                              sx={{
+                                borderRadius: "4px",
+                                color: "text.secondary",
+                                "&:hover": {
+                                  backgroundColor: "primary.main",
+                                  color: "white",
+                                },
+                              }}
+                            >
+                              <Info fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))

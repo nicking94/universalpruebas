@@ -9,6 +9,7 @@ import {
   TableRow,
   Paper,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import { Visibility, Assignment } from "@mui/icons-material";
 import { Budget, Customer } from "@/app/lib/types/types";
@@ -93,7 +94,7 @@ const ClientBudgetsModal = ({
       }
     >
       {selectedBudget ? (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
             <Box>
               <Typography variant="subtitle2" fontWeight="bold">
@@ -214,7 +215,7 @@ const ClientBudgetsModal = ({
           </Box>
         </Box>
       ) : (
-        <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
+        <Box sx={{ maxHeight: "63vh", mb: 2, overflow: "auto" }}>
           {budgets.length > 0 ? (
             <TableContainer component={Paper}>
               <Table stickyHeader>
@@ -266,21 +267,22 @@ const ClientBudgetsModal = ({
                         />
                       </TableCell>
                       <TableCell align="center">
-                        <IconButton
-                          onClick={() => onSelectBudget(budget)}
-                          size="small"
-                          sx={{
-                            borderRadius: "4px",
-                            color: "primary.main",
-                            "&:hover": {
-                              backgroundColor: "primary.main",
-                              color: "white",
-                            },
-                          }}
-                          title="Ver detalles"
-                        >
-                          <Visibility fontSize="small" />
-                        </IconButton>
+                        <Tooltip title="Ver detalles">
+                          <IconButton
+                            onClick={() => onSelectBudget(budget)}
+                            size="small"
+                            sx={{
+                              borderRadius: "4px",
+                              color: "primary.main",
+                              "&:hover": {
+                                backgroundColor: "primary.main",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <Visibility fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}

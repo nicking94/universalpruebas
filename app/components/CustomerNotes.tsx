@@ -19,7 +19,6 @@ import {
 } from "@mui/material";
 import { Delete, Edit, Add, Close } from "@mui/icons-material";
 
-// Styled components
 const NoteCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   backgroundColor: theme.palette.grey[50],
@@ -142,7 +141,6 @@ const CustomerNotes = ({
     fetchNotes();
   };
 
-  // Manejar la tecla Enter
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (
@@ -206,7 +204,7 @@ const CustomerNotes = ({
       </DialogTitle>
 
       <DialogContent
-        sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3 }}
+        sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2 }}
       >
         {/* Formulario de nueva/editar nota */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -225,7 +223,7 @@ const CustomerNotes = ({
             fullWidth
           />
 
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
             {editingNote ? (
               <>
                 <StyledButton

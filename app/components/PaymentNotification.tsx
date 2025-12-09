@@ -32,12 +32,10 @@ export default function PaymentNotification() {
     const today = new Date();
     const currentDay = today.getDate();
 
-    // Buscar configuración de recordatorio para el usuario actual
     const userReminderConfig = PAYMENT_REMINDERS_CONFIG.find(
       (config) => config.username === user.username
     );
 
-    // Si no hay configuración para este usuario, no mostrar notificación
     if (!userReminderConfig) {
       setShowNotification(false);
       return;
@@ -45,7 +43,6 @@ export default function PaymentNotification() {
 
     const isReminderDay = currentDay === userReminderConfig.reminderDay;
 
-    // Obtener el nombre del mes en español
     const meses = [
       "Enero",
       "Febrero",

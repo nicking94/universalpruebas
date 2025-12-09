@@ -188,7 +188,7 @@ const BarcodeGenerator = ({
         </>
       }
     >
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Box sx={{ width: "100%" }}>
             <Typography

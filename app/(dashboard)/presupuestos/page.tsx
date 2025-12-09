@@ -55,6 +55,7 @@ import {
   Divider,
   Autocomplete,
   TextField,
+  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -1029,20 +1030,25 @@ const PresupuestosPage = () => {
           ).toLocaleDateString("es-ES")}.pdf`}
         >
           {({ loading }) => (
-            <IconButton
-              size="small"
-              disabled={loading}
-              title="Descargar presupuesto"
-              sx={{
-                color: theme.palette.text.secondary,
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.main,
-                  color: "white",
-                },
-              }}
-            >
-              <Download fontSize="small" />
-            </IconButton>
+            <Tooltip title="Descargar presupuesto">
+              <span>
+                {" "}
+                {/* Wrapper necesario para tooltip con elemento deshabilitado */}
+                <IconButton
+                  size="small"
+                  disabled={loading}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    "&:hover": {
+                      backgroundColor: theme.palette.primary.main,
+                      color: "white",
+                    },
+                  }}
+                >
+                  <Download fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
           )}
         </PDFDownloadLink>
       );
@@ -1112,7 +1118,7 @@ const PresupuestosPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -1173,10 +1179,10 @@ const PresupuestosPage = () => {
             flex: 1,
           }}
         >
-          <Box sx={{ flex: 1, minHeight: 0 }}>
+          <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "71vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -1352,92 +1358,107 @@ const PresupuestosPage = () => {
                                 gap: 0.5,
                               }}
                             >
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  if (budget.status !== "cobrado") {
-                                    setBudgetToConvert(budget);
-                                    setIsConvertModalOpen(true);
-                                  }
-                                }}
-                                disabled={budget.status === "cobrado"}
+                              <Tooltip
                                 title={
                                   budget.status === "cobrado"
                                     ? "Presupuesto ya cobrado"
                                     : "Cobrar como venta"
                                 }
-                                sx={{
-                                  borderRadius: "4px",
-                                  color:
-                                    budget.status === "cobrado"
-                                      ? "text.disabled"
-                                      : "text.secondary",
-                                  "&:hover":
-                                    budget.status !== "cobrado"
-                                      ? {
-                                          backgroundColor: "success.main",
-                                          color: "white",
-                                        }
-                                      : {},
-                                }}
                               >
-                                <ShoppingCart fontSize="small" />
-                              </IconButton>
+                                <span>
+                                  {" "}
+                                  {/* Wrapper necesario para tooltip con elemento deshabilitado */}
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                      if (budget.status !== "cobrado") {
+                                        setBudgetToConvert(budget);
+                                        setIsConvertModalOpen(true);
+                                      }
+                                    }}
+                                    disabled={budget.status === "cobrado"}
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color:
+                                        budget.status === "cobrado"
+                                          ? "text.disabled"
+                                          : "text.secondary",
+                                      "&:hover":
+                                        budget.status !== "cobrado"
+                                          ? {
+                                              backgroundColor: "success.main",
+                                              color: "white",
+                                            }
+                                          : {},
+                                    }}
+                                  >
+                                    <ShoppingCart fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
 
                               {handleDownloadPDF(budget)}
 
-                              <IconButton
-                                size="small"
-                                onClick={() => handleShowNotes(budget)}
-                                disabled={!budget.customerId}
+                              <Tooltip
                                 title={
                                   !budget.customerId
                                     ? "No hay cliente asociado"
                                     : "Ver notas del cliente"
                                 }
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "info.main",
-                                    color: "white",
-                                  },
-                                }}
                               >
-                                <Note fontSize="small" />
-                              </IconButton>
+                                <span>
+                                  {" "}
+                                  {/* Wrapper necesario para tooltip con elemento deshabilitado */}
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleShowNotes(budget)}
+                                    disabled={!budget.customerId}
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "info.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Note fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title="Editar presupuesto">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleEditClick(budget)}
+                                  sx={{
+                                    borderRadius: "4px",
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "primary.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                >
+                                  <Edit fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
 
-                              <IconButton
-                                size="small"
-                                onClick={() => handleEditClick(budget)}
-                                title="Editar presupuesto"
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "primary.main",
-                                    color: "white",
-                                  },
-                                }}
-                              >
-                                <Edit fontSize="small" />
-                              </IconButton>
-
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteClick(budget)}
-                                title="Eliminar presupuesto"
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "error.main",
-                                    color: "white",
-                                  },
-                                }}
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
+                              <Tooltip title="Eliminar presupuesto">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDeleteClick(budget)}
+                                  sx={{
+                                    borderRadius: "4px",
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "error.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                >
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
                           </TableCell>
                         )}
@@ -1663,12 +1684,37 @@ const PresupuestosPage = () => {
                     } as ProductOption;
                   })}
                   onProductSelect={(selectedOptions) => {
-                    const selectedProducts = selectedOptions
-                      .filter((option) => !option.isDisabled)
-                      .map((option) => {
-                        const product =
-                          option.product ||
-                          products.find((p) => p.id === option.value);
+                    // Filtrar solo las opciones que no están deshabilitadas
+                    const enabledOptions = selectedOptions.filter(
+                      (option) => !option.isDisabled
+                    );
+
+                    // Crear un mapa de los items existentes para preservar sus valores
+                    const existingItemsMap = new Map(
+                      newBudget.items.map((item) => [item.productId, item])
+                    );
+
+                    // Crear el nuevo array de items preservando los valores existentes
+                    const updatedItems = enabledOptions.map((option) => {
+                      const existingItem = existingItemsMap.get(option.value);
+                      const product =
+                        option.product ||
+                        products.find((p) => p.id === option.value);
+
+                      if (existingItem) {
+                        // Si el producto ya existe en el presupuesto, preserva sus valores
+                        return {
+                          ...existingItem,
+                          productName:
+                            product?.name || existingItem.productName,
+                          price: product?.price || existingItem.price,
+                          unit: product?.unit || existingItem.unit,
+                          basePrice: product
+                            ? product.price / convertToBaseUnit(1, product.unit)
+                            : existingItem.basePrice,
+                        };
+                      } else {
+                        // Si es un producto nuevo, usar valores por defecto
                         return {
                           productId: option.value,
                           productName: product?.name || "",
@@ -1682,16 +1728,17 @@ const PresupuestosPage = () => {
                             ? product.price / convertToBaseUnit(1, product.unit)
                             : 0,
                         };
-                      });
+                      }
+                    });
 
                     const { total, remaining } = calculateTotalAndRemaining(
-                      selectedProducts,
+                      updatedItems,
                       newBudget.deposit
                     );
 
                     setNewBudget((prev) => ({
                       ...prev,
-                      items: selectedProducts,
+                      items: updatedItems,
                       total,
                       remaining,
                     }));
@@ -1708,7 +1755,7 @@ const PresupuestosPage = () => {
               {newBudget.items.length > 0 && (
                 <Card variant="outlined">
                   <CardContent sx={{ p: 0 }}>
-                    <Box sx={{ maxHeight: "200px", overflow: "auto" }}>
+                    <Box sx={{ maxHeight: "35vh", overflow: "auto" }}>
                       <Table size="small">
                         <TableHead>
                           <TableRow
@@ -1943,20 +1990,22 @@ const PresupuestosPage = () => {
                                   )}
                                 </TableCell>
                                 <TableCell sx={{ textAlign: "center" }}>
-                                  <IconButton
-                                    onClick={() =>
-                                      handleRemoveProduct(item.productId)
-                                    }
-                                    size="small"
-                                    sx={{
-                                      color: "error.main",
-                                      "&:hover": {
-                                        color: "error.dark",
-                                      },
-                                    }}
-                                  >
-                                    <Delete fontSize="small" />
-                                  </IconButton>
+                                  <Tooltip title="Eliminar producto">
+                                    <IconButton
+                                      onClick={() =>
+                                        handleRemoveProduct(item.productId)
+                                      }
+                                      size="small"
+                                      sx={{
+                                        color: "error.main",
+                                        "&:hover": {
+                                          color: "error.dark",
+                                        },
+                                      }}
+                                    >
+                                      <Delete fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
                                 </TableCell>
                               </TableRow>
                             );

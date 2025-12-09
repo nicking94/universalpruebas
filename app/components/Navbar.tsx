@@ -7,7 +7,6 @@ import logo from "@/public/logo.png";
 import { useRubro } from "../context/RubroContext";
 import NotificationIcon from "./Notifications/NotificationIcon";
 
-// Material-UI imports
 import {
   AppBar,
   Toolbar,
@@ -31,7 +30,6 @@ const rubroOptions = [
   { value: "indumentaria", label: "Indumentaria" },
 ];
 
-// Styled components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   color: theme.palette.text.primary,
@@ -108,7 +106,6 @@ const Navbar: React.FC<NavbarProps> = ({
   const muiTheme = useTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
 
-  // Tipo correcto para el evento del Select
   const handleRubroChange = (event: SelectChangeEvent<string>) => {
     setRubro(
       event.target.value as "Todos los rubros" | "comercio" | "indumentaria"
@@ -120,14 +117,14 @@ const Navbar: React.FC<NavbarProps> = ({
       position="fixed"
       sx={{
         width: {
-          xs: "100%", // Mobile: full width
-          sm: "100%", // Tablet: full width
-          md: isSidebarOpen ? "calc(100% - 256px)" : "calc(100% - 120px)", // Desktop: sidebar offset
+          xs: "100%",
+          sm: "100%",
+          md: isSidebarOpen ? "calc(100% - 256px)" : "calc(100% - 120px)",
         },
         left: {
-          xs: 0, // Mobile: no offset
-          sm: 0, // Tablet: no offset
-          md: isSidebarOpen ? 256 : 120, // Desktop: sidebar offset
+          xs: 0,
+          sm: 0,
+          md: isSidebarOpen ? 256 : 120,
         },
         transition: muiTheme.transitions.create(["width", "left"], {
           duration: muiTheme.transitions.duration.standard,
@@ -144,7 +141,6 @@ const Navbar: React.FC<NavbarProps> = ({
           },
         }}
       >
-        {/* Hamburger menu button for mobile - Always visible */}
         <IconButton
           onClick={toggleSidebar}
           sx={{
@@ -156,7 +152,6 @@ const Navbar: React.FC<NavbarProps> = ({
           <MenuIcon />
         </IconButton>
 
-        {/* Logo y título - Hidden on mobile to save space */}
         <LogoContainer sx={{ display: { xs: "none", md: "flex" } }}>
           <LogoImage src={logo} alt="User Logo" width={32} height={32} />
           <Box>
@@ -187,9 +182,7 @@ const Navbar: React.FC<NavbarProps> = ({
           </Box>
         </LogoContainer>
 
-        {/* Controles del lado derecho */}
         <NavbarContainer>
-          {/* Selector de rubro */}
           <RubroContainer>
             <StyledFormControl size="small" variant="outlined">
               <InputLabel id="rubro-select-label">Rubro</InputLabel>
@@ -228,12 +221,10 @@ const Navbar: React.FC<NavbarProps> = ({
             </StyledFormControl>
           </RubroContainer>
 
-          {/* Icono de notificaciones */}
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <NotificationIcon />
           </Box>
 
-          {/* Menú de usuario */}
           <Box
             sx={{
               display: "flex",

@@ -25,6 +25,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -381,7 +382,7 @@ const ProveedoresPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -450,7 +451,7 @@ const ProveedoresPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "71vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -624,58 +625,61 @@ const ProveedoresPage = () => {
                               sx={{
                                 display: "flex",
                                 justifyContent: "center",
-                                gap: 1,
+                                gap: 2,
                               }}
                             >
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  openProductAssignmentModal(supplier)
-                                }
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "primary.main",
-                                    color: "white",
-                                  },
-                                }}
-                                title="Asignar productos"
-                              >
-                                <Inventory fontSize="small" />
-                              </IconButton>
+                              <Tooltip title="Asignar productos">
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    openProductAssignmentModal(supplier)
+                                  }
+                                  sx={{
+                                    borderRadius: "4px",
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "primary.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                >
+                                  <Inventory fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
 
-                              <IconButton
-                                size="small"
-                                onClick={() => handleEdit(supplier)}
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "primary.main",
-                                    color: "white",
-                                  },
-                                }}
-                                title="Editar proveedor"
-                              >
-                                <Edit fontSize="small" />
-                              </IconButton>
+                              <Tooltip title="Editar proveedor">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleEdit(supplier)}
+                                  sx={{
+                                    borderRadius: "4px",
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "primary.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                >
+                                  <Edit fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
 
-                              <IconButton
-                                size="small"
-                                onClick={() => openDeleteModal(supplier)}
-                                sx={{
-                                  borderRadius: "4px",
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "error.main",
-                                    color: "white",
-                                  },
-                                }}
-                                title="Eliminar proveedor"
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
+                              <Tooltip title="Eliminar proveedor">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => openDeleteModal(supplier)}
+                                  sx={{
+                                    borderRadius: "4px",
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "error.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                >
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
                           </TableCell>
                         )}
@@ -798,7 +802,7 @@ const ProveedoresPage = () => {
                   </Box>
                 ) : filteredAvailableProducts.length > 0 ? (
                   <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
                   >
                     {filteredAvailableProducts.map((product) => (
                       <Box
@@ -850,20 +854,22 @@ const ProveedoresPage = () => {
                           </Box>
                         </Box>
                         <Box sx={{ ml: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => assignProduct(product)}
-                            sx={{
-                              bgcolor: "primary.main",
-                              color: "white",
-                              "&:hover": { bgcolor: "primary.dark" },
-                              minWidth: "32px",
-                              width: "32px",
-                              height: "32px",
-                            }}
-                          >
-                            <Add fontSize="small" />
-                          </IconButton>
+                          <Tooltip title="Asignar producto">
+                            <IconButton
+                              size="small"
+                              onClick={() => assignProduct(product)}
+                              sx={{
+                                bgcolor: "primary.main",
+                                color: "white",
+                                "&:hover": { bgcolor: "primary.dark" },
+                                minWidth: "32px",
+                                width: "32px",
+                                height: "32px",
+                              }}
+                            >
+                              <Add fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </Box>
                     ))}
@@ -902,7 +908,7 @@ const ProveedoresPage = () => {
               >
                 {assignedProducts.length > 0 ? (
                   <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
                   >
                     {assignedProducts.map((product) => (
                       <Box
@@ -936,20 +942,22 @@ const ProveedoresPage = () => {
                             </Typography>
                           </Box>
 
-                          <IconButton
-                            size="small"
-                            onClick={() => unassignProduct(product)}
-                            sx={{
-                              bgcolor: "error.main",
-                              color: "white",
-                              "&:hover": { bgcolor: "error.dark" },
-                              minWidth: "32px",
-                              width: "32px",
-                              height: "32px",
-                            }}
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
+                          <Tooltip title="Desasignar producto">
+                            <IconButton
+                              size="small"
+                              onClick={() => unassignProduct(product)}
+                              sx={{
+                                bgcolor: "error.main",
+                                color: "white",
+                                "&:hover": { bgcolor: "error.dark" },
+                                minWidth: "32px",
+                                width: "32px",
+                                height: "32px",
+                              }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </Box>
                     ))}
@@ -1014,7 +1022,7 @@ const ProveedoresPage = () => {
             </Box>
           }
         >
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Input
               label="Nombre de la Empresa"
               value={companyName}
@@ -1023,7 +1031,7 @@ const ProveedoresPage = () => {
               required
             />
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {contacts.map((contact, index) => (
                 <Box
                   key={index}
@@ -1051,20 +1059,21 @@ const ProveedoresPage = () => {
                       sx={{ color: "white" }}
                     />
                     {contacts.length > 1 && (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveContact(index)}
-                        sx={{
-                          color: "error.main",
-                          "&:hover": {
-                            backgroundColor: "error.main",
-                            color: "white",
-                          },
-                        }}
-                        title="Eliminar contacto"
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
+                      <Tooltip title="Eliminar contacto">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveContact(index)}
+                          sx={{
+                            color: "error.main",
+                            "&:hover": {
+                              backgroundColor: "error.main",
+                              color: "white",
+                            },
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </Box>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

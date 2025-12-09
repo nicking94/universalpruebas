@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { TextField, InputAdornment, IconButton } from "@mui/material";
-import { Barcode, RefreshCw } from "lucide-react";
+import { TextField, InputAdornment, IconButton, Tooltip } from "@mui/material";
+import {
+  QrCodeScanner as BarcodeIcon,
+  Refresh as RefreshIcon,
+} from "@mui/icons-material";
 
 interface BarcodeScannerProps {
   value: string;
@@ -10,7 +13,6 @@ interface BarcodeScannerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
-  // Nuevas props para el botón integrado
   onButtonClick?: () => void;
   buttonTitle?: string;
   buttonDisabled?: boolean;
@@ -23,7 +25,6 @@ export default function BarcodeScanner({
   placeholder = "Escanear o ingresar código manualmente",
   className = "",
   disabled = false,
-  // Nuevas props para el botón integrado
   onButtonClick,
   buttonTitle = "Generar código EAN-13",
   buttonDisabled = false,
@@ -121,33 +122,34 @@ export default function BarcodeScanner({
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
-            <Barcode size={18} />
+            <BarcodeIcon fontSize="small" />
           </InputAdornment>
         ),
         endAdornment: onButtonClick ? (
           <InputAdornment position="end">
-            <IconButton
-              onClick={onButtonClick}
-              disabled={buttonDisabled || disabled}
-              size="medium"
-              title={buttonTitle}
-              sx={{
-                marginRight: "8px",
-                padding: "4px",
-                borderRadius: "4px",
-                backgroundColor: "primary.main",
-                color: "white",
-                "&:hover": {
-                  backgroundColor: "primary.dark",
-                },
-                "&.Mui-disabled": {
-                  backgroundColor: "grey.400",
-                  color: "grey.600",
-                },
-              }}
-            >
-              <RefreshCw size={16} />
-            </IconButton>
+            <Tooltip title={buttonTitle}>
+              <IconButton
+                onClick={onButtonClick}
+                disabled={buttonDisabled || disabled}
+                size="medium"
+                sx={{
+                  marginRight: "8px",
+                  padding: "4px",
+                  borderRadius: "4px",
+                  backgroundColor: "primary.main",
+                  color: "white",
+                  "&:hover": {
+                    backgroundColor: "primary.dark",
+                  },
+                  "&.Mui-disabled": {
+                    backgroundColor: "grey.400",
+                    color: "grey.600",
+                  },
+                }}
+              >
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </InputAdornment>
         ) : undefined,
       }}

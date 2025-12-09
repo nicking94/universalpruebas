@@ -7,7 +7,7 @@ import { useNotification } from "../hooks/useNotification";
 import { Box, useTheme } from "@mui/material";
 import Button from "./Button";
 import Modal from "./Modal";
-import Input from "./Input"; // Importa tu componente Input personalizado
+import Input from "./Input";
 import { useBusinessData } from "../context/BusinessDataContext";
 
 interface BusinessDataModalProps {
@@ -38,23 +38,20 @@ const BusinessDataModal: React.FC<BusinessDataModalProps> = ({
     cuit: "",
   });
 
-  // Función adaptada para el Input component (igual que en UserMenu)
   const handleInputChange =
     (field: keyof BusinessData) => (value: string | number) => {
       setLocalBusinessData((prev) => ({
         ...prev,
-        [field]: value.toString(), // Convertir a string siempre
+        [field]: value.toString(),
       }));
     };
 
-  // Cargar datos cuando se abre el modal
   useEffect(() => {
     if (isOpen && businessData) {
       setLocalBusinessData(businessData);
     }
   }, [isOpen, businessData]);
 
-  // Manejar la tecla Enter
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === "Enter" && isOpen) {
@@ -71,7 +68,6 @@ const BusinessDataModal: React.FC<BusinessDataModalProps> = ({
     };
   }, [isOpen, localBusinessData]);
 
-  // Guardar datos
   const handleSave = async () => {
     try {
       await setBusinessData(localBusinessData);
@@ -134,7 +130,7 @@ const BusinessDataModal: React.FC<BusinessDataModalProps> = ({
         </Box>
       }
     >
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Input
           label="Nombre del Negocio"
           name="name"

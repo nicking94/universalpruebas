@@ -2,7 +2,6 @@
 
 import React, { useMemo, useCallback, useEffect } from "react";
 import { PaginationProps } from "../lib/types/types";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "@/app/database/db";
 import { usePagination } from "../context/PaginationContext";
@@ -16,8 +15,12 @@ import {
   useMediaQuery,
   CircularProgress,
 } from "@mui/material";
+import {
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+} from "@mui/icons-material";
 import { PaginationRenderItemParams } from "@mui/material/Pagination";
-import Select, { SelectOption } from "./Select"; // Ajusta la ruta según sea necesario
+import Select, { SelectOption } from "./Select";
 
 const Pagination: React.FC<
   Omit<
@@ -111,7 +114,6 @@ const Pagination: React.FC<
     [currentPage, setCurrentPage]
   );
 
-  // Opciones para el Select personalizado
   const itemsPerPageOptions: SelectOption<number>[] = useMemo(
     () => [
       { value: 5, label: "5" },
@@ -122,7 +124,6 @@ const Pagination: React.FC<
     []
   );
 
-  // Función para renderizar los botones de paginación personalizados
   const renderPaginationItem = (item: PaginationRenderItemParams) => {
     if (item.type === "previous") {
       return (
@@ -132,7 +133,7 @@ const Pagination: React.FC<
           disabled={currentPage === 1}
           aria-label="Página anterior"
         >
-          <ChevronLeft size={18} aria-hidden="true" />
+          <ChevronLeftIcon fontSize="small" aria-hidden="true" />
         </PaginationItem>
       );
     }
@@ -145,7 +146,7 @@ const Pagination: React.FC<
           disabled={currentPage === totalPages}
           aria-label="Página siguiente"
         >
-          <ChevronRight size={18} aria-hidden="true" />
+          <ChevronRightIcon fontSize="small" aria-hidden="true" />
         </PaginationItem>
       );
     }
@@ -171,7 +172,6 @@ const Pagination: React.FC<
       alignItems="center"
       justifyContent="space-between"
     >
-      {/* Selector de items por página */}
       <Stack direction="row" alignItems="center" spacing={1}>
         <Typography variant="body2" color="text.secondary">
           {text}

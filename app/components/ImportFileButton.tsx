@@ -1,6 +1,8 @@
+"use client";
 import { useRef } from "react";
-import { Button, Box } from "@mui/material";
-import { FolderUp } from "lucide-react";
+import { Box } from "@mui/material";
+import { Folder as FolderIcon } from "@mui/icons-material";
+import Button from "./Button";
 
 export default function ImportFileButton({
   onImport,
@@ -16,9 +18,14 @@ export default function ImportFileButton({
   return (
     <Box>
       <Button
-        variant="contained"
-        startIcon={<FolderUp className="w-5 h-5" />}
+        text="Importar archivo"
+        icon={<FolderIcon />}
+        iconPosition="left"
         onClick={handleButtonClick}
+        variant="contained"
+        size="large"
+        title="Importar datos desde un archivo JSON"
+        ariaLabel="Importar datos"
         sx={{
           textTransform: "none",
           fontWeight: 600,
@@ -26,11 +33,13 @@ export default function ImportFileButton({
           color: "white",
           "&:hover": {
             backgroundColor: "primary.dark",
+            transform: "none",
           },
+          minWidth: "200px",
+          height: "56px",
+          fontSize: "1rem",
         }}
-      >
-        Importar archivo
-      </Button>
+      />
       <input
         type="file"
         accept=".json,.txt"

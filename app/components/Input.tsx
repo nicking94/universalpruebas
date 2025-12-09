@@ -7,6 +7,7 @@ import {
   IconButton,
   TextFieldProps,
   useTheme,
+  Tooltip,
 } from "@mui/material";
 import { toCapitalize } from "@/app/lib/utils/capitalizeText";
 
@@ -155,28 +156,29 @@ const Input: React.FC<InputProps> = ({
     endAdornment:
       buttonIcon && onButtonClick ? (
         <InputAdornment position="end">
-          <IconButton
-            onClick={onButtonClick}
-            disabled={buttonDisabled || disabled}
-            size="medium"
-            title={buttonTitle}
-            sx={{
-              marginRight: "8px",
-              padding: "4px",
-              borderRadius: "4px",
-              backgroundColor: theme.palette.primary.main,
-              color: "white",
-              "&:hover": {
-                backgroundColor: theme.palette.primary.dark,
-              },
-              "&.Mui-disabled": {
-                backgroundColor: theme.palette.action.disabled,
-                color: theme.palette.text.disabled,
-              },
-            }}
-          >
-            {buttonIcon}
-          </IconButton>
+          <Tooltip title={buttonTitle}>
+            <IconButton
+              onClick={onButtonClick}
+              disabled={buttonDisabled || disabled}
+              size="medium"
+              sx={{
+                marginRight: "8px",
+                padding: "4px",
+                borderRadius: "4px",
+                backgroundColor: theme.palette.primary.main,
+                color: "white",
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.dark,
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: theme.palette.action.disabled,
+                  color: theme.palette.text.disabled,
+                },
+              }}
+            >
+              {buttonIcon}
+            </IconButton>
+          </Tooltip>
         </InputAdornment>
       ) : undefined,
   };

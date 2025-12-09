@@ -276,7 +276,7 @@ export const ConvertToSaleModal = ({
       isOpen={isOpen}
       onClose={onClose}
       title={
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <ShoppingCart fontSize="small" />
           <Typography variant="h6" component="span">
             Cobrar presupuesto de {budget.customerName}
@@ -315,7 +315,7 @@ export const ConvertToSaleModal = ({
         </Box>
       }
     >
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {/* Resumen del presupuesto */}
         <Card variant="outlined">
           <CardContent>
@@ -454,7 +454,7 @@ export const ConvertToSaleModal = ({
         {/* Métodos de pago */}
         <Card variant="outlined">
           <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
               <Typography variant="subtitle1" fontWeight="medium">
                 Métodos de pago
               </Typography>
@@ -539,7 +539,7 @@ export const ConvertToSaleModal = ({
               <Typography variant="subtitle2" gutterBottom fontWeight="bold">
                 Resumen de pagos:
               </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {paymentMethods.map((method, index) => (
                   <Box
                     key={index}

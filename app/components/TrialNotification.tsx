@@ -8,9 +8,13 @@ import {
   Slide,
   SlideProps,
 } from "@mui/material";
+import {
+  LocalOffer as TagsIcon,
+  FlashOn as ZapIcon,
+  Warning as AlertTriangleIcon,
+} from "@mui/icons-material";
 import { db } from "@/app/database/db";
 import { TRIAL_CREDENTIALS } from "../lib/constants/constants";
-import { Tags, Zap, AlertTriangle } from "lucide-react";
 
 function SlideTransition(props: SlideProps) {
   return <Slide {...props} direction="down" />;
@@ -145,7 +149,7 @@ const TrialNotification = () => {
     if (daysLeft === 0) {
       return (
         <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
-          <AlertTriangle size={16} />
+          <AlertTriangleIcon fontSize="small" />
           <Typography variant="body2">
             ¡Periodo de prueba finalizado! La sesión se cerrará automáticamente
           </Typography>
@@ -155,14 +159,14 @@ const TrialNotification = () => {
     if (daysLeft === 1) {
       return (
         <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
-          <Zap size={16} />
+          <ZapIcon fontSize="small" />
           <Typography variant="body2">¡Último día de prueba!</Typography>
         </Box>
       );
     }
     return (
       <Box display="flex" justifyContent="center" alignItems="center" gap={1}>
-        <Tags size={16} />
+        <TagsIcon fontSize="small" />
         <Typography variant="body2">
           Días restantes de prueba: {daysLeft}
         </Typography>

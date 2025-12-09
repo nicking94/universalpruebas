@@ -3,7 +3,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { es } from "date-fns/locale";
-import { TextField, IconButton, Box, useTheme } from "@mui/material";
+import { TextField, IconButton, Box, useTheme, Tooltip } from "@mui/material";
 import { parseISO, format, isValid } from "date-fns";
 import { useMemo, useState } from "react";
 import { PickersActionBarAction } from "@mui/x-date-pickers";
@@ -180,7 +180,6 @@ const CustomDatePicker = ({
           InputLabelProps={{
             shrink: true,
             sx: {
-              // Estilo consistente con el Select
               color: disabled
                 ? theme.palette.text.disabled
                 : theme.palette.text.secondary,
@@ -239,28 +238,31 @@ const CustomDatePicker = ({
               },
             },
             endAdornment: (
-              <IconButton
-                onClick={handleIconClick}
-                disabled={disabled}
-                onBlur={handleBlur}
-                sx={{
-                  position: "absolute",
-                  right: "8px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  padding: "4px",
-                  color: disabled ? "action.disabled" : "action.active",
-                  "&:hover": {
-                    backgroundColor: disabled ? "transparent" : "action.hover",
-                  },
-                  "&.Mui-disabled": {
-                    color: "action.disabled",
-                  },
-                }}
-                title="Seleccionar fecha"
-              >
-                <CalendarTodayIcon fontSize="small" />
-              </IconButton>
+              <Tooltip title="Seleccionar fecha">
+                <IconButton
+                  onClick={handleIconClick}
+                  disabled={disabled}
+                  onBlur={handleBlur}
+                  sx={{
+                    position: "absolute",
+                    right: "8px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    padding: "4px",
+                    color: disabled ? "action.disabled" : "action.active",
+                    "&:hover": {
+                      backgroundColor: disabled
+                        ? "transparent"
+                        : "action.hover",
+                    },
+                    "&.Mui-disabled": {
+                      color: "action.disabled",
+                    },
+                  }}
+                >
+                  <CalendarTodayIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             ),
           }}
           onClick={handleTextFieldClick}

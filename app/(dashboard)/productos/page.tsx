@@ -57,6 +57,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Tooltip,
 } from "@mui/material";
 import Input from "@/app/components/Input";
 import Button from "@/app/components/Button";
@@ -550,7 +551,7 @@ const ProductRow = React.memo(
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 1,
+              gap: 2,
               height: "100%",
             }}
           >
@@ -672,51 +673,54 @@ const ProductRow = React.memo(
         {rubro !== "Todos los rubros" && (
           <TableCell sx={{ textAlign: "center" }}>
             <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
-              <IconButton
-                onClick={handleGenerateBarcode}
-                size="small"
-                sx={{
-                  borderRadius: "4px",
-                  color: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "primary.main",
-                    color: "white",
-                  },
-                }}
-                title="Código de Barras"
-              >
-                <QrCode fontSize="small" />
-              </IconButton>
-              <IconButton
-                onClick={handleEdit}
-                size="small"
-                sx={{
-                  borderRadius: "4px",
-                  color: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "primary.main",
-                    color: "white",
-                  },
-                }}
-                title="Editar Producto"
-              >
-                <Edit fontSize="small" />
-              </IconButton>
-              <IconButton
-                onClick={handleDelete}
-                size="small"
-                sx={{
-                  borderRadius: "4px",
-                  color: "text.secondary",
-                  "&:hover": {
-                    backgroundColor: "error.main",
-                    color: "white",
-                  },
-                }}
-                title="Eliminar Producto"
-              >
-                <Delete fontSize="small" />
-              </IconButton>
+              <Tooltip title="Código de Barras">
+                <IconButton
+                  onClick={handleGenerateBarcode}
+                  size="small"
+                  sx={{
+                    borderRadius: "4px",
+                    color: "text.secondary",
+                    "&:hover": {
+                      backgroundColor: "primary.main",
+                      color: "white",
+                    },
+                  }}
+                >
+                  <QrCode fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Editar Producto">
+                <IconButton
+                  onClick={handleEdit}
+                  size="small"
+                  sx={{
+                    borderRadius: "4px",
+                    color: "text.secondary",
+                    "&:hover": {
+                      backgroundColor: "primary.main",
+                      color: "white",
+                    },
+                  }}
+                >
+                  <Edit fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Eliminar Producto">
+                <IconButton
+                  onClick={handleDelete}
+                  size="small"
+                  sx={{
+                    borderRadius: "4px",
+                    color: "text.secondary",
+                    "&:hover": {
+                      backgroundColor: "error.main",
+                      color: "white",
+                    },
+                  }}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
           </TableCell>
         )}
@@ -2121,7 +2125,7 @@ const ProductsPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -2161,7 +2165,6 @@ const ProductsPage = () => {
               display: "flex",
               justifyContent: "flex-end",
               alignItems: "center",
-              mt: 1,
               gap: 2,
               visibility: rubro === "Todos los rubros" ? "hidden" : "visible",
             }}
@@ -2212,7 +2215,7 @@ const ProductsPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "72vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", mb: 2, flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>

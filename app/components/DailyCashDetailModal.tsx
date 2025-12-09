@@ -100,7 +100,6 @@ const DailyCashDetailModal = ({
     const groups: Record<string, DailyCashMovement> = {};
 
     filteredMovements.forEach((movement, index) => {
-      // Cada movimiento es único, usa una combinación de id y timestamp
       const uniqueKey = `movement-${movement.id}-${index}-${
         movement.createdAt || Date.now()
       }`;
@@ -133,7 +132,6 @@ const DailyCashDetailModal = ({
     setFilterPaymentMethod("TODOS");
   };
 
-  // Función para formatear la hora desde el timestamp
   const formatTime = (timestamp?: string) => {
     if (!timestamp) return "-";
     try {
@@ -248,7 +246,7 @@ const DailyCashDetailModal = ({
         </Box>
       </Box>
 
-      <TableContainer component={Paper} sx={{ maxHeight: "61vh" }}>
+      <TableContainer component={Paper} sx={{ maxHeight: "66vh", mt: 2 }}>
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>

@@ -16,6 +16,7 @@ import {
   TextField,
   Autocomplete,
   useTheme,
+  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -514,7 +515,7 @@ const VentasPage = () => {
 
     return (
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, p: 1 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, ml: "auto" }}>
           <Typography variant="body2" sx={{ fontWeight: "semibold" }}>
             Promoción aplicada:
           </Typography>
@@ -611,7 +612,7 @@ const VentasPage = () => {
           </Box>
         }
       >
-        <Box sx={{ maxHeight: "61vh", overflow: "auto" }}>
+        <Box sx={{ maxHeight: "63vh", mb: 2, overflow: "auto" }}>
           <Box sx={{ display: "grid", gap: 2 }}>
             {availablePromotions.length > 0 ? (
               availablePromotions.map((promotion) => {
@@ -654,7 +655,7 @@ const VentasPage = () => {
                           sx={{
                             display: "flex",
                             alignItems: "center",
-                            gap: 1,
+                            gap: 2,
                             mb: 1,
                           }}
                         >
@@ -1133,14 +1134,10 @@ const VentasPage = () => {
         sale.manualProfitPercentage || 0
       );
 
-      // Crear timestamp base para esta venta
       const baseTimestamp = new Date().toISOString();
-
-      // Si hay múltiples métodos de pago, crear un movimiento por cada uno
       const movements: DailyCashMovement[] = [];
 
       if (sale.paymentMethods.length === 1) {
-        // Un solo método de pago
         const movement: DailyCashMovement = {
           id: Date.now(),
           amount: sale.total,
@@ -1165,11 +1162,10 @@ const VentasPage = () => {
           profit: totalProfit,
           combinedPaymentMethods: sale.paymentMethods,
           customerName: sale.customerName || "CLIENTE OCASIONAL",
-          createdAt: new Date().toISOString(), // Timestamp único
+          createdAt: new Date().toISOString(),
         };
         movements.push(movement);
       } else {
-        // Múltiples métodos de pago - crear un movimiento principal con submovimientos
         const mainMovement: DailyCashMovement = {
           id: Date.now(),
           amount: sale.total,
@@ -1194,7 +1190,7 @@ const VentasPage = () => {
           profit: totalProfit,
           combinedPaymentMethods: sale.paymentMethods,
           customerName: sale.customerName || "CLIENTE OCASIONAL",
-          createdAt: new Date().toISOString(), // Timestamp único
+          createdAt: new Date().toISOString(),
         };
         movements.push(mainMovement);
       }
@@ -1203,7 +1199,7 @@ const VentasPage = () => {
         dailyCash = {
           id: Date.now(),
           date: today,
-          movements: movements, // Usar array de movimientos
+          movements: movements,
           closed: false,
           totalIncome: sale.total,
           totalExpense: 0,
@@ -1212,7 +1208,7 @@ const VentasPage = () => {
       } else {
         const updatedCash = {
           ...dailyCash,
-          movements: [...dailyCash.movements, ...movements], // Agregar todos los movimientos
+          movements: [...dailyCash.movements, ...movements],
           totalIncome: (dailyCash.totalIncome || 0) + sale.total,
         };
         await db.dailyCashes.update(dailyCash.id, updatedCash);
@@ -1253,6 +1249,7 @@ const VentasPage = () => {
           ...existingProduct,
           quantity: existingProduct.quantity + 1,
         };
+
         const newTotal = calculateFinalTotal(
           updatedProducts,
           prevState.manualAmount || 0,
@@ -1273,6 +1270,8 @@ const VentasPage = () => {
           ...productToAdd,
           quantity: 1,
           unit: productToAdd.unit,
+          discount: 0,
+          surcharge: 0,
         };
 
         const updatedProducts = [...prevState.products, newProduct];
@@ -1932,7 +1931,7 @@ const VentasPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -2016,7 +2015,7 @@ const VentasPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "70vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -2238,21 +2237,22 @@ const VentasPage = () => {
                                   gap: 0.5,
                                 }}
                               >
-                                <IconButton
-                                  onClick={() => handleOpenInfoModal(sale)}
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Ver ticket"
-                                >
-                                  <Print fontSize="small" />
-                                </IconButton>
+                                <Tooltip title="Ver ticket">
+                                  <IconButton
+                                    onClick={() => handleOpenInfoModal(sale)}
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Print fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
                             </TableCell>
                           )}
@@ -2574,25 +2574,42 @@ const VentasPage = () => {
                     } as ProductOption;
                   })}
                   onProductSelect={(selectedOptions: ProductOption[]) => {
-                    // Adaptar la lógica actual al formato de ProductSearchAutocomplete
-                    const selectedProducts = selectedOptions
-                      .filter((option) => !option.isDisabled)
-                      .map((option) => ({
-                        ...option.product,
-                        quantity: 1,
-                      }));
+                    const existingProductsMap = new Map(
+                      newSale.products.map((p) => [p.id, p])
+                    );
 
-                    // Actualizar el estado de newSale con los productos seleccionados
+                    const updatedProducts = selectedOptions
+                      .filter((option) => !option.isDisabled)
+                      .map((option) => {
+                        const existingProduct = existingProductsMap.get(
+                          option.product.id
+                        );
+
+                        if (existingProduct) {
+                          return {
+                            ...existingProduct,
+                          };
+                        }
+
+                        return {
+                          ...option.product,
+                          quantity: 1,
+                          discount: 0,
+                          surcharge: 0,
+                          unit: option.product.unit || "Unid.",
+                        };
+                      });
+
                     setNewSale((prev) => {
                       const newTotal = calculateFinalTotal(
-                        selectedProducts,
+                        updatedProducts,
                         prev.manualAmount || 0,
                         selectedPromotions
                       );
 
                       return {
                         ...prev,
-                        products: selectedProducts,
+                        products: updatedProducts,
                         total: newTotal,
                         paymentMethods: synchronizePaymentMethods(
                           prev.paymentMethods,
@@ -2810,25 +2827,27 @@ const VentasPage = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <IconButton
-                            onClick={() => {
-                              handleDeleteProductClick(
-                                product.id,
-                                getDisplayProductName(product, rubro)
-                              );
-                            }}
-                            size="small"
-                            sx={{
-                              borderRadius: "4px",
-                              color: "text.secondary",
-                              "&:hover": {
-                                backgroundColor: "error.main",
-                                color: "white",
-                              },
-                            }}
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
+                          <Tooltip title="Eliminar producto">
+                            <IconButton
+                              onClick={() => {
+                                handleDeleteProductClick(
+                                  product.id,
+                                  getDisplayProductName(product, rubro)
+                                );
+                              }}
+                              size="small"
+                              sx={{
+                                borderRadius: "4px",
+                                color: "text.secondary",
+                                "&:hover": {
+                                  backgroundColor: "error.main",
+                                  color: "white",
+                                },
+                              }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -2946,7 +2965,7 @@ const VentasPage = () => {
               )}
               {isCredit && registerCheck ? (
                 <Box sx={{ p: 1 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Select
                       label="Método"
                       options={[{ value: "CHEQUE", label: "Cheque" }]}
@@ -2973,7 +2992,7 @@ const VentasPage = () => {
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 1,
+                        gap: 2,
                         my: 1,
                       }}
                     >
@@ -3021,26 +3040,28 @@ const VentasPage = () => {
                       </Box>
 
                       {newSale.paymentMethods.length > 1 && (
-                        <IconButton
-                          onClick={() => removePaymentMethod(index)}
-                          size="small"
-                          sx={{
-                            borderRadius: "4px",
-                            color: "text.secondary",
-                            "&:hover": {
-                              backgroundColor: "error.main",
-                              color: "white",
-                            },
-                          }}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
+                        <Tooltip title="Eliminar método de pago">
+                          <IconButton
+                            onClick={() => removePaymentMethod(index)}
+                            size="small"
+                            sx={{
+                              borderRadius: "4px",
+                              color: "text.secondary",
+                              "&:hover": {
+                                backgroundColor: "error.main",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     </Box>
                   ))}
                   {!isCredit && newSale.paymentMethods.length < 3 && (
                     <Button
-                      variant="outlined"
+                      variant="text"
                       startIcon={<Add fontSize="small" />}
                       onClick={addPaymentMethod}
                       sx={{

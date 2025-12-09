@@ -14,6 +14,7 @@ import {
   IconButton,
   FormControl,
   useTheme,
+  Tooltip,
 } from "@mui/material";
 
 import {
@@ -495,7 +496,7 @@ const ClientesPage = () => {
     if (!selectedCustomer) return null;
 
     return selectedBudget ? (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
           <Box>
             <Typography variant="subtitle2" fontWeight="bold">
@@ -616,7 +617,7 @@ const ClientesPage = () => {
         </Box>
       </Box>
     ) : (
-      <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
+      <Box sx={{ maxHeight: "63vh", mb: 2, overflow: "auto" }}>
         {customerBudgets.length > 0 ? (
           <TableContainer component={Paper}>
             <Table stickyHeader>
@@ -668,21 +669,22 @@ const ClientesPage = () => {
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton
-                        onClick={() => handleViewBudgetItems(budget)}
-                        size="small"
-                        sx={{
-                          borderRadius: "4px",
-                          color: "primary.main",
-                          "&:hover": {
-                            backgroundColor: "primary.main",
-                            color: "white",
-                          },
-                        }}
-                        title="Ver detalles"
-                      >
-                        <Visibility fontSize="small" />
-                      </IconButton>
+                      <Tooltip title="Ver detalles">
+                        <IconButton
+                          onClick={() => handleViewBudgetItems(budget)}
+                          size="small"
+                          sx={{
+                            borderRadius: "4px",
+                            color: "primary.main",
+                            "&:hover": {
+                              backgroundColor: "primary.main",
+                              color: "white",
+                            },
+                          }}
+                        >
+                          <Visibility fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -710,7 +712,7 @@ const ClientesPage = () => {
     if (!selectedCustomer) return null;
 
     return (
-      <Box sx={{ maxHeight: "72vh", overflow: "auto" }}>
+      <Box sx={{ maxHeight: "63vh", mb: 2, overflow: "auto" }}>
         {customerSales.length > 0 ? (
           <TableContainer component={Paper}>
             <Table stickyHeader>
@@ -837,7 +839,7 @@ const ClientesPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -898,7 +900,7 @@ const ClientesPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "72vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", mb: 2, flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -969,7 +971,7 @@ const ClientesPage = () => {
                               sx={{
                                 display: "flex",
                                 flexDirection: "column",
-                                gap: 0.5,
+                                gap: 2,
                               }}
                             >
                               {customer.phone && (
@@ -1033,74 +1035,88 @@ const ClientesPage = () => {
                                 sx={{
                                   display: "flex",
                                   justifyContent: "center",
-                                  gap: 1,
+                                  gap: 2,
                                 }}
                               >
-                                <IconButton
-                                  onClick={() =>
-                                    handleOpenBudgetsModal(customer)
+                                <Tooltip title="Ver presupuestos">
+                                  <IconButton
+                                    onClick={() =>
+                                      handleOpenBudgetsModal(customer)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Assignment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Ver historial de compras">
+                                  <IconButton
+                                    onClick={() =>
+                                      handleViewPurchaseHistory(customer)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Visibility fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Editar cliente">
+                                  <IconButton
+                                    onClick={() => handleEditClick(customer)}
+                                    size="small"
+                                    sx={{
+                                      borderRadius: "4px",
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip
+                                  title={
+                                    hasPendingBalance
+                                      ? "Cliente tiene saldo pendiente"
+                                      : "Eliminar cliente"
                                   }
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Ver presupuestos"
                                 >
-                                  <Assignment fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() =>
-                                    handleViewPurchaseHistory(customer)
-                                  }
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Ver historial de compras"
-                                >
-                                  <Visibility fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() => handleEditClick(customer)}
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "primary.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Editar cliente"
-                                >
-                                  <Edit fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() => handleDeleteClick(customer)}
-                                  size="small"
-                                  sx={{
-                                    borderRadius: "4px",
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                      backgroundColor: "error.main",
-                                      color: "white",
-                                    },
-                                  }}
-                                  title="Eliminar cliente"
-                                  disabled={hasPendingBalance}
-                                >
-                                  <Delete fontSize="small" />
-                                </IconButton>
+                                  <span>
+                                    <IconButton
+                                      onClick={() =>
+                                        handleDeleteClick(customer)
+                                      }
+                                      size="small"
+                                      sx={{
+                                        borderRadius: "4px",
+                                        color: "text.secondary",
+                                        "&:hover": {
+                                          backgroundColor: "error.main",
+                                          color: "white",
+                                        },
+                                      }}
+                                      disabled={hasPendingBalance}
+                                    >
+                                      <Delete fontSize="small" />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
                               </Box>
                             </TableCell>
                           )}
@@ -1210,7 +1226,7 @@ const ClientesPage = () => {
             </Box>
           }
         >
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Box
               sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
             >

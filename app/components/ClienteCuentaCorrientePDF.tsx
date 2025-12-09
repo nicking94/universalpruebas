@@ -3,7 +3,6 @@ import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-// Crear estilos mejorados
 const styles = StyleSheet.create({
   page: {
     flexDirection: "column",
@@ -103,7 +102,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 20,
-    gap: 10,
+    gap: 20,
   },
   summaryCard: {
     flex: 1,

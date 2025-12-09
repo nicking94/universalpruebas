@@ -41,7 +41,6 @@ const AuthForm: React.FC<AuthFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const theme = useTheme();
 
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (showTermsCheckbox && !acceptedTerms) {
@@ -69,9 +68,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
         justifyContent: "center",
         width: { xs: "90%", sm: "70%", md: "35%", xl: "25%" },
         p: 5,
-        gap: 3,
-        backgroundColor: "#e0f2fe", // bg-blue_xl equivalent
-        color: "#374151", // text-gray_b equivalent
+        gap: 2,
+        backgroundColor: "#e0f2fe",
+        color: "#374151",
         zIndex: 40,
         borderRadius: 2,
       }}
@@ -97,7 +96,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
         label="Usuario"
         name="username"
         value={formData.username}
-        onChange={(value) => setFormData({ ...formData, username: value.toString() })}
+        onChange={(value) =>
+          setFormData({ ...formData, username: value.toString() })
+        }
         placeholder="Escribe tu nombre de usuario"
         fullWidth
         required
@@ -109,7 +110,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
         name="password"
         type={showPassword ? "text" : "password"}
         value={formData.password}
-        onChange={(value) => setFormData({ ...formData, password: value.toString() })}
+        onChange={(value) =>
+          setFormData({ ...formData, password: value.toString() })
+        }
         placeholder="Escribe tu contraseña"
         fullWidth
         required
@@ -119,7 +122,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
       />
 
       {showTermsCheckbox && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -166,13 +169,6 @@ const AuthForm: React.FC<AuthFormProps> = ({
           disabled={showTermsCheckbox && !acceptedTerms}
           fullWidth
           sx={{
-            py: 1.5,
-            fontSize: "1rem",
-            fontWeight: 600,
-            backgroundColor: theme.palette.primary.main,
-            "&:hover": {
-              backgroundColor: theme.palette.primary.dark,
-            },
             "&:disabled": {
               backgroundColor: theme.palette.action.disabled,
             },

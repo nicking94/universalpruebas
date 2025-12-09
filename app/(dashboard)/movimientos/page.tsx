@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 import {
   Chart as ChartJS,
   ArcElement,
-  Tooltip,
+  Tooltip as TooltipChart,
   Legend,
   CategoryScale,
   LinearScale,
@@ -37,6 +37,7 @@ import {
   useTheme,
   Card,
   CardContent,
+  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -76,7 +77,7 @@ import CustomChip from "@/app/components/CustomChip";
 
 ChartJS.register(
   ArcElement,
-  Tooltip,
+  TooltipChart,
   Legend,
   CategoryScale,
   LinearScale,
@@ -841,7 +842,7 @@ const MovimientosPage = () => {
         sx={{
           px: 4,
           py: 2,
-          height: "calc(100vh - 80px)",
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
@@ -931,18 +932,13 @@ const MovimientosPage = () => {
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            height: "calc(100vh - 220px)",
+            flex: 1,
           }}
         >
-          <Box
-            sx={{
-              maxHeight: "calc(96vh - 250px)",
-              overflow: "auto",
-            }}
-          >
+          <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "71vh", flex: 1 }}
+              sx={{ maxHeight: "63vh", flex: 1 }}
             >
               <Table sx={{ minWidth: 650 }} size="small">
                 <TableHead>
@@ -1087,16 +1083,34 @@ const MovimientosPage = () => {
                               sx={{
                                 display: "flex",
                                 justifyContent: "center",
-                                gap: 1,
+                                gap: 2,
                               }}
                             >
                               {expense.receipt && (
+                                <Tooltip title="Ver comprobante">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      setReceiptPreview(expense.receipt || null)
+                                    }
+                                    sx={{
+                                      color: "text.secondary",
+                                      "&:hover": {
+                                        backgroundColor: "primary.main",
+                                        color: "white",
+                                      },
+                                    }}
+                                  >
+                                    <Description fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              <Tooltip title="Editar">
                                 <IconButton
                                   size="small"
-                                  onClick={() =>
-                                    setReceiptPreview(expense.receipt || null)
-                                  }
-                                  title="Ver comprobante"
+                                  onClick={() => {
+                                    handleOpenModalForEdit(expense);
+                                  }}
                                   sx={{
                                     color: "text.secondary",
                                     "&:hover": {
@@ -1105,42 +1119,27 @@ const MovimientosPage = () => {
                                     },
                                   }}
                                 >
-                                  <Description fontSize="small" />
+                                  <Edit fontSize="small" />
                                 </IconButton>
-                              )}
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  handleOpenModalForEdit(expense);
-                                }}
-                                title="Editar"
-                                sx={{
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "primary.main",
-                                    color: "white",
-                                  },
-                                }}
-                              >
-                                <Edit fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setExpenseToDelete(expense);
-                                  setIsDeleteModalOpen(true);
-                                }}
-                                title="Eliminar"
-                                sx={{
-                                  color: "text.secondary",
-                                  "&:hover": {
-                                    backgroundColor: "error.main",
-                                    color: "white",
-                                  },
-                                }}
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Eliminar">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setExpenseToDelete(expense);
+                                    setIsDeleteModalOpen(true);
+                                  }}
+                                  sx={{
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                      backgroundColor: "error.main",
+                                      color: "white",
+                                    },
+                                  }}
+                                >
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
                           </TableCell>
                         )}
@@ -1550,8 +1549,8 @@ const MovimientosPage = () => {
             </Button>
           }
         >
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <Card sx={{ flex: "1 1 300px" }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
@@ -1651,7 +1650,7 @@ const MovimientosPage = () => {
               </Card>
             </Box>
 
-            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <Card sx={{ flex: "1 1 300px" }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
