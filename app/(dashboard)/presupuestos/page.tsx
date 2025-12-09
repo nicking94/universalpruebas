@@ -834,6 +834,7 @@ const PresupuestosPage = () => {
             isDeposit: true,
             budgetId: budgetToAdd.id,
             fromBudget: true,
+            createdAt: new Date().toISOString(),
           };
 
           const updatedCash = {

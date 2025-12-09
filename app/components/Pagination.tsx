@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useEffect } from "react";
 import { PaginationProps } from "../lib/types/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -27,6 +27,7 @@ const Pagination: React.FC<
     text?: string;
     text2?: string;
     totalItems: number;
+    onSearchChange?: () => void;
   }
 > = ({
   text = "Productos por página",
@@ -40,6 +41,7 @@ const Pagination: React.FC<
     setCurrentPage,
     setItemsPerPage,
     isLoading,
+    resetToFirstPage,
   } = usePagination();
 
   const theme = useTheme();
@@ -49,6 +51,16 @@ const Pagination: React.FC<
     () => Math.ceil(totalItems / itemsPerPage),
     [totalItems, itemsPerPage]
   );
+  useEffect(() => {
+    if (!isLoading) {
+      resetToFirstPage();
+    }
+  }, [totalItems, resetToFirstPage, isLoading]);
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages || 1);
+    }
+  }, [totalPages, currentPage, setCurrentPage]);
 
   const handlePrevious = useCallback(() => {
     setCurrentPage(Math.max(1, currentPage - 1));
@@ -61,7 +73,8 @@ const Pagination: React.FC<
   const handleItemsPerPageChange = useCallback(
     async (newItemsPerPage: number) => {
       setItemsPerPage(newItemsPerPage);
-      setCurrentPage(1);
+
+      resetToFirstPage();
 
       if (userId) {
         try {
@@ -86,7 +99,7 @@ const Pagination: React.FC<
         }
       }
     },
-    [setItemsPerPage, userId, setCurrentPage]
+    [setItemsPerPage, resetToFirstPage, userId]
   );
 
   const handlePageChange = useCallback(

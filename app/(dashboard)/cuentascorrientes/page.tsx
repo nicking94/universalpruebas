@@ -1712,6 +1712,7 @@ const CuentasCorrientesPage = () => {
             unit: p.unit,
             price: p.price,
           })),
+          createdAt: new Date().toISOString(),
         };
 
         if (dailyCash) {

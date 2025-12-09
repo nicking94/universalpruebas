@@ -268,6 +268,7 @@ export type PaymentSplit = {
 
 export type DailyCashMovement = {
   id: number;
+  dailyCashId?: number;
   isDeposit?: boolean;
   originalAmount?: number;
   isBudgetGroup?: boolean;
@@ -326,6 +327,7 @@ export type DailyCashMovement = {
   expenseCategory?: string;
   customerName?: string;
   createdAt?: string;
+  timestamp?: string;
 };
 
 export type DailyCash = {

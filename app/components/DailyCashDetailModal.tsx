@@ -97,34 +97,34 @@ const DailyCashDetailModal = ({
   }, [filteredMovements]);
 
   const groupedMovements = useMemo(() => {
-    return filteredMovements.reduce((acc, movement) => {
-      const movementKey = movement.items
-        ? `sale-${movement.date}-${movement.items
-            .map((item) => item.productId)
-            .join("-")}`
-        : movement.id;
+    const groups: Record<string, DailyCashMovement> = {};
 
-      if (!acc[movementKey]) {
-        acc[movementKey] = {
-          ...movement,
-          subMovements: movement.combinedPaymentMethods ? [] : undefined,
-        };
-      }
+    filteredMovements.forEach((movement, index) => {
+      // Cada movimiento es único, usa una combinación de id y timestamp
+      const uniqueKey = `movement-${movement.id}-${index}-${
+        movement.createdAt || Date.now()
+      }`;
+
+      groups[uniqueKey] = {
+        ...movement,
+        subMovements: movement.combinedPaymentMethods ? [] : undefined,
+      };
 
       if (movement.combinedPaymentMethods) {
         movement.combinedPaymentMethods.forEach((paymentMethod) => {
-          acc[movementKey].subMovements!.push({
+          groups[uniqueKey].subMovements!.push({
             ...movement,
-            id: Math.random(),
+            id: movement.id,
             paymentMethod: paymentMethod.method,
             amount: paymentMethod.amount,
             description: `${movement.description} - ${paymentMethod.method}`,
+            createdAt: movement.createdAt || new Date().toISOString(),
           });
         });
       }
+    });
 
-      return acc;
-    }, {} as Record<string, DailyCashMovement>);
+    return groups;
   }, [filteredMovements]);
 
   const handleClose = () => {
@@ -437,7 +437,7 @@ const DailyCashDetailModal = ({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <Typography color="text.secondary">
                     No hay movimientos que coincidan con los filtros
                   </Typography>

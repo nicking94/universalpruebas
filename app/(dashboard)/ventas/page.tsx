@@ -1133,40 +1133,77 @@ const VentasPage = () => {
         sale.manualProfitPercentage || 0
       );
 
-      const movement: DailyCashMovement = {
-        id: Date.now(),
-        amount: sale.total,
-        description: `Venta - ${sale.concept || "general"}`,
-        type: "INGRESO",
-        date: new Date().toISOString(),
-        paymentMethod:
-          sale.paymentMethods.length > 1
-            ? "MIXTO"
-            : sale.paymentMethods[0]?.method || "EFECTIVO",
-        items: sale.products.map((p) => {
-          const priceInfo = calculatePrice(p, p.quantity, p.unit);
-          return {
-            productId: p.id,
-            productName: p.name,
-            quantity: p.quantity,
-            unit: p.unit,
-            price: priceInfo.finalPrice / p.quantity,
-            costPrice: p.costPrice,
-            profit: priceInfo.profit,
-            size: p.size,
-            color: p.color,
-          };
-        }),
-        profit: totalProfit,
-        combinedPaymentMethods: sale.paymentMethods,
-        customerName: sale.customerName || "CLIENTE OCASIONAL",
-      };
+      // Crear timestamp base para esta venta
+      const baseTimestamp = new Date().toISOString();
+
+      // Si hay múltiples métodos de pago, crear un movimiento por cada uno
+      const movements: DailyCashMovement[] = [];
+
+      if (sale.paymentMethods.length === 1) {
+        // Un solo método de pago
+        const movement: DailyCashMovement = {
+          id: Date.now(),
+          amount: sale.total,
+          description: `Venta - ${sale.concept || "general"}`,
+          type: "INGRESO",
+          date: baseTimestamp,
+          paymentMethod: sale.paymentMethods[0]?.method || "EFECTIVO",
+          items: sale.products.map((p) => {
+            const priceInfo = calculatePrice(p, p.quantity, p.unit);
+            return {
+              productId: p.id,
+              productName: p.name,
+              quantity: p.quantity,
+              unit: p.unit,
+              price: priceInfo.finalPrice / p.quantity,
+              costPrice: p.costPrice,
+              profit: priceInfo.profit,
+              size: p.size,
+              color: p.color,
+            };
+          }),
+          profit: totalProfit,
+          combinedPaymentMethods: sale.paymentMethods,
+          customerName: sale.customerName || "CLIENTE OCASIONAL",
+          createdAt: new Date().toISOString(), // Timestamp único
+        };
+        movements.push(movement);
+      } else {
+        // Múltiples métodos de pago - crear un movimiento principal con submovimientos
+        const mainMovement: DailyCashMovement = {
+          id: Date.now(),
+          amount: sale.total,
+          description: `Venta - ${sale.concept || "general"}`,
+          type: "INGRESO",
+          date: baseTimestamp,
+          paymentMethod: "MIXTO",
+          items: sale.products.map((p) => {
+            const priceInfo = calculatePrice(p, p.quantity, p.unit);
+            return {
+              productId: p.id,
+              productName: p.name,
+              quantity: p.quantity,
+              unit: p.unit,
+              price: priceInfo.finalPrice / p.quantity,
+              costPrice: p.costPrice,
+              profit: priceInfo.profit,
+              size: p.size,
+              color: p.color,
+            };
+          }),
+          profit: totalProfit,
+          combinedPaymentMethods: sale.paymentMethods,
+          customerName: sale.customerName || "CLIENTE OCASIONAL",
+          createdAt: new Date().toISOString(), // Timestamp único
+        };
+        movements.push(mainMovement);
+      }
 
       if (!dailyCash) {
         dailyCash = {
           id: Date.now(),
           date: today,
-          movements: [movement],
+          movements: movements, // Usar array de movimientos
           closed: false,
           totalIncome: sale.total,
           totalExpense: 0,
@@ -1175,7 +1212,7 @@ const VentasPage = () => {
       } else {
         const updatedCash = {
           ...dailyCash,
-          movements: [...dailyCash.movements, movement],
+          movements: [...dailyCash.movements, ...movements], // Agregar todos los movimientos
           totalIncome: (dailyCash.totalIncome || 0) + sale.total,
         };
         await db.dailyCashes.update(dailyCash.id, updatedCash);

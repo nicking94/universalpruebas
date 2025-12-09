@@ -303,6 +303,7 @@ const CajaDiariaPage = () => {
           movements: cash.movements.map((m) => ({
             ...m,
             amount: Number(m.amount) || 0,
+            createdAt: m.createdAt || new Date().toISOString(),
           })),
         }));
 

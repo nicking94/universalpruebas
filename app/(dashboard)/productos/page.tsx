@@ -1469,6 +1469,7 @@ const ProductsPage = () => {
         profit: -profitToSubtract,
         rubro: selectedReturnProduct.rubro || rubro,
         unit: selectedReturnProduct.unit,
+        createdAt: new Date().toISOString(),
       };
 
       const updatedCash = {
