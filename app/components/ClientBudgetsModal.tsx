@@ -9,13 +9,13 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Tooltip,
 } from "@mui/material";
 import { Visibility, Assignment } from "@mui/icons-material";
 import { Budget, Customer } from "@/app/lib/types/types";
 import Modal from "@/app/components/Modal";
 import Button from "@/app/components/Button";
 import CustomChip from "./CustomChip";
+import CustomGlobalTooltip from "./CustomTooltipGlobal";
 
 interface ClientBudgetsModalProps {
   isOpen: boolean;
@@ -267,7 +267,7 @@ const ClientBudgetsModal = ({
                         />
                       </TableCell>
                       <TableCell align="center">
-                        <Tooltip title="Ver detalles">
+                        <CustomGlobalTooltip title="Ver detalles">
                           <IconButton
                             onClick={() => onSelectBudget(budget)}
                             size="small"
@@ -282,7 +282,7 @@ const ClientBudgetsModal = ({
                           >
                             <Visibility fontSize="small" />
                           </IconButton>
-                        </Tooltip>
+                        </CustomGlobalTooltip>
                       </TableCell>
                     </TableRow>
                   ))}

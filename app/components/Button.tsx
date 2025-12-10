@@ -5,10 +5,10 @@ import {
   Button as MuiButton,
   ButtonProps as MuiButtonProps,
   CircularProgress,
-  Tooltip,
   SxProps,
   Theme,
 } from "@mui/material";
+import CustomGlobalTooltip from "./CustomTooltipGlobal";
 
 interface CustomButtonProps {
   text?: string;
@@ -227,9 +227,9 @@ const Button = forwardRef<HTMLButtonElement, CustomButtonProps>(
     );
 
     return title ? (
-      <Tooltip title={title} arrow>
+      <CustomGlobalTooltip title={title} arrow>
         {buttonElement}
-      </Tooltip>
+      </CustomGlobalTooltip>
     ) : (
       buttonElement
     );

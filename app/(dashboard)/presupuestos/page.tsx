@@ -55,7 +55,6 @@ import {
   Divider,
   Autocomplete,
   TextField,
-  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -71,6 +70,7 @@ import Select from "@/app/components/Select";
 import CustomChip from "@/app/components/CustomChip";
 import getDisplayProductName from "@/app/lib/utils/DisplayProductName";
 import ProductSearchAutocomplete from "@/app/components/ProductSearchAutocomplete";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 interface CustomerOption {
   value: string;
@@ -1030,10 +1030,8 @@ const PresupuestosPage = () => {
           ).toLocaleDateString("es-ES")}.pdf`}
         >
           {({ loading }) => (
-            <Tooltip title="Descargar presupuesto">
+            <CustomGlobalTooltip title="Descargar presupuesto">
               <span>
-                {" "}
-                {/* Wrapper necesario para tooltip con elemento deshabilitado */}
                 <IconButton
                   size="small"
                   disabled={loading}
@@ -1048,7 +1046,7 @@ const PresupuestosPage = () => {
                   <Download fontSize="small" />
                 </IconButton>
               </span>
-            </Tooltip>
+            </CustomGlobalTooltip>
           )}
         </PDFDownloadLink>
       );
@@ -1358,7 +1356,7 @@ const PresupuestosPage = () => {
                                 gap: 0.5,
                               }}
                             >
-                              <Tooltip
+                              <CustomGlobalTooltip
                                 title={
                                   budget.status === "cobrado"
                                     ? "Presupuesto ya cobrado"
@@ -1395,11 +1393,11 @@ const PresupuestosPage = () => {
                                     <ShoppingCart fontSize="small" />
                                   </IconButton>
                                 </span>
-                              </Tooltip>
+                              </CustomGlobalTooltip>
 
                               {handleDownloadPDF(budget)}
 
-                              <Tooltip
+                              <CustomGlobalTooltip
                                 title={
                                   !budget.customerId
                                     ? "No hay cliente asociado"
@@ -1425,8 +1423,8 @@ const PresupuestosPage = () => {
                                     <Note fontSize="small" />
                                   </IconButton>
                                 </span>
-                              </Tooltip>
-                              <Tooltip title="Editar presupuesto">
+                              </CustomGlobalTooltip>
+                              <CustomGlobalTooltip title="Editar presupuesto">
                                 <IconButton
                                   size="small"
                                   onClick={() => handleEditClick(budget)}
@@ -1441,9 +1439,9 @@ const PresupuestosPage = () => {
                                 >
                                   <Edit fontSize="small" />
                                 </IconButton>
-                              </Tooltip>
+                              </CustomGlobalTooltip>
 
-                              <Tooltip title="Eliminar presupuesto">
+                              <CustomGlobalTooltip title="Eliminar presupuesto">
                                 <IconButton
                                   size="small"
                                   onClick={() => handleDeleteClick(budget)}
@@ -1458,7 +1456,7 @@ const PresupuestosPage = () => {
                                 >
                                   <Delete fontSize="small" />
                                 </IconButton>
-                              </Tooltip>
+                              </CustomGlobalTooltip>
                             </Box>
                           </TableCell>
                         )}
@@ -1990,7 +1988,7 @@ const PresupuestosPage = () => {
                                   )}
                                 </TableCell>
                                 <TableCell sx={{ textAlign: "center" }}>
-                                  <Tooltip title="Eliminar producto">
+                                  <CustomGlobalTooltip title="Eliminar producto">
                                     <IconButton
                                       onClick={() =>
                                         handleRemoveProduct(item.productId)
@@ -2005,7 +2003,7 @@ const PresupuestosPage = () => {
                                     >
                                       <Delete fontSize="small" />
                                     </IconButton>
-                                  </Tooltip>
+                                  </CustomGlobalTooltip>
                                 </TableCell>
                               </TableRow>
                             );

@@ -37,7 +37,6 @@ import {
   useTheme,
   Card,
   CardContent,
-  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -74,6 +73,7 @@ import CustomDatePicker from "@/app/components/CustomDatePicker";
 import Input from "@/app/components/Input";
 import Notification from "@/app/components/Notification";
 import CustomChip from "@/app/components/CustomChip";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 ChartJS.register(
   ArcElement,
@@ -1087,7 +1087,7 @@ const MovimientosPage = () => {
                               }}
                             >
                               {expense.receipt && (
-                                <Tooltip title="Ver comprobante">
+                                <CustomGlobalTooltip title="Ver comprobante">
                                   <IconButton
                                     size="small"
                                     onClick={() =>
@@ -1103,9 +1103,9 @@ const MovimientosPage = () => {
                                   >
                                     <Description fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
+                                </CustomGlobalTooltip>
                               )}
-                              <Tooltip title="Editar">
+                              <CustomGlobalTooltip title="Editar">
                                 <IconButton
                                   size="small"
                                   onClick={() => {
@@ -1121,8 +1121,8 @@ const MovimientosPage = () => {
                                 >
                                   <Edit fontSize="small" />
                                 </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Eliminar">
+                              </CustomGlobalTooltip>
+                              <CustomGlobalTooltip title="Eliminar">
                                 <IconButton
                                   size="small"
                                   onClick={() => {
@@ -1139,7 +1139,7 @@ const MovimientosPage = () => {
                                 >
                                   <Delete fontSize="small" />
                                 </IconButton>
-                              </Tooltip>
+                              </CustomGlobalTooltip>
                             </Box>
                           </TableCell>
                         )}

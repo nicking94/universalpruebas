@@ -11,9 +11,9 @@ import {
   useTheme,
   IconButton,
   Box,
-  Tooltip,
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
+import CustomGlobalTooltip from "./CustomTooltipGlobal";
 
 export interface SelectOptionMetadata {
   id?: string | number;
@@ -215,7 +215,7 @@ function Select<T = string | number, M = SelectOptionMetadata>({
                 </Box>
 
                 {showDelete && (
-                  <Tooltip title="Eliminar">
+                  <CustomGlobalTooltip title="Eliminar">
                     <IconButton
                       size="small"
                       onClick={(e) => handleDelete(e, option)}
@@ -232,7 +232,7 @@ function Select<T = string | number, M = SelectOptionMetadata>({
                     >
                       <Delete fontSize="small" />
                     </IconButton>
-                  </Tooltip>
+                  </CustomGlobalTooltip>
                 )}
               </Box>
             </MenuItem>

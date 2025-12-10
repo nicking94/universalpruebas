@@ -11,7 +11,6 @@ import {
   ListItem,
   useTheme,
   alpha,
-  Tooltip,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -20,6 +19,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import CustomChip from "../CustomChip";
+import CustomGlobalTooltip from "../CustomTooltipGlobal";
 
 interface NotificationDropdownProps {
   notifications: NotificationType[];
@@ -61,7 +61,7 @@ const NotificationDropdown = ({
         sx={{
           p: 2,
           borderBottom: `1px solid ${theme.palette.divider}`,
-          bgcolor: theme.palette.mode === "dark" ? "grey.900" : "grey.100",
+          bgcolor: "grey.50",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -72,7 +72,7 @@ const NotificationDropdown = ({
         </Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
           {unreadNotifications.length > 0 && (
-            <Tooltip title="Marcar todas como leídas">
+            <CustomGlobalTooltip title="Marcar todas como leídas">
               <IconButton
                 onClick={onMarkAllAsRead}
                 size="small"
@@ -85,9 +85,9 @@ const NotificationDropdown = ({
               >
                 <CheckIcon fontSize="small" />
               </IconButton>
-            </Tooltip>
+            </CustomGlobalTooltip>
           )}
-          <Tooltip title="Cerrar">
+          <CustomGlobalTooltip title="Cerrar">
             <IconButton
               onClick={onClose}
               size="small"
@@ -100,7 +100,7 @@ const NotificationDropdown = ({
             >
               <CloseIcon fontSize="small" />
             </IconButton>
-          </Tooltip>
+          </CustomGlobalTooltip>
         </Box>
       </Box>
 
@@ -259,7 +259,7 @@ const NotificationItem = ({
         </Box>
       </Box>
       <Box sx={{ ml: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-        <Tooltip title="Eliminar">
+        <CustomGlobalTooltip title="Eliminar">
           <IconButton
             onClick={() => notification.id && onDelete(notification.id)}
             size="small"
@@ -273,9 +273,9 @@ const NotificationItem = ({
           >
             <DeleteIcon fontSize="small" />
           </IconButton>
-        </Tooltip>
+        </CustomGlobalTooltip>
         {isUnread && notification.id && (
-          <Tooltip title="Marcar como leída">
+          <CustomGlobalTooltip title="Marcar como leída">
             <IconButton
               onClick={() => onMarkAsRead(notification.id!)}
               size="small"
@@ -289,7 +289,7 @@ const NotificationItem = ({
             >
               <CheckCircleIcon fontSize="small" />
             </IconButton>
-          </Tooltip>
+          </CustomGlobalTooltip>
         )}
       </Box>
     </ListItem>

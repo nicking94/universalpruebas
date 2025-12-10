@@ -13,7 +13,6 @@ import {
   IconButton,
   useTheme,
   CardContent,
-  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -42,6 +41,7 @@ import Input from "@/app/components/Input";
 import CustomDatePicker from "@/app/components/CustomDatePicker";
 import { useNotification } from "@/app/hooks/useNotification";
 import CustomChip from "@/app/components/CustomChip";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 const PromocionesPage = () => {
   const { rubro } = useRubro();
@@ -543,7 +543,7 @@ const PromocionesPage = () => {
                                   gap: 0.5,
                                 }}
                               >
-                                <Tooltip title="Editar promoción">
+                                <CustomGlobalTooltip title="Editar promoción">
                                   <IconButton
                                     size="small"
                                     onClick={() =>
@@ -560,8 +560,8 @@ const PromocionesPage = () => {
                                   >
                                     <Edit fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Eliminar promoción">
+                                </CustomGlobalTooltip>
+                                <CustomGlobalTooltip title="Eliminar promoción">
                                   <IconButton
                                     size="small"
                                     onClick={() =>
@@ -578,7 +578,7 @@ const PromocionesPage = () => {
                                   >
                                     <Delete fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
+                                </CustomGlobalTooltip>
                               </Box>
                             </TableCell>
                           )}

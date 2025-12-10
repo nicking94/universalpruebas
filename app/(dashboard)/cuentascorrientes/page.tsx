@@ -20,7 +20,6 @@ import {
   CardContent,
   Divider,
   LinearProgress,
-  Tooltip,
   Tabs,
   Tab,
   Badge,
@@ -78,6 +77,7 @@ import SearchBar from "@/app/components/SearchBar";
 import Pagination from "@/app/components/Pagination";
 import Notification from "@/app/components/Notification";
 import CustomChip from "@/app/components/CustomChip";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 const CUENTAS_CONFIG = {
   NOTIFICATION_DURATION: 2500,
@@ -1130,7 +1130,7 @@ const ChequesModal = ({
                           }}
                         >
                           {cheque.checkStatus === "pendiente" && (
-                            <Tooltip title="Marcar como cobrado">
+                            <CustomGlobalTooltip title="Marcar como cobrado">
                               <IconButton
                                 onClick={() => onMarkCheckAsPaid(cheque.id)}
                                 size="small"
@@ -1145,9 +1145,9 @@ const ChequesModal = ({
                               >
                                 <CheckCircleIcon fontSize="small" />
                               </IconButton>
-                            </Tooltip>
+                            </CustomGlobalTooltip>
                           )}
-                          <Tooltip title="Eliminar cheque">
+                          <CustomGlobalTooltip title="Eliminar cheque">
                             <IconButton
                               onClick={() => onDeleteCheck(cheque.id)}
                               size="small"
@@ -1162,7 +1162,7 @@ const ChequesModal = ({
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
-                          </Tooltip>
+                          </CustomGlobalTooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -2546,7 +2546,7 @@ const CuentasCorrientesPage = () => {
                                   gap: 0.5,
                                 }}
                               >
-                                <Tooltip title="Ver información detallada">
+                                <CustomGlobalTooltip title="Ver información detallada">
                                   <IconButton
                                     onClick={() =>
                                       handleOpenInfoModal(oldestSale)
@@ -2563,8 +2563,8 @@ const CuentasCorrientesPage = () => {
                                   >
                                     <InfoIcon fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Descargar PDF">
+                                </CustomGlobalTooltip>
+                                <CustomGlobalTooltip title="Descargar PDF">
                                   <span>
                                     {" "}
                                     {/* Wrapper necesario para tooltip con elemento deshabilitado */}
@@ -2586,8 +2586,8 @@ const CuentasCorrientesPage = () => {
                                       <DownloadIcon fontSize="small" />
                                     </IconButton>
                                   </span>
-                                </Tooltip>
-                                <Tooltip title="Ver cheques">
+                                </CustomGlobalTooltip>
+                                <CustomGlobalTooltip title="Ver cheques">
                                   <IconButton
                                     onClick={() =>
                                       handleOpenChequesModal(customerName)
@@ -2604,8 +2604,8 @@ const CuentasCorrientesPage = () => {
                                   >
                                     <WalletIcon fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Eliminar cuentas">
+                                </CustomGlobalTooltip>
+                                <CustomGlobalTooltip title="Eliminar cuentas">
                                   <IconButton
                                     onClick={() => {
                                       setCustomerToDelete(customerName);
@@ -2623,7 +2623,7 @@ const CuentasCorrientesPage = () => {
                                   >
                                     <DeleteIcon fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
+                                </CustomGlobalTooltip>
                               </Box>
                             </TableCell>
                           )}

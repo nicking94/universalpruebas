@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { TextField, InputAdornment, IconButton, Tooltip } from "@mui/material";
+import { TextField, InputAdornment, IconButton } from "@mui/material";
 import {
   QrCodeScanner as BarcodeIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
+import CustomGlobalTooltip from "./CustomTooltipGlobal";
 
 interface BarcodeScannerProps {
   value: string;
@@ -127,7 +128,7 @@ export default function BarcodeScanner({
         ),
         endAdornment: onButtonClick ? (
           <InputAdornment position="end">
-            <Tooltip title={buttonTitle}>
+            <CustomGlobalTooltip title={buttonTitle}>
               <IconButton
                 onClick={onButtonClick}
                 disabled={buttonDisabled || disabled}
@@ -149,7 +150,7 @@ export default function BarcodeScanner({
               >
                 <RefreshIcon fontSize="small" />
               </IconButton>
-            </Tooltip>
+            </CustomGlobalTooltip>
           </InputAdornment>
         ) : undefined,
       }}

@@ -14,7 +14,6 @@ import {
   IconButton,
   FormControl,
   useTheme,
-  Tooltip,
 } from "@mui/material";
 
 import {
@@ -42,6 +41,7 @@ import Input from "@/app/components/Input";
 import Select from "@/app/components/Select";
 import Notification from "@/app/components/Notification";
 import CustomChip from "@/app/components/CustomChip";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 const ClientesPage = () => {
   const { rubro } = useRubro();
@@ -669,7 +669,7 @@ const ClientesPage = () => {
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <Tooltip title="Ver detalles">
+                      <CustomGlobalTooltip title="Ver detalles">
                         <IconButton
                           onClick={() => handleViewBudgetItems(budget)}
                           size="small"
@@ -684,7 +684,7 @@ const ClientesPage = () => {
                         >
                           <Visibility fontSize="small" />
                         </IconButton>
-                      </Tooltip>
+                      </CustomGlobalTooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1038,7 +1038,7 @@ const ClientesPage = () => {
                                   gap: 2,
                                 }}
                               >
-                                <Tooltip title="Ver presupuestos">
+                                <CustomGlobalTooltip title="Ver presupuestos">
                                   <IconButton
                                     onClick={() =>
                                       handleOpenBudgetsModal(customer)
@@ -1055,8 +1055,8 @@ const ClientesPage = () => {
                                   >
                                     <Assignment fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Ver historial de compras">
+                                </CustomGlobalTooltip>
+                                <CustomGlobalTooltip title="Ver historial de compras">
                                   <IconButton
                                     onClick={() =>
                                       handleViewPurchaseHistory(customer)
@@ -1073,8 +1073,8 @@ const ClientesPage = () => {
                                   >
                                     <Visibility fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Editar cliente">
+                                </CustomGlobalTooltip>
+                                <CustomGlobalTooltip title="Editar cliente">
                                   <IconButton
                                     onClick={() => handleEditClick(customer)}
                                     size="small"
@@ -1089,8 +1089,8 @@ const ClientesPage = () => {
                                   >
                                     <Edit fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
-                                <Tooltip
+                                </CustomGlobalTooltip>
+                                <CustomGlobalTooltip
                                   title={
                                     hasPendingBalance
                                       ? "Cliente tiene saldo pendiente"
@@ -1116,7 +1116,7 @@ const ClientesPage = () => {
                                       <Delete fontSize="small" />
                                     </IconButton>
                                   </span>
-                                </Tooltip>
+                                </CustomGlobalTooltip>
                               </Box>
                             </TableCell>
                           )}

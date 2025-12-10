@@ -13,7 +13,6 @@ import {
   Box,
   FormControl,
   IconButton,
-  Tooltip,
 } from "@mui/material";
 import { Add, Close, Info, PointOfSale } from "@mui/icons-material";
 import { useEffect, useState, useCallback, useMemo } from "react";
@@ -36,7 +35,8 @@ import ProtectedRoute from "@/app/components/ProtectedRoute";
 import Notification from "@/app/components/Notification";
 import Pagination from "@/app/components/Pagination";
 import CustomChip from "@/app/components/CustomChip";
-import DailyCashDetailModal from "@/app/components/DailyCashDetailModal"; // Importa el componente separado
+import DailyCashDetailModal from "@/app/components/DailyCashDetailModal";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 const CajaDiariaPage = () => {
   const { rubro } = useRubro();
@@ -587,7 +587,7 @@ const CajaDiariaPage = () => {
                           />
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Ver detalles">
+                          <CustomGlobalTooltip title="Ver detalles">
                             <IconButton
                               onClick={() => openDetailModal(day.movements)}
                               size="small"
@@ -602,7 +602,7 @@ const CajaDiariaPage = () => {
                             >
                               <Info fontSize="small" />
                             </IconButton>
-                          </Tooltip>
+                          </CustomGlobalTooltip>
                         </TableCell>
                       </TableRow>
                     ))

@@ -3,11 +3,12 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { es } from "date-fns/locale";
-import { TextField, IconButton, Box, useTheme, Tooltip } from "@mui/material";
+import { TextField, IconButton, Box, useTheme } from "@mui/material";
 import { parseISO, format, isValid } from "date-fns";
 import { useMemo, useState } from "react";
 import { PickersActionBarAction } from "@mui/x-date-pickers";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import CustomGlobalTooltip from "./CustomTooltipGlobal";
 
 interface CustomDatePickerProps {
   value: string;
@@ -238,7 +239,7 @@ const CustomDatePicker = ({
               },
             },
             endAdornment: (
-              <Tooltip title="Seleccionar fecha">
+              <CustomGlobalTooltip title="Seleccionar fecha">
                 <IconButton
                   onClick={handleIconClick}
                   disabled={disabled}
@@ -262,7 +263,7 @@ const CustomDatePicker = ({
                 >
                   <CalendarTodayIcon fontSize="small" />
                 </IconButton>
-              </Tooltip>
+              </CustomGlobalTooltip>
             ),
           }}
           onClick={handleTextFieldClick}

@@ -57,11 +57,11 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Tooltip,
 } from "@mui/material";
 import Input from "@/app/components/Input";
 import Button from "@/app/components/Button";
 import { useNotification } from "@/app/hooks/useNotification";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 const PRODUCT_CONFIG = {
   MAX_PRODUCTS_PER_CATEGORY: 30,
@@ -673,7 +673,7 @@ const ProductRow = React.memo(
         {rubro !== "Todos los rubros" && (
           <TableCell sx={{ textAlign: "center" }}>
             <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
-              <Tooltip title="Código de Barras">
+              <CustomGlobalTooltip title="Código de Barras">
                 <IconButton
                   onClick={handleGenerateBarcode}
                   size="small"
@@ -688,8 +688,8 @@ const ProductRow = React.memo(
                 >
                   <QrCode fontSize="small" />
                 </IconButton>
-              </Tooltip>
-              <Tooltip title="Editar Producto">
+              </CustomGlobalTooltip>
+              <CustomGlobalTooltip title="Editar Producto">
                 <IconButton
                   onClick={handleEdit}
                   size="small"
@@ -704,8 +704,8 @@ const ProductRow = React.memo(
                 >
                   <Edit fontSize="small" />
                 </IconButton>
-              </Tooltip>
-              <Tooltip title="Eliminar Producto">
+              </CustomGlobalTooltip>
+              <CustomGlobalTooltip title="Eliminar Producto">
                 <IconButton
                   onClick={handleDelete}
                   size="small"
@@ -720,7 +720,7 @@ const ProductRow = React.memo(
                 >
                   <Delete fontSize="small" />
                 </IconButton>
-              </Tooltip>
+              </CustomGlobalTooltip>
             </Box>
           </TableCell>
         )}

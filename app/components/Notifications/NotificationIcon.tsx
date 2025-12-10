@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { IconButton, Badge, useTheme, Tooltip } from "@mui/material";
+import { IconButton, Badge, useTheme } from "@mui/material";
 import {
   Notifications as NotificationsIcon,
   NotificationsActive as NotificationsActiveIcon,
@@ -14,6 +14,7 @@ import {
   markAllAsRead,
 } from "../../services/notifications";
 import { NotificationType } from "@/app/lib/types/types";
+import CustomGlobalTooltip from "../CustomTooltipGlobal";
 
 const NotificationIcon = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
@@ -33,7 +34,7 @@ const NotificationIcon = () => {
 
   return (
     <div className="relative">
-      <Tooltip title="Notificaciones">
+      <CustomGlobalTooltip title="Notificaciones">
         <IconButton
           onClick={() => setIsOpen(!isOpen)}
           sx={{
@@ -75,7 +76,7 @@ const NotificationIcon = () => {
             )}
           </Badge>
         </IconButton>
-      </Tooltip>
+      </CustomGlobalTooltip>
 
       {isOpen && (
         <NotificationDropdown

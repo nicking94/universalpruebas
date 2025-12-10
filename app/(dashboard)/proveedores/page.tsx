@@ -25,7 +25,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -36,6 +35,7 @@ import {
 } from "@mui/icons-material";
 import Button from "@/app/components/Button";
 import CustomChip from "@/app/components/CustomChip";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 const ProveedoresPage = () => {
   const { rubro } = useRubro();
@@ -628,7 +628,7 @@ const ProveedoresPage = () => {
                                 gap: 2,
                               }}
                             >
-                              <Tooltip title="Asignar productos">
+                              <CustomGlobalTooltip title="Asignar productos">
                                 <IconButton
                                   size="small"
                                   onClick={() =>
@@ -645,9 +645,9 @@ const ProveedoresPage = () => {
                                 >
                                   <Inventory fontSize="small" />
                                 </IconButton>
-                              </Tooltip>
+                              </CustomGlobalTooltip>
 
-                              <Tooltip title="Editar proveedor">
+                              <CustomGlobalTooltip title="Editar proveedor">
                                 <IconButton
                                   size="small"
                                   onClick={() => handleEdit(supplier)}
@@ -662,9 +662,9 @@ const ProveedoresPage = () => {
                                 >
                                   <Edit fontSize="small" />
                                 </IconButton>
-                              </Tooltip>
+                              </CustomGlobalTooltip>
 
-                              <Tooltip title="Eliminar proveedor">
+                              <CustomGlobalTooltip title="Eliminar proveedor">
                                 <IconButton
                                   size="small"
                                   onClick={() => openDeleteModal(supplier)}
@@ -679,7 +679,7 @@ const ProveedoresPage = () => {
                                 >
                                   <Delete fontSize="small" />
                                 </IconButton>
-                              </Tooltip>
+                              </CustomGlobalTooltip>
                             </Box>
                           </TableCell>
                         )}
@@ -854,7 +854,7 @@ const ProveedoresPage = () => {
                           </Box>
                         </Box>
                         <Box sx={{ ml: 1 }}>
-                          <Tooltip title="Asignar producto">
+                          <CustomGlobalTooltip title="Asignar producto">
                             <IconButton
                               size="small"
                               onClick={() => assignProduct(product)}
@@ -869,7 +869,7 @@ const ProveedoresPage = () => {
                             >
                               <Add fontSize="small" />
                             </IconButton>
-                          </Tooltip>
+                          </CustomGlobalTooltip>
                         </Box>
                       </Box>
                     ))}
@@ -942,7 +942,7 @@ const ProveedoresPage = () => {
                             </Typography>
                           </Box>
 
-                          <Tooltip title="Desasignar producto">
+                          <CustomGlobalTooltip title="Desasignar producto">
                             <IconButton
                               size="small"
                               onClick={() => unassignProduct(product)}
@@ -957,7 +957,7 @@ const ProveedoresPage = () => {
                             >
                               <Delete fontSize="small" />
                             </IconButton>
-                          </Tooltip>
+                          </CustomGlobalTooltip>
                         </Box>
                       </Box>
                     ))}
@@ -1059,7 +1059,7 @@ const ProveedoresPage = () => {
                       sx={{ color: "white" }}
                     />
                     {contacts.length > 1 && (
-                      <Tooltip title="Eliminar contacto">
+                      <CustomGlobalTooltip title="Eliminar contacto">
                         <IconButton
                           size="small"
                           onClick={() => handleRemoveContact(index)}
@@ -1073,7 +1073,7 @@ const ProveedoresPage = () => {
                         >
                           <Delete fontSize="small" />
                         </IconButton>
-                      </Tooltip>
+                      </CustomGlobalTooltip>
                     )}
                   </Box>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

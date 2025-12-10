@@ -1,5 +1,5 @@
 ﻿"use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TextField,
   InputAdornment,
@@ -7,9 +7,9 @@ import {
   IconButton,
   TextFieldProps,
   useTheme,
-  Tooltip,
 } from "@mui/material";
 import { toCapitalize } from "@/app/lib/utils/capitalizeText";
+import CustomGlobalTooltip from "./CustomTooltipGlobal";
 
 export interface InputProps
   extends Omit<
@@ -76,9 +76,15 @@ const Input: React.FC<InputProps> = ({
 }) => {
   const theme = useTheme();
   const [isFocused, setIsFocused] = useState(false);
-  const [previousValue, setPreviousValue] = useState<string | number>(
-    value || ""
-  );
+  const [previousValue, setPreviousValue] = useState<string | number>("");
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Manejar el montaje del componente
+  useEffect(() => {
+    setIsMounted(true);
+    // Inicializar previousValue con el valor actual
+    setPreviousValue(value || "");
+  }, [value]);
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -92,6 +98,7 @@ const Input: React.FC<InputProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onRawChange?.(e);
     let newValue: string | number = e.target.value;
+
     if (
       capitalize &&
       type === "text" &&
@@ -137,16 +144,24 @@ const Input: React.FC<InputProps> = ({
     e: React.FocusEvent<HTMLInputElement>
   ) => {
     if (capitalize && type === "text" && value && typeof value === "string") {
-      const capitalizedValue = toCapitalize(value.toString().trim());
-      if (capitalizedValue !== value) {
+      const currentValue = value ?? "";
+      const capitalizedValue = toCapitalize(currentValue.toString().trim());
+      if (capitalizedValue !== currentValue) {
         onChange(capitalizedValue);
       }
     }
     handleBlur(e);
   };
 
-  const shouldShrink =
-    isFocused || (value !== undefined && value !== "" && value !== 0);
+  // Determinar si el label debe estar en estado "shrink"
+  // Usar la lógica de MUI: si hay valor O si está enfocado O si hay placeholder
+  const shouldShrink = React.useMemo(() => {
+    if (!isMounted) return false; // Evitar problemas en el render inicial
+
+    const hasValue =
+      value !== undefined && value !== null && value !== "" && value !== 0;
+    return isFocused || hasValue || !!placeholder;
+  }, [isFocused, value, placeholder, isMounted]);
 
   const inputPropsConfig: TextFieldProps["InputProps"] = {
     readOnly,
@@ -156,7 +171,7 @@ const Input: React.FC<InputProps> = ({
     endAdornment:
       buttonIcon && onButtonClick ? (
         <InputAdornment position="end">
-          <Tooltip title={buttonTitle}>
+          <CustomGlobalTooltip title={buttonTitle}>
             <IconButton
               onClick={onButtonClick}
               disabled={buttonDisabled || disabled}
@@ -178,7 +193,7 @@ const Input: React.FC<InputProps> = ({
             >
               {buttonIcon}
             </IconButton>
-          </Tooltip>
+          </CustomGlobalTooltip>
         </InputAdornment>
       ) : undefined,
   };
@@ -225,7 +240,6 @@ const Input: React.FC<InputProps> = ({
         transform: "translate(14px, -6px) scale(0.75)",
       },
     },
-
     "& .MuiOutlinedInput-input": {
       paddingLeft: icon ? "4px" : undefined,
       color: theme.palette.text.primary,
@@ -248,7 +262,7 @@ const Input: React.FC<InputProps> = ({
         autoFocus={autoFocus}
         type={type}
         name={name}
-        value={value}
+        value={value ?? ""}
         onChange={readOnly ? undefined : handleChange}
         onKeyDown={onKeyDown}
         onFocus={handleFocus}

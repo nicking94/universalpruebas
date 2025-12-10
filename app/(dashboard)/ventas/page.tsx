@@ -16,7 +16,6 @@ import {
   TextField,
   Autocomplete,
   useTheme,
-  Tooltip,
 } from "@mui/material";
 import {
   Add,
@@ -80,6 +79,7 @@ import { useNotification } from "@/app/hooks/useNotification";
 import BusinessDataModal from "@/app/components/BusinessDataModal";
 import CustomChip from "@/app/components/CustomChip";
 import ProductSearchAutocomplete from "@/app/components/ProductSearchAutocomplete";
+import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 
 type CustomerOption = {
   value: string;
@@ -2237,7 +2237,7 @@ const VentasPage = () => {
                                   gap: 0.5,
                                 }}
                               >
-                                <Tooltip title="Ver ticket">
+                                <CustomGlobalTooltip title="Ver ticket">
                                   <IconButton
                                     onClick={() => handleOpenInfoModal(sale)}
                                     size="small"
@@ -2252,7 +2252,7 @@ const VentasPage = () => {
                                   >
                                     <Print fontSize="small" />
                                   </IconButton>
-                                </Tooltip>
+                                </CustomGlobalTooltip>
                               </Box>
                             </TableCell>
                           )}
@@ -2827,7 +2827,7 @@ const VentasPage = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Eliminar producto">
+                          <CustomGlobalTooltip title="Eliminar producto">
                             <IconButton
                               onClick={() => {
                                 handleDeleteProductClick(
@@ -2847,7 +2847,7 @@ const VentasPage = () => {
                             >
                               <Delete fontSize="small" />
                             </IconButton>
-                          </Tooltip>
+                          </CustomGlobalTooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -3040,7 +3040,7 @@ const VentasPage = () => {
                       </Box>
 
                       {newSale.paymentMethods.length > 1 && (
-                        <Tooltip title="Eliminar método de pago">
+                        <CustomGlobalTooltip title="Eliminar método de pago">
                           <IconButton
                             onClick={() => removePaymentMethod(index)}
                             size="small"
@@ -3055,7 +3055,7 @@ const VentasPage = () => {
                           >
                             <Delete fontSize="small" />
                           </IconButton>
-                        </Tooltip>
+                        </CustomGlobalTooltip>
                       )}
                     </Box>
                   ))}

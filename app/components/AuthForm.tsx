@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import {
   Box,
-  Button,
   Typography,
   FormControlLabel,
   Checkbox,
@@ -18,6 +17,7 @@ import { AuthData } from "../lib/types/types";
 import Image from "next/image";
 import Logo from "@/public/logo.png";
 import Input from "./Input";
+import Button from "./Button"; // Importa tu botón personalizado
 
 interface AuthFormProps {
   type?: "login" | "register";
@@ -168,14 +168,21 @@ const AuthForm: React.FC<AuthFormProps> = ({
           variant="contained"
           disabled={showTermsCheckbox && !acceptedTerms}
           fullWidth
+          text={type === "login" ? "Iniciar Sesión" : "Registrarse"}
+          title={
+            type === "login"
+              ? "Iniciar sesión en el sistema"
+              : "Crear una nueva cuenta"
+          }
+          isPrimaryAction={true}
+          size="medium"
           sx={{
-            "&:disabled": {
-              backgroundColor: theme.palette.action.disabled,
+            "&.Mui-disabled": {
+              backgroundColor: theme.palette.action.disabledBackground,
+              color: theme.palette.action.disabled,
             },
           }}
-        >
-          {type === "login" ? "Iniciar Sesión" : "Registrarse"}
-        </Button>
+        />
       </Box>
     </Paper>
   );

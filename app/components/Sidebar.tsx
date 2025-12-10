@@ -42,10 +42,10 @@ import {
   useMediaQuery,
   styled,
   Chip,
-  Tooltip,
 } from "@mui/material";
 
 import Button from "./Button";
+import CustomGlobalTooltip from "./CustomTooltipGlobal";
 
 // Extender la interfaz localmente si no puedes modificar el archivo original
 interface ExtendedMenuItemProps extends MenuItemProps {
@@ -361,7 +361,9 @@ const Sidebar: React.FC<ExtendedSidebarProps> = ({ items = menuItems }) => {
           <Typography variant="subtitle1" fontWeight="medium">
             Menú
           </Typography>
-          <Tooltip title={isSidebarOpen ? "Cerrar menú" : "Abrir menú"}>
+          <CustomGlobalTooltip
+            title={isSidebarOpen ? "Cerrar menú" : "Abrir menú"}
+          >
             <IconButton
               onClick={toggleSidebar}
               size="small"
@@ -378,7 +380,7 @@ const Sidebar: React.FC<ExtendedSidebarProps> = ({ items = menuItems }) => {
                 <MenuIcon fontSize="small" />
               )}
             </IconButton>
-          </Tooltip>
+          </CustomGlobalTooltip>
         </MenuHeader>
 
         <List sx={{ pt: 0.5 }}>
