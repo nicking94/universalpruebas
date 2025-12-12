@@ -185,9 +185,14 @@ export type UnitOption = {
 export type SearchBarProps = {
   onSearch: (query: string) => void;
 };
-// En tus tipos/types.ts
 
-export type Sale = {
+export type EditMode = {
+  isEditing: boolean;
+  originalSaleId?: number;
+  originalCashMovementIds?: number[];
+};
+
+export interface Sale {
   id: number;
   products: Product[];
   paymentMethods: PaymentSplit[];
@@ -212,7 +217,14 @@ export type Sale = {
   };
   concept?: string;
   appliedPromotion?: Promotion;
-};
+  edited?: boolean;
+  editHistory?: {
+    date: string;
+    changes: Partial<Sale>;
+    previousTotal: number;
+    newTotal: number;
+  }[];
+}
 
 export type SaleItem = {
   productId: number;
