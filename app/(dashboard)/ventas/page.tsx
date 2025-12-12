@@ -378,11 +378,6 @@ const VentasPage = () => {
 
       // 8. Abrir el modal de edición
       setIsOpenModal(true);
-
-      showNotification(
-        "Modo edición activado. Los productos han sido restaurados al stock.",
-        "info"
-      );
     } catch (error) {
       console.error("Error al iniciar edición:", error);
       showNotification("Error al iniciar la edición de la venta", "error");
@@ -1223,15 +1218,6 @@ const VentasPage = () => {
 
   const handleConfirmPayment = async () => {
     if (isProcessingPayment) {
-      return;
-    }
-
-    // Si estamos en modo edición, no procesar el pago normal
-    if (isEditMode.isEditing) {
-      showNotification(
-        "Está en modo edición. Use el botón 'Guardar Cambios'.",
-        "error"
-      );
       return;
     }
 
@@ -2393,9 +2379,8 @@ const VentasPage = () => {
     <ProtectedRoute>
       <Box
         sx={{
-          px: 4,
-          py: 2,
-          height: "100vh",
+          p: 4,
+          height: "calc(100vh - 64px)",
           display: "flex",
           flexDirection: "column",
         }}
@@ -2758,12 +2743,11 @@ const VentasPage = () => {
                                       onClick={() => handleStartEditSale(sale)}
                                       size="small"
                                       sx={{
-                                        bgcolor: "primary.main",
+                                        borderRadius: "4px",
+                                        color: "text.secondary",
                                         "&:hover": {
-                                          bgcolor: "primary.dark",
-                                        },
-                                        "&:disabled": {
-                                          bgcolor: "action.disabled",
+                                          backgroundColor: "primary.main",
+                                          color: "white",
                                         },
                                       }}
                                     >

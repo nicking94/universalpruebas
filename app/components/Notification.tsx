@@ -28,6 +28,8 @@ export default function Notification({
         return "error";
       case "info":
         return "info";
+      case "warning":
+        return "warning";
       default:
         return "info";
     }
@@ -80,6 +82,12 @@ export default function Notification({
     }),
     ...(type === "error" && {
       backgroundColor: theme.palette.error.main,
+      "& .MuiAlert-icon": {
+        color: "white",
+      },
+    }),
+    ...(type === "warning" && {
+      backgroundColor: theme.palette.warning.main,
       "& .MuiAlert-icon": {
         color: "white",
       },

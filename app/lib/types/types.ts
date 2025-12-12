@@ -67,7 +67,7 @@ export type SidebarContextProps = {
 export type NotificationProps = {
   isOpen: boolean;
   message: string;
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "info" | "warning";
 };
 
 export type ModalProps = {
@@ -167,6 +167,8 @@ export type Product = {
   season?: string;
   setMinStock?: boolean;
   minStock?: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 export type ProductDisplayInfo = {
   name: string;
