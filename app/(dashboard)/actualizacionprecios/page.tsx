@@ -448,9 +448,8 @@ const ActualizacionPreciosPage = () => {
     <ProtectedRoute>
       <Box
         sx={{
-          px: { xs: 2, sm: 3, md: 4 },
-          py: 2,
-          height: "100vh",
+          p: 4,
+          height: "calc(100vh - 64px)",
           display: "flex",
           flexDirection: "column",
           gap: 2,

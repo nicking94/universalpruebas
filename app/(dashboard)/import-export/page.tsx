@@ -1180,6 +1180,7 @@ export default function ImportExportPage() {
                 minWidth: { xs: "100%", sm: "300px" },
                 height: "56px",
                 fontSize: "1rem",
+                textTransform: "uppercase",
               }}
             />
             <ImportFileButton onImport={importData} />
@@ -1202,7 +1203,7 @@ export default function ImportExportPage() {
               gap: 1,
             }}
           >
-            <CloudUploadIcon /> Importar Productos desde Excel
+            <CloudUploadIcon /> Importar Productos desde Excel (xlsx, xls)
           </Typography>
           <Alert severity="warning" sx={{ mb: 3 }}>
             <AlertTitle>Atención</AlertTitle>

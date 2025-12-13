@@ -18,7 +18,7 @@ export default function ImportFileButton({
   return (
     <Box>
       <Button
-        text="Importar archivo"
+        text="Importar copia de seguridad"
         icon={<FolderIcon />}
         iconPosition="left"
         onClick={handleButtonClick}
@@ -27,7 +27,7 @@ export default function ImportFileButton({
         title="Importar datos desde un archivo JSON"
         ariaLabel="Importar datos"
         sx={{
-          textTransform: "none",
+          textTransform: "uppercase",
           fontWeight: 600,
           backgroundColor: "primary.main",
           color: "white",
