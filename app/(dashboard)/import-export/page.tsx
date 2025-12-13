@@ -887,6 +887,8 @@ export default function ImportExportPage() {
     try {
       const theme = await db.theme.toArray();
       const products = await db.products.toArray();
+      const priceLists = await db.priceLists.toArray();
+      const productPrices = await db.productPrices.toArray();
       const sales = await db.sales.toArray();
       const dailyCashes = await db.dailyCashes.toArray();
       const payments = await db.payments.toArray();
@@ -910,6 +912,8 @@ export default function ImportExportPage() {
       const data = {
         theme,
         products,
+        priceLists,
+        productPrices,
         sales,
         dailyCashes,
         payments,
@@ -1003,6 +1007,8 @@ export default function ImportExportPage() {
         [
           db.theme,
           db.products,
+          db.priceLists,
+          db.productPrices,
           db.sales,
           db.auth,
           db.dailyCashes,
@@ -1028,6 +1034,8 @@ export default function ImportExportPage() {
           await Promise.all([
             db.theme.clear(),
             db.products.clear(),
+            db.priceLists.clear(),
+            db.productPrices.clear(),
             db.sales.clear(),
             db.auth.clear(),
             db.dailyCashes.clear(),
@@ -1054,6 +1062,8 @@ export default function ImportExportPage() {
             await Promise.all([
               db.theme.bulkAdd(data.theme || []),
               db.products.bulkAdd(data.products || []),
+              db.priceLists.bulkAdd(data.priceLists || []),
+              db.productPrices.bulkAdd(data.productPrices || []),
               db.sales.bulkPut(data.sales || []),
               db.auth.bulkAdd(data.auth || []),
               db.dailyCashes.bulkAdd(data.dailyCashes || []),
@@ -1101,16 +1111,27 @@ export default function ImportExportPage() {
     }
   };
 
-  // Función para manejar el clic en el botón de importar Excel
   const handleExcelImportClick = () => {
-    // Crear un input file programáticamente
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".xlsx,.xls,.xlsm,.xlsb,.ods";
+
     input.onchange = (e: Event) => {
-      // Convertir el Event a ChangeEvent<HTMLInputElement>
-      importExcelData(e as unknown as React.ChangeEvent<HTMLInputElement>);
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) return;
+
+      // Crear un evento sintético de React
+      const syntheticEvent = {
+        target: {
+          files: target.files,
+          value: target.value,
+        },
+      } as React.ChangeEvent<HTMLInputElement>;
+
+      importExcelData(syntheticEvent);
     };
+
     input.click();
   };
 

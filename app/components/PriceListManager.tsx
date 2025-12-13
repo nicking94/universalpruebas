@@ -11,7 +11,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Chip,
 } from "@mui/material";
 import { Edit, Delete, CheckCircle, Add } from "@mui/icons-material";
 import { db } from "@/app/database/db";
@@ -19,8 +18,10 @@ import { PriceList, Rubro } from "@/app/lib/types/types";
 import Modal from "@/app/components/Modal";
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
+import Select from "@/app/components/Select";
 import { useNotification } from "@/app/hooks/useNotification";
 import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
+import CustomChip from "@/app/components/CustomChip";
 import { usePagination } from "@/app/context/PaginationContext";
 import Pagination from "@/app/components/Pagination";
 
@@ -75,7 +76,6 @@ const PriceListsManager: React.FC<{ rubro: Rubro }> = ({ rubro }) => {
 
     try {
       if (editingPriceList) {
-        // Si se está marcando como default, quitar default de otras listas
         if (formData.isDefault && !editingPriceList.isDefault) {
           await db.priceLists
             .where("rubro")
@@ -261,14 +261,18 @@ const PriceListsManager: React.FC<{ rubro: Rubro }> = ({ rubro }) => {
                     </TableCell>
                     <TableCell align="center">
                       {list.isDefault ? (
-                        <Chip
+                        <CustomChip
                           label="Por defecto"
                           color="success"
                           size="small"
                           icon={<CheckCircle />}
                         />
                       ) : (
-                        <Chip label="Activa" color="default" size="small" />
+                        <CustomChip
+                          label="Activa"
+                          color="primary"
+                          size="small"
+                        />
                       )}
                     </TableCell>
                     <TableCell align="center">
@@ -406,6 +410,33 @@ const PriceListsManager: React.FC<{ rubro: Rubro }> = ({ rubro }) => {
             placeholder="Ej: Mayorista, Minorista, Oferta"
             required
           />
+
+          <Select
+            label="Tipo de lista"
+            value={formData.isDefault ? "default" : "normal"}
+            options={[
+              { value: "normal", label: "Lista normal" },
+              { value: "default", label: "Lista por defecto" },
+            ]}
+            onChange={(value) =>
+              setFormData({ ...formData, isDefault: value === "default" })
+            }
+          />
+
+          {formData.isDefault && (
+            <Typography variant="caption" color="info.main" sx={{ mt: 1 }}>
+              ⚠️ Esta será la lista de precios que se usará por defecto en las
+              ventas. Si ya existe una lista por defecto, será reemplazada.
+            </Typography>
+          )}
+
+          {editingPriceList?.isDefault && !formData.isDefault && (
+            <Typography variant="caption" color="warning.main" sx={{ mt: 1 }}>
+              ⚠️ Estás quitando el estado <strong>Por defecto</strong> a esta
+              lista. Las ventas nuevas usarán otra lista por defecto o{" "}
+              <strong>Precio General</strong>.
+            </Typography>
+          )}
         </Box>
       </Modal>
     </Box>
