@@ -222,6 +222,8 @@ export interface Sale {
   manualAmount?: number;
   manualProfitPercentage?: number;
   credit?: boolean;
+  creditType?: CreditType; // "cuenta_corriente" o "credito_cuotas"
+  creditDetails?: CreditDetails;
   paid?: boolean;
   customerName?: string;
   customerPhone?: string;
@@ -291,8 +293,59 @@ export type PaymentMethod =
   | "TRANSFERENCIA"
   | "TARJETA"
   | "CHEQUE"
-  | "MIXTO";
+  | "CREDITO"; // Nuevo: para crédito en cuotas
 
+export type CreditAlert = {
+  id?: number;
+  creditSaleId: number;
+  installmentId?: number;
+  type: "vencimiento" | "atraso" | "pago";
+  status: "pendiente" | "resuelta";
+  dueDate: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// Nuevos tipos para crédito en cuotas
+export type InstallmentStatus =
+  | "pendiente"
+  | "pagada"
+  | "vencida"
+  | "atrasada"
+  | "cancelada";
+export type CreditType = "cuenta_corriente" | "credito_cuotas";
+
+export interface Installment {
+  id?: number;
+  creditSaleId: number;
+  number: number; // Número de cuota (1, 2, 3...)
+  dueDate: string; // Fecha de vencimiento
+  amount: number; // Monto de la cuota
+  interestAmount: number; // Interés de esta cuota
+  penaltyAmount: number; // Penalización por atraso
+  status: InstallmentStatus;
+  paymentDate?: string; // Fecha de pago real
+  paymentMethod?: PaymentMethod;
+  daysOverdue?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreditDetails {
+  type: CreditType;
+  totalAmount: number;
+  numberOfInstallments: number;
+  interestRate: number; // Tasa de interés mensual (%)
+  penaltyRate: number; // Tasa de penalización por atraso (%)
+  startDate: string;
+  endDate?: string;
+  paidAmount: number;
+  remainingAmount: number;
+  nextDueDate?: string;
+  lastPaymentDate?: string;
+  isOverdue?: boolean;
+  overdueDays?: number;
+}
 export type PaymentSplit = {
   method: PaymentMethod;
   amount: number;
@@ -314,7 +367,7 @@ export type DailyCashMovement = {
   description: string;
   type: "INGRESO" | "EGRESO" | "TODOS";
   date: string;
-  paymentMethod?: "EFECTIVO" | "TRANSFERENCIA" | "TARJETA" | "CHEQUE" | "MIXTO";
+  paymentMethod?: PaymentMethod;
   productId?: number;
   productName?: string;
   costPrice?: number;
@@ -385,6 +438,9 @@ export type DailyCash = {
 
 export interface CreditSale extends Sale {
   credit: boolean;
+  creditType: CreditType;
+  creditDetails?: CreditDetails;
+  installments?: Installment[];
   customerName: string;
   customerPhone?: string;
   customerId?: string;

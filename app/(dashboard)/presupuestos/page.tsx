@@ -1179,7 +1179,7 @@ const PresupuestosPage = () => {
           <Box sx={{ flex: 1, minHeight: "auto" }}>
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: "62vh", flex: 1 }}
+              sx={{ maxHeight: "60vh", flex: 1 }}
             >
               <Table stickyHeader>
                 <TableHead>

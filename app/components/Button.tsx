@@ -187,19 +187,16 @@ const Button = forwardRef<HTMLButtonElement, CustomButtonProps>(
           },
 
           ...(size === "small" && {
-            fontSize: "0.65rem",
-            px: 2,
-            py: 1,
+            fontSize: "0.70rem",
+            p: 1,
           }),
           ...(size === "medium" && {
             fontSize: "0.875rem",
-            px: 2,
-            py: 1,
+            p: 1,
           }),
           ...(size === "large" && {
             fontSize: "1rem",
-            px: 2,
-            py: 1,
+            p: 1,
           }),
 
           ...(variant === "text" && {

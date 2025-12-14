@@ -23,6 +23,8 @@ import {
   Promotion,
   PriceList,
   ProductPrice,
+  Installment,
+  CreditAlert,
 } from "../lib/types/types";
 
 class MyDatabase extends Dexie {
@@ -58,10 +60,12 @@ class MyDatabase extends Dexie {
   expenses!: Table<Expense, number>;
   expenseCategories!: Table<ExpenseCategory, number>;
   promotions!: Table<Promotion, number>;
+  installments!: Table<Installment, number>;
+  creditAlerts!: Table<CreditAlert, number>;
 
   constructor() {
     super("MyDatabase");
-    this.version(33)
+    this.version(34)
       .stores({
         theme: "id",
         products:
@@ -72,7 +76,7 @@ class MyDatabase extends Dexie {
         users: "id, username",
         auth: "id, userId",
         sales:
-          "++id, date, *paymentMethod, customerName, customerId, paid, credit, chequeInfo",
+          "++id, date, *paymentMethod, customerName, customerId, paid, chequeInfo, credit, creditType",
         dailyCashes: "++id, &date, closed",
         dailyCashMovements:
           "++id, dailyCashId, date, type, paymentMethod, createdAt",
@@ -98,9 +102,13 @@ class MyDatabase extends Dexie {
         expenseCategories: "++id, name, rubro, type",
         promotions:
           "++id, name, type, status, startDate, endDate, rubro, [rubro+status]",
+        installments:
+          "++id, creditSaleId, dueDate, status, [creditSaleId+status]",
+        creditAlerts:
+          "++id, creditSaleId, installmentId, type, status, dueDate, [status+type]",
       })
       .upgrade(async (trans) => {
-        if (trans.db.verno === 33) {
+        if (trans.db.verno === 34) {
           const rubros = ["comercio", "indumentaria"];
 
           for (const rubro of rubros) {
@@ -235,6 +243,9 @@ class MyDatabase extends Dexie {
           .modify((sale: Sale) => {
             if (sale.customerName)
               sale.customerName = this.formatString(sale.customerName);
+            if (sale.credit === true && !sale.creditType) {
+              sale.creditType = "cuenta_corriente";
+            }
           });
 
         await trans

@@ -24,6 +24,7 @@ import {
   PriceChange,
   Category,
   AttachMoney,
+  CreditCard,
 } from "@mui/icons-material";
 import { TbCashRegister } from "react-icons/tb";
 import {
@@ -74,6 +75,11 @@ const menuItems: ExtendedMenuItemProps[] = [
         label: "Promociones",
         href: "/promociones",
         icon: <Sell />,
+      },
+      {
+        label: "Créditos",
+        href: "/creditos",
+        icon: <CreditCard />,
       },
     ],
   },
