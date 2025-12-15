@@ -665,7 +665,6 @@ const VentasPage = () => {
     }
   };
 
-  // Función para actualizar la caja diaria con la venta editada
   const updateDailyCashForEditedSale = async (
     originalSale: Sale,
     updatedSale: Sale
@@ -677,126 +676,65 @@ const VentasPage = () => {
       if (!dailyCash) {
         throw new Error("No se encontró la caja diaria para hoy");
       }
+      const filteredMovements = dailyCash.movements.filter(
+        (movement) => !isEditMode.originalCashMovementIds?.includes(movement.id)
+      );
 
-      // Si hay movimientos específicos para esta venta, actualizarlos
-      if (
-        isEditMode.originalCashMovementIds &&
-        isEditMode.originalCashMovementIds.length > 0
-      ) {
-        const updatedMovements = dailyCash.movements.map((movement) => {
-          if (isEditMode.originalCashMovementIds?.includes(movement.id)) {
-            // Actualizar movimiento existente
-            const totalProfit = calculateTotalProfit(
-              updatedSale.products,
-              updatedSale.manualAmount || 0,
-              updatedSale.manualProfitPercentage || 0
-            );
+      const totalProfit = calculateTotalProfit(
+        updatedSale.products,
+        updatedSale.manualAmount || 0,
+        updatedSale.manualProfitPercentage || 0
+      );
 
-            return {
-              ...movement,
-              amount: updatedSale.total,
-              description: `Venta editada - ${
-                updatedSale.concept || "general"
-              }`,
-              items: updatedSale.products.map((p) => {
-                const priceInfo = calculatePrice(p, p.quantity, p.unit);
-                return {
-                  productId: p.id,
-                  productName: p.name,
-                  quantity: p.quantity,
-                  unit: p.unit,
-                  price: priceInfo.finalPrice / p.quantity,
-                  costPrice: p.costPrice,
-                  profit: priceInfo.profit,
-                  size: p.size,
-                  color: p.color,
-                };
-              }),
-              profit: totalProfit,
-              combinedPaymentMethods: updatedSale.paymentMethods,
-            };
-          }
-          return movement;
-        });
+      const newMovement: DailyCashMovement = {
+        id: Date.now(),
+        amount: updatedSale.total,
+        description: `Venta editada - ${updatedSale.concept || "general"}`,
+        type: "INGRESO",
+        date: new Date().toISOString(),
+        paymentMethod: updatedSale.paymentMethods[0]?.method || "EFECTIVO",
+        items: updatedSale.products.map((p) => {
+          const priceInfo = calculatePrice(p, p.quantity, p.unit);
+          return {
+            productId: p.id,
+            productName: p.name,
+            quantity: p.quantity,
+            unit: p.unit,
+            price: priceInfo.finalPrice / p.quantity,
+            costPrice: p.costPrice,
+            profit: priceInfo.profit,
+            size: p.size,
+            color: p.color,
+          };
+        }),
+        profit: totalProfit,
+        combinedPaymentMethods: updatedSale.paymentMethods,
+        customerName: updatedSale.customerName || "CLIENTE OCASIONAL",
+        createdAt: new Date().toISOString(),
+        originalSaleId: updatedSale.id,
+      };
 
-        // Actualizar totales de la caja
-        const totalIncome = updatedMovements
-          .filter((m) => m.type === "INGRESO")
-          .reduce((sum, m) => sum + m.amount, 0);
+      const updatedMovements = [...filteredMovements, newMovement];
 
-        const totalExpense = updatedMovements
-          .filter((m) => m.type === "EGRESO")
-          .reduce((sum, m) => sum + m.amount, 0);
+      // 3. Recalcular totales
+      const totalIncome = updatedMovements
+        .filter((m) => m.type === "INGRESO")
+        .reduce((sum, m) => sum + m.amount, 0);
 
-        await db.dailyCashes.update(dailyCash.id, {
-          movements: updatedMovements,
-          totalIncome,
-          totalExpense,
-        });
-      } else {
-        // Si no hay movimientos específicos, crear uno nuevo y eliminar el efecto del anterior
-        showNotification("Actualizando registros de caja...", "info");
+      const totalExpense = updatedMovements
+        .filter((m) => m.type === "EGRESO")
+        .reduce((sum, m) => sum + m.amount, 0);
 
-        // Recalcular toda la caja del día
-        const todaySales = await db.sales
-          .where("date")
-          .between(
-            new Date(today).toISOString(),
-            new Date(today + "T23:59:59.999Z").toISOString()
-          )
-          .toArray();
+      const totalProfitUpdated = updatedMovements
+        .filter((m) => m.type === "INGRESO")
+        .reduce((sum, m) => sum + (m.profit || 0), 0);
 
-        const movements: DailyCashMovement[] = [];
-
-        // Recrear todos los movimientos del día
-        for (const sale of todaySales) {
-          const totalProfit = calculateTotalProfit(
-            sale.products,
-            sale.manualAmount || 0,
-            sale.manualProfitPercentage || 0
-          );
-
-          if (sale.paymentMethods.length === 1) {
-            const movement: DailyCashMovement = {
-              id: sale.id, // Usar ID de venta como ID de movimiento
-              amount: sale.total,
-              description: `Venta - ${sale.concept || "general"}${
-                sale.edited ? " (editada)" : ""
-              }`,
-              type: "INGRESO",
-              date: sale.date,
-              paymentMethod: sale.paymentMethods[0]?.method || "EFECTIVO",
-              items: sale.products.map((p) => {
-                const priceInfo = calculatePrice(p, p.quantity, p.unit);
-                return {
-                  productId: p.id,
-                  productName: p.name,
-                  quantity: p.quantity,
-                  unit: p.unit,
-                  price: priceInfo.finalPrice / p.quantity,
-                  costPrice: p.costPrice,
-                  profit: priceInfo.profit,
-                  size: p.size,
-                  color: p.color,
-                };
-              }),
-              profit: totalProfit,
-              combinedPaymentMethods: sale.paymentMethods,
-              customerName: sale.customerName || "CLIENTE OCASIONAL",
-              createdAt: new Date().toISOString(),
-              originalSaleId: sale.id,
-            };
-            movements.push(movement);
-          }
-        }
-
-        // Actualizar la caja con todos los movimientos recalculados
-        await db.dailyCashes.update(dailyCash.id, {
-          movements,
-          totalIncome: movements.reduce((sum, m) => sum + m.amount, 0),
-          totalExpense: 0,
-        });
-      }
+      await db.dailyCashes.update(dailyCash.id, {
+        movements: updatedMovements,
+        totalIncome,
+        totalExpense,
+        totalProfit: totalProfitUpdated,
+      });
     } catch (error) {
       console.error("Error al actualizar caja diaria:", error);
       throw error;
@@ -1011,10 +949,14 @@ const VentasPage = () => {
       return;
     }
 
-    // NO establecer isCredit aquí
-    // setIsCredit(true); // <-- ESTA ES LA LÍNEA QUE DEBEMOS ELIMINAR
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
+    // Cambio importante: Cerrar el modal de configuración y procesar directamente
     setIsCreditInstallmentModalOpen(false);
+
+    // Procesar la venta a crédito inmediatamente
+    handleConfirmPayment();
 
     showNotification("Configuración de crédito en cuotas aplicada", "success");
   };
@@ -1341,30 +1283,19 @@ const VentasPage = () => {
       (method) => method.method === "CREDITO"
     );
 
+    // Si es crédito en cuotas, abrir modal de configuración
     if (hasCreditMethod) {
-      // Verificar que el modal de configuración ya fue completado
-      if (!isCreditCuotasSelected) {
-        showNotification(
-          "Debe completar la configuración del crédito en cuotas",
-          "error"
-        );
-        setIsCreditInstallmentModalOpen(true);
-        return;
-      }
-
-      // Las validaciones del cliente ahora están en el modal, no aquí
-      // Solo validar configuración de cuotas
-      if (creditInstallmentDetails.numberOfInstallments > 36) {
-        showNotification("El número máximo de cuotas es 36", "error");
-        return;
-      }
-
-      if (creditInstallmentDetails.interestRate > 50) {
-        showNotification("La tasa de interés no puede exceder el 50%", "error");
-        return;
-      }
+      setIsCreditInstallmentModalOpen(true);
+      return;
     }
 
+    // Si es cuenta corriente, confirmar directamente sin modal de pago
+    if (isCredit) {
+      handleConfirmPayment();
+      return;
+    }
+
+    // Solo para ventas normales (no crédito) abrir modal de pago
     setIsOpenModal(false);
     setTimeout(() => {
       setIsPaymentModalOpen(true);
@@ -1379,16 +1310,23 @@ const VentasPage = () => {
     setIsProcessingPayment(true);
 
     try {
-      const needsRedirect = await ensureCashIsOpen();
-      if (needsRedirect.needsRedirect) {
-        setShouldRedirectToCash(true);
-        showNotification(
-          "Debes abrir la caja primero para realizar ventas",
-          "error"
-        );
-        setIsProcessingPayment(false);
-        setIsPaymentModalOpen(false);
-        return;
+      // Solo verificar caja abierta para ventas NO a crédito
+      const hasCreditMethod = newSale.paymentMethods.some(
+        (method) => method.method === "CREDITO"
+      );
+
+      if (!isCredit && !hasCreditMethod) {
+        const needsRedirect = await ensureCashIsOpen();
+        if (needsRedirect.needsRedirect) {
+          setShouldRedirectToCash(true);
+          showNotification(
+            "Debes abrir la caja primero para realizar ventas",
+            "error"
+          );
+          setIsProcessingPayment(false);
+          setIsPaymentModalOpen(false);
+          return;
+        }
       }
 
       const stockValidation = validateStockForSale(newSale.products);
@@ -1401,13 +1339,7 @@ const VentasPage = () => {
       }
 
       // Validar crédito en cuotas
-      const hasCreditMethod = newSale.paymentMethods.some(
-        (method) => method.method === "CREDITO"
-      );
-
       if (hasCreditMethod) {
-        // Las validaciones del cliente ahora están en el modal
-        // Solo validar configuración de cuotas
         if (creditInstallmentDetails.numberOfInstallments > 36) {
           showNotification("El número máximo de cuotas es 36", "error");
           setIsProcessingPayment(false);
@@ -1424,7 +1356,8 @@ const VentasPage = () => {
         }
       }
 
-      if (isCredit) {
+      // Validaciones para ventas a crédito
+      if (isCredit || hasCreditMethod) {
         const normalizedName = customerName.toUpperCase().trim();
 
         if (!normalizedName && !selectedCustomer) {
@@ -1451,7 +1384,8 @@ const VentasPage = () => {
         }
       }
 
-      if (!isCredit && !registerCheck) {
+      // Solo validar pago suficiente para ventas NO a crédito
+      if (!isCredit && !hasCreditMethod && !registerCheck) {
         const totalPayment = newSale.paymentMethods.reduce(
           (sum, method) => sum + method.amount,
           0
@@ -1469,6 +1403,7 @@ const VentasPage = () => {
         }
       }
 
+      // Actualizar stock de productos
       for (const product of newSale.products) {
         try {
           const updatedStock = updateStockAfterSale(
@@ -1505,7 +1440,8 @@ const VentasPage = () => {
         return `${cleanName}-${timestamp}`;
       };
 
-      if (hasCreditMethod && !customerId && customerName) {
+      // Crear cliente si es necesario (para créditos)
+      if ((hasCreditMethod || isCredit) && !customerId && customerName) {
         const newCustomer: Customer = {
           id: generateCustomerId(customerName),
           name: customerName.toUpperCase().trim(),
@@ -1534,14 +1470,20 @@ const VentasPage = () => {
           setIsProcessingPayment(false);
           return;
         }
-      } else if (hasCreditMethod && selectedCustomer) {
+      } else if ((hasCreditMethod || isCredit) && selectedCustomer) {
         const customer = customers.find((c) => c.id === selectedCustomer.value);
         if (customer) {
           customerId = customer.id;
           finalCustomerName = customer.name;
           finalCustomerPhone = customer.phone || "";
+
+          // Actualizar saldo pendiente del cliente existente
+          await db.customers.update(customerId, {
+            pendingBalance: (customer.pendingBalance || 0) + newSale.total,
+            updatedAt: new Date().toISOString(),
+          });
         }
-      } else if (selectedCustomer && !hasCreditMethod) {
+      } else if (selectedCustomer && !hasCreditMethod && !isCredit) {
         const customer = customers.find((c) => c.id === selectedCustomer.value);
         if (customer) {
           customerId = customer.id;
@@ -1552,11 +1494,12 @@ const VentasPage = () => {
         finalCustomerName = "CLIENTE OCASIONAL";
       }
 
-      // Crear objeto saleToSave con valores por defecto
+      // Crear objeto saleToSave
       const saleToSave: Sale = {
         id: Date.now(),
         products: newSale.products,
-        paymentMethods: isCredit ? [] : newSale.paymentMethods,
+        paymentMethods:
+          isCredit || hasCreditMethod ? [] : newSale.paymentMethods,
         total: newSale.total,
         date: new Date().toISOString(),
         barcode: newSale.barcode || "",
@@ -1577,7 +1520,9 @@ const VentasPage = () => {
         appliedPromotion: selectedPromotions || undefined,
       };
 
-      // Solo si es crédito en cuotas
+      let saleId: number;
+
+      // Procesar crédito en cuotas
       if (hasCreditMethod) {
         saleToSave.credit = true;
         saleToSave.creditType = "credito_cuotas";
@@ -1601,27 +1546,57 @@ const VentasPage = () => {
           creditInstallmentDetails.startDate
         );
 
-        const saleId = await db.sales.add(saleToSave);
+        saleId = await db.sales.add(saleToSave);
 
-        // Guardar cuotas con el ID correcto
+        // Guardar cuotas
         for (const installment of installments) {
           await db.installments.add({
             ...installment,
             creditSaleId: saleId,
+            paymentDate: undefined, // Inicialmente undefined
+            paymentMethod: undefined, // Inicialmente undefined
           });
         }
 
-        // Si es crédito simple (cuenta corriente)
+        // Actualizar saldo pendiente del cliente
+        if (customerId) {
+          const customer = await db.customers.get(customerId);
+          if (customer) {
+            await db.customers.update(customerId, {
+              pendingBalance: (customer.pendingBalance || 0) + saleToSave.total,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
       } else if (isCredit) {
         saleToSave.credit = true;
         saleToSave.creditType = "cuenta_corriente";
         saleToSave.paid = false;
-        await db.sales.add(saleToSave);
-      } else {
-        // Para ventas normales
-        await db.sales.add(saleToSave);
+        saleToSave.creditDetails = {
+          type: "cuenta_corriente",
+          totalAmount: saleToSave.total,
+          paidAmount: 0,
+          remainingAmount: saleToSave.total,
+        };
+
+        saleId = await db.sales.add(saleToSave);
+
+        if (customerId) {
+          const customer = await db.customers.get(customerId);
+          if (customer) {
+            await db.customers.update(customerId, {
+              pendingBalance: (customer.pendingBalance || 0) + saleToSave.total,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+      // Procesar venta normal
+      else {
+        saleId = await db.sales.add(saleToSave);
       }
 
+      // Manejar cheques (solo para cuentas corrientes con cheque)
       if (isCredit && registerCheck) {
         saleToSave.chequeInfo = {
           amount: newSale.total,
@@ -1642,7 +1617,6 @@ const VentasPage = () => {
         };
 
         await db.payments.add(chequePayment);
-        console.log("✅ Cheque guardado en payments:", chequePayment);
 
         // Crear venta para caja diaria
         const saleForDailyCash: Sale = {
@@ -1652,12 +1626,15 @@ const VentasPage = () => {
         await addIncomeToDailyCash(saleForDailyCash);
       }
 
+      // Registrar en caja diaria solo para ventas NO a crédito
       if (!isCredit && !hasCreditMethod) {
         await addIncomeToDailyCash(saleToSave);
       }
 
+      // Actualizar estado local
       setSales([...sales, saleToSave]);
 
+      // Actualizar promociones si aplica
       if (selectedPromotions && selectedPromotions.id) {
         await db.promotions.update(selectedPromotions.id, {
           updatedAt: new Date().toISOString(),
@@ -1672,131 +1649,81 @@ const VentasPage = () => {
         setAvailablePromotions(activePromotions);
       }
 
+      // Actualizar historial del cliente
       if (customerId && finalCustomerName !== "CLIENTE OCASIONAL") {
         await updateCustomerPurchaseHistory(customerId, saleToSave);
       }
 
-      showNotification(
-        `Venta ${
-          isCredit
-            ? "a cuenta corriente"
-            : hasCreditMethod
-            ? "a crédito en cuotas"
-            : ""
-        } registrada correctamente`,
-        "success"
-      );
+      // Mostrar notificación apropiada
+      if (isCredit || hasCreditMethod) {
+        showNotification(
+          `Venta ${
+            isCredit ? "a cuenta corriente" : "a crédito en cuotas"
+          } confirmada correctamente`,
+          "success"
+        );
+      } else {
+        showNotification("Venta registrada correctamente", "success");
+      }
 
-      if (!isCredit && !hasCreditMethod) {
-        setIsPaymentModalOpen(false);
-        setNewSale({
-          products: [],
-          paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
-          total: 0,
-          date: new Date().toISOString(),
-          barcode: "",
-          manualAmount: 0,
-          manualProfitPercentage: 0,
-          concept: "",
+      // Resetear formulario y estados
+      setNewSale({
+        products: [],
+        paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
+        total: 0,
+        date: new Date().toISOString(),
+        barcode: "",
+        manualAmount: 0,
+        manualProfitPercentage: 0,
+        concept: "",
+      });
+
+      // Resetear estados de crédito
+      setIsCredit(false);
+      setIsCreditCuotasSelected(false);
+      setRegisterCheck(false);
+      setSelectedCustomer(null);
+      setCustomerName("");
+      setCustomerPhone("");
+      setSelectedPriceListId(null);
+      setSelectedPromotions(null);
+      setTemporarySelectedPromotion(null);
+
+      // Resetear detalles de crédito en cuotas
+      if (hasCreditMethod) {
+        setCreditInstallmentDetails({
+          numberOfInstallments: 1,
+          interestRate: 0,
+          penaltyRate: 0,
+          startDate: new Date().toISOString().split("T")[0],
         });
+      }
 
-        setIsCredit(false);
-        setIsCreditCuotasSelected(false);
-        setRegisterCheck(false);
-        setSelectedCustomer(null);
-        setCustomerName("");
-        setCustomerPhone("");
-        setSelectedPriceListId(null);
-        setSelectedPromotions(null);
-        setTemporarySelectedPromotion(null);
+      // Cerrar modales
+      setIsOpenModal(false);
+      setIsPaymentModalOpen(false);
+      setIsCreditInstallmentModalOpen(false);
+
+      // Si no es crédito, mostrar ticket
+      if (!isCredit && !hasCreditMethod) {
         setSelectedSale(saleToSave);
         setTimeout(() => {
           setIsInfoModalOpen(true);
         }, 200);
-      } else if (hasCreditMethod) {
-        // Solo crédito en cuotas
-        setNewSale({
-          products: [],
-          paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
-          total: 0,
-          date: new Date().toISOString(),
-          barcode: "",
-          manualAmount: 0,
-          manualProfitPercentage: 0,
-          concept: "",
-        });
-
-        setIsCredit(false);
-        setIsCreditCuotasSelected(false);
-        setRegisterCheck(false);
-        setSelectedCustomer(null);
-        setCustomerName("");
-        setCustomerPhone("");
-        setSelectedPriceListId(null);
-        setSelectedPromotions(null);
-        setTemporarySelectedPromotion(null);
-        setIsCreditInstallmentModalOpen(false);
-        setIsPaymentModalOpen(false);
-      } else {
-        // Crédito simple (cuenta corriente)
-        setNewSale({
-          products: [],
-          paymentMethods: [{ method: "EFECTIVO", amount: 0 }],
-          total: 0,
-          date: new Date().toISOString(),
-          barcode: "",
-          manualAmount: 0,
-          manualProfitPercentage: 0,
-          concept: "",
-        });
-
-        setIsCredit(false);
-        setIsCreditCuotasSelected(false);
-        setRegisterCheck(false);
-        setSelectedCustomer(null);
-        setCustomerName("");
-        setCustomerPhone("");
-        setSelectedPriceListId(null);
-        setSelectedPromotions(null);
-        setTemporarySelectedPromotion(null);
-
-        setIsPaymentModalOpen(false);
       }
-      setIsOpenModal(false);
-      setIsProcessingPayment(false);
 
       console.log("✅ Venta guardada:", saleToSave);
-      console.log("✅ Es crédito simple:", isCredit);
-      console.log("✅ Es crédito en cuotas:", hasCreditMethod);
-      console.log("✅ Tipo de crédito:", saleToSave.creditType);
-      if (newSale.paymentMethods[0]?.method === "CREDITO") {
-        // Verificar que haya un cliente seleccionado o ingresado
-        if (!selectedCustomer && !customerName.trim()) {
-          showNotification(
-            "Para ventas a crédito en cuotas debe seleccionar o ingresar un cliente",
-            "error"
-          );
-          setIsProcessingPayment(false);
-          return;
-        }
 
-        // Si hay un nombre de cliente pero no está seleccionado de la lista
-        if (customerName.trim() && !selectedCustomer) {
-          // Verificar si el cliente ya existe
-          const normalizedName = customerName.toUpperCase().trim();
-          const existingCustomer = customers.find(
-            (c) => c.name.toUpperCase() === normalizedName
-          );
+      // Debug: Verificar que la venta se guardó correctamente
+      const savedSale = await db.sales.get(saleToSave.id);
+      console.log("✅ Venta guardada en DB:", savedSale);
 
-          if (existingCustomer) {
-            showNotification(
-              `El cliente "${existingCustomer.name}" ya existe. Selecciónelo de la lista.`,
-              "error"
-            );
-            setIsProcessingPayment(false);
-            return;
-          }
-        }
+      if (saleToSave.credit) {
+        const installments = await db.installments
+          .where("creditSaleId")
+          .equals(saleToSave.id)
+          .toArray();
+        console.log("✅ Cuotas creadas:", installments);
       }
     } catch (error) {
       console.error("Error al procesar la venta:", error);
@@ -2794,7 +2721,23 @@ const VentasPage = () => {
             return;
           }
 
-          cobrarButtonRef.current?.click();
+          // Verificar si es crédito (cuenta corriente o cuotas)
+          const hasCreditMethod = newSale.paymentMethods.some(
+            (method) => method.method === "CREDITO"
+          );
+
+          if (hasCreditMethod || isCredit) {
+            // Para crédito en cuotas, abrir modal de configuración
+            if (hasCreditMethod) {
+              setIsCreditInstallmentModalOpen(true);
+            } else {
+              // Para cuenta corriente, confirmar directamente
+              handleConfirmPayment();
+            }
+          } else {
+            // Para ventas normales, abrir modal de pago
+            cobrarButtonRef.current?.click();
+          }
         }
       };
 
@@ -2807,9 +2750,8 @@ const VentasPage = () => {
     isOpenModal,
     isProcessingPayment,
     newSale.products.length,
+    newSale.paymentMethods,
     isCredit,
-    customerName,
-    selectedCustomer,
     showNotification,
   ]);
 
@@ -4224,13 +4166,6 @@ const VentasPage = () => {
                         !selectedCustomer &&
                         !customerName
                       }
-                      helperText={
-                        isCreditCuotasSelected &&
-                        !selectedCustomer &&
-                        !customerName
-                          ? "Seleccione un cliente para crédito en cuotas"
-                          : ""
-                      }
                     />
                   )}
                   isOptionEqualToValue={(option, value) =>
@@ -4254,11 +4189,6 @@ const VentasPage = () => {
                       isCreditCuotasSelected &&
                       !selectedCustomer &&
                       !customerName.trim()
-                    }
-                    helperText={
-                      isCreditCuotasSelected && !selectedCustomer
-                        ? "Ingrese nombre para nuevo cliente"
-                        : ""
                     }
                     fullWidth
                     size="small"

@@ -318,26 +318,27 @@ export type CreditType = "cuenta_corriente" | "credito_cuotas";
 export interface Installment {
   id?: number;
   creditSaleId: number;
-  number: number; // Número de cuota (1, 2, 3...)
-  dueDate: string; // Fecha de vencimiento
-  amount: number; // Monto de la cuota
-  interestAmount: number; // Interés de esta cuota
-  penaltyAmount: number; // Penalización por atraso
+  number: number;
+  dueDate: string;
+  amount: number;
+  interestAmount: number;
+  penaltyAmount: number;
   status: InstallmentStatus;
-  paymentDate?: string; // Fecha de pago real
-  paymentMethod?: PaymentMethod;
+  paymentDate?: string | null;
+  paymentMethod?: PaymentMethod | null;
   daysOverdue?: number;
   createdAt?: string;
   updatedAt?: string;
+  totalAmount?: number;
 }
 
 export interface CreditDetails {
   type: CreditType;
   totalAmount: number;
-  numberOfInstallments: number;
-  interestRate: number; // Tasa de interés mensual (%)
-  penaltyRate: number; // Tasa de penalización por atraso (%)
-  startDate: string;
+  numberOfInstallments?: number;
+  interestRate?: number;
+  penaltyRate?: number;
+  startDate?: string;
   endDate?: string;
   paidAmount: number;
   remainingAmount: number;
@@ -412,7 +413,8 @@ export type DailyCashMovement = {
   fromBudget?: boolean;
   expenseCategory?: string;
   customerName?: string;
-  createdAt?: string;
+  customerId?: string;
+  createdAt: string;
   timestamp?: string;
 };
 

@@ -482,6 +482,7 @@ const MovimientosPage = () => {
           type: newExpense.type,
           paymentMethod: newExpense.paymentMethod,
           date: newExpense.date,
+          createdAt: new Date().toISOString(),
           rubro: rubro,
           supplierName: newExpense.supplier,
           expenseCategory: newExpense.category,

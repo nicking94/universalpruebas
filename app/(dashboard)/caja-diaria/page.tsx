@@ -299,14 +299,43 @@ const CajaDiariaPage = () => {
     const fetchData = async () => {
       try {
         const storedDailyCashes = await db.dailyCashes.toArray();
-        const cleanedCashes = storedDailyCashes.map((cash) => ({
-          ...cash,
-          movements: cash.movements.map((m) => ({
-            ...m,
-            amount: Number(m.amount) || 0,
-            createdAt: m.createdAt || new Date().toISOString(),
-          })),
-        }));
+
+        // Eliminar movimientos duplicados
+        const cleanedCashes = storedDailyCashes.map((cash) => {
+          const uniqueMovements = cash.movements.filter(
+            (movement, index, self) => {
+              // Asegurarse de que createdAt tenga un valor por defecto
+              const movementCreatedAt =
+                movement.createdAt || new Date().toISOString();
+
+              return (
+                index ===
+                self.findIndex((m) => {
+                  const mCreatedAt = m.createdAt || new Date().toISOString();
+
+                  return (
+                    m.id === movement.id ||
+                    (m.description === movement.description &&
+                      m.amount === movement.amount &&
+                      Math.abs(
+                        new Date(mCreatedAt).getTime() -
+                          new Date(movementCreatedAt).getTime()
+                      ) < 60000)
+                  );
+                })
+              );
+            }
+          );
+
+          return {
+            ...cash,
+            movements: uniqueMovements.map((m) => ({
+              ...m,
+              amount: Number(m.amount) || 0,
+              createdAt: m.createdAt || new Date().toISOString(), // Asegurar valor por defecto
+            })),
+          };
+        });
 
         setDailyCashes(cleanedCashes);
       } catch (error) {

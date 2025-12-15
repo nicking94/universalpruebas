@@ -504,6 +504,7 @@ const PresupuestosPage = () => {
             description: `Venta - presupuesto de ${budgetToConvert.customerName}`,
             type: "INGRESO",
             date: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
             paymentMethod: method.method,
             profit: methodProfit,
             profitPercentage: (methodProfit / methodAmount) * 100,

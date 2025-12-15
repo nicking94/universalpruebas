@@ -443,7 +443,7 @@ const PriceListsManager: React.FC<{ rubro: Rubro }> = ({ rubro }) => {
                         py: 4,
                       }}
                     >
-                      <ViewList
+                      <AttachMoney
                         sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                       />
                       <Typography sx={{ mb: 2 }}>
@@ -929,7 +929,6 @@ const ListasPreciosPage = () => {
         {/* Header */}
         <Box sx={{ mb: 3 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-            <AttachMoney color="primary" sx={{ fontSize: 32 }} />
             <Typography variant="h5" fontWeight="semibold">
               Listas de Precios
             </Typography>

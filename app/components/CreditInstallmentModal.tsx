@@ -223,7 +223,7 @@ const CreditInstallmentModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Configurar Crédito en Cuotas"
+      title="Configurar Crédito"
       bgColor="bg-white dark:bg-gray_b"
       buttons={
         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
@@ -249,6 +249,7 @@ const CreditInstallmentModal = ({
               bgcolor: "primary.main",
               "&:hover": { bgcolor: "primary.dark" },
             }}
+            hotkey="Enter"
           >
             {isProcessing ? "Procesando..." : "Confirmar Configuración"}
           </Button>
@@ -275,17 +276,6 @@ const CreditInstallmentModal = ({
               <Info fontSize="small" color="action" />
             </CustomGlobalTooltip>
           </Box>
-
-          <Alert
-            severity="info"
-            sx={{ mb: 2, borderRadius: 1 }}
-            icon={<Info fontSize="small" />}
-          >
-            <Typography variant="body2">
-              <strong>Importante:</strong> El cliente aparecerá en la página de
-              créditos.
-            </Typography>
-          </Alert>
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
