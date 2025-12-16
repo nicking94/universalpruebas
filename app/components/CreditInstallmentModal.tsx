@@ -35,6 +35,7 @@ interface CreditInstallmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   total: number;
+  isCreditCuotasSelected?: boolean;
   creditInstallmentDetails: {
     numberOfInstallments: number;
     interestRate: number;
@@ -69,6 +70,7 @@ const addMonths = (date: Date, months: number): Date => {
 };
 
 const CreditInstallmentModal = ({
+  isCreditCuotasSelected = false,
   isOpen,
   onClose,
   total,
@@ -151,25 +153,41 @@ const CreditInstallmentModal = ({
     };
   }, [total, creditInstallmentDetails]);
 
-  // Efecto para actualizar el resumen
   useEffect(() => {
     setInstallmentSummary(calculateSummary);
   }, [calculateSummary]);
 
-  // Validar formulario
   useEffect(() => {
-    const errors: string[] = [];
-
-    if (!selectedCustomer && !customerName.trim()) {
-      errors.push("Debe seleccionar o ingresar un cliente");
+    // Limpiar campos de nuevo cliente cuando se selecciona un cliente existente
+    if (isOpen && selectedCustomer) {
+      setCustomerName("");
+      setCustomerPhone("");
     }
+  }, [isOpen, selectedCustomer, setCustomerName, setCustomerPhone]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setValidationErrors([]);
+      return;
+    }
+    const errors: string[] = [];
     if (selectedCustomer && customerName.trim()) {
       errors.push(
-        "Solo puede seleccionar un cliente existente O ingresar uno nuevo, no ambos"
+        "Si selecciona un cliente existente, no puede ingresar un nuevo nombre de cliente"
       );
     }
 
+    // ✅ CORRECCIÓN: Validar solo si es crédito en cuotas
+    // Para crédito en cuotas, se requiere cliente (seleccionado o nuevo)
+    if (isCreditCuotasSelected) {
+      if (!selectedCustomer && !customerName.trim()) {
+        errors.push(
+          "Debe seleccionar o ingresar un cliente para crédito en cuotas"
+        );
+      }
+    }
+
+    // Validaciones de cuotas e interés
     if (creditInstallmentDetails.numberOfInstallments > 36) {
       errors.push("El número máximo de cuotas es 36");
     }
@@ -179,7 +197,14 @@ const CreditInstallmentModal = ({
     }
 
     setValidationErrors(errors);
-  }, [selectedCustomer, customerName, creditInstallmentDetails]);
+  }, [
+    selectedCustomer,
+    customerName,
+    customerPhone,
+    creditInstallmentDetails,
+    isCreditCuotasSelected,
+    isOpen, // ✅ Añadir isOpen como dependencia
+  ]);
 
   const handleNumberChange = (
     field: keyof typeof creditInstallmentDetails,
@@ -222,7 +247,11 @@ const CreditInstallmentModal = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => {
+        onClose();
+
+        setValidationErrors([]);
+      }}
       title="Configurar Crédito"
       bgColor="bg-white dark:bg-gray_b"
       buttons={
@@ -230,6 +259,7 @@ const CreditInstallmentModal = ({
           <Button
             variant="text"
             onClick={onClose}
+            hotkey="Escape"
             sx={{
               color: "text.secondary",
               borderColor: "text.secondary",
@@ -239,7 +269,7 @@ const CreditInstallmentModal = ({
               },
             }}
           >
-            Cancelar
+            Volver
           </Button>
           <Button
             variant="contained"
@@ -284,10 +314,14 @@ const CreditInstallmentModal = ({
             <Autocomplete
               options={customers}
               value={selectedCustomer}
-              onChange={(event, newValue) => {
+              onChange={(
+                event: React.SyntheticEvent,
+                newValue: CustomerOption | null
+              ) => {
                 setSelectedCustomer(newValue);
                 if (newValue) {
                   setCustomerName("");
+                  setCustomerPhone("");
                 }
               }}
               getOptionLabel={(option) => option.label}
@@ -316,7 +350,7 @@ const CreditInstallmentModal = ({
               }}
             />
             <Typography variant="caption" color="text.secondary">
-              O
+              O crear nuevo cliente
             </Typography>
             <Box
               sx={{
@@ -329,9 +363,6 @@ const CreditInstallmentModal = ({
           </Box>
 
           <Box>
-            <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
-              Crear nuevo cliente
-            </Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
               <Input
                 label="Nombre del cliente*"
@@ -350,6 +381,7 @@ const CreditInstallmentModal = ({
               <Input
                 label="Teléfono"
                 placeholder="Número de teléfono"
+                disabled={!!selectedCustomer}
                 value={customerPhone}
                 onRawChange={(e) => setCustomerPhone(e.target.value)}
                 fullWidth

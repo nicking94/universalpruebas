@@ -208,68 +208,42 @@ export const calculateInstallments = (
   const installments: Installment[] = [];
   const monthlyInterest = interestRate / 100;
 
-  // Cálculo de cuota con interés compuesto (sistema francés)
-  if (monthlyInterest > 0) {
-    // Cuota constante con interés
-    const monthlyFactor = Math.pow(1 + monthlyInterest, numberOfInstallments);
-    const installmentAmount =
-      (totalAmount * monthlyInterest * monthlyFactor) / (monthlyFactor - 1);
+  // Fórmula de amortización francesa (interés compuesto)
+  const cuota =
+    (totalAmount *
+      (monthlyInterest * Math.pow(1 + monthlyInterest, numberOfInstallments))) /
+    (Math.pow(1 + monthlyInterest, numberOfInstallments) - 1);
 
-    let remainingBalance = totalAmount;
-    const start = new Date(startDate);
+  const start = new Date(startDate);
+  let saldo = totalAmount;
 
-    for (let i = 1; i <= numberOfInstallments; i++) {
-      const dueDate = new Date(start);
-      dueDate.setMonth(dueDate.getMonth() + i);
+  for (let i = 1; i <= numberOfInstallments; i++) {
+    const dueDate = new Date(start);
+    dueDate.setMonth(dueDate.getMonth() + i);
 
-      const interestAmount = remainingBalance * monthlyInterest;
-      const principalAmount = installmentAmount - interestAmount;
+    const interestAmount = saldo * monthlyInterest;
+    const principalAmount = cuota - interestAmount;
+    saldo -= principalAmount;
 
-      remainingBalance -= principalAmount;
+    const installment: Installment = {
+      creditSaleId: 0,
+      number: i,
+      dueDate: dueDate.toISOString().split("T")[0],
+      amount: parseFloat(cuota.toFixed(2)),
+      interestAmount: parseFloat(interestAmount.toFixed(2)),
+      penaltyAmount: 0,
+      status: "pendiente",
+      daysOverdue: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-      const installment: Installment = {
-        creditSaleId: 0,
-        number: i,
-        dueDate: dueDate.toISOString().split("T")[0],
-        amount: parseFloat(installmentAmount.toFixed(2)),
-        interestAmount: parseFloat(interestAmount.toFixed(2)),
-        penaltyAmount: 0,
-        status: "pendiente",
-        daysOverdue: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      installments.push(installment);
-    }
-  } else {
-    // Sin interés - cuotas iguales
-    const installmentAmount = totalAmount / numberOfInstallments;
-    const start = new Date(startDate);
-
-    for (let i = 1; i <= numberOfInstallments; i++) {
-      const dueDate = new Date(start);
-      dueDate.setMonth(dueDate.getMonth() + i);
-
-      const installment: Installment = {
-        creditSaleId: 0,
-        number: i,
-        dueDate: dueDate.toISOString().split("T")[0],
-        amount: parseFloat(installmentAmount.toFixed(2)),
-        interestAmount: 0,
-        penaltyAmount: 0,
-        status: "pendiente",
-        daysOverdue: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      installments.push(installment);
-    }
+    installments.push(installment);
   }
 
   return installments;
 };
+
 export const recalculatePaymentMethods = (
   paymentMethods: PaymentSplit[],
   newTotal: number

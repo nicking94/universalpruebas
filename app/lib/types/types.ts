@@ -222,7 +222,7 @@ export interface Sale {
   manualAmount?: number;
   manualProfitPercentage?: number;
   credit?: boolean;
-  creditType?: CreditType; // "cuenta_corriente" o "credito_cuotas"
+  creditType?: CreditType;
   creditDetails?: CreditDetails;
   paid?: boolean;
   customerName?: string;
@@ -265,6 +265,9 @@ export type SaleItem = {
   rubro?: Rubro;
   fromBudget?: boolean;
   budgetId?: string;
+  costPrice?: number;
+  profit?: number;
+  profitPercentage?: number;
 };
 
 export type PaginationProps = {
@@ -293,7 +296,8 @@ export type PaymentMethod =
   | "TRANSFERENCIA"
   | "TARJETA"
   | "CHEQUE"
-  | "CREDITO"; // Nuevo: para crédito en cuotas
+  | "CUENTA_CORRIENTE"
+  | "CREDITO_CUOTAS";
 
 export type CreditAlert = {
   id?: number;
@@ -334,13 +338,17 @@ export interface Installment {
 
 export interface CreditDetails {
   type: CreditType;
+  principalAmount: number;
   totalAmount: number;
+  totalNumberOfInstallments: number;
   numberOfInstallments?: number;
   interestRate?: number;
   penaltyRate?: number;
   startDate?: string;
   endDate?: string;
   paidAmount: number;
+  paidPrincipalAmount?: number;
+  paidInterestAmount?: number;
   remainingAmount: number;
   nextDueDate?: string;
   lastPaymentDate?: string;
@@ -351,6 +359,20 @@ export type PaymentSplit = {
   method: PaymentMethod;
   amount: number;
   isDeposit?: boolean;
+};
+
+export type InvoiceItem = {
+  id: number;
+  uniqueId: string;
+  description: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+  unit: Product["unit"];
+  discount?: number;
+  subtotalSinDescuento: number;
+  ahorro: number;
+  interestIncluded?: number; // Nuevo campo
 };
 
 export type DailyCashMovement = {
@@ -477,6 +499,7 @@ export interface Payment {
   customerName?: string;
   products?: Product[];
   saleTotal?: number;
+  installmentNumber?: number;
 }
 export type ChequeWithDetails = Omit<Payment, "products"> & {
   saleDate: string;

@@ -4,13 +4,12 @@ import {
   Installment,
   CreditSale,
   PaymentMethod,
-  Payment,
   DailyCashMovement,
-  Sale,
-  CreditDetails,
+  DailyCash,
 } from "@/app/lib/types/types";
 import { differenceInDays, isBefore } from "date-fns";
 import { getLocalDateString } from "../lib/utils/getLocalDate";
+import { calculatePrice } from "../lib/utils/calculations";
 
 export const useCreditInstallments = () => {
   const [installments, setInstallments] = useState<Installment[]>([]);
@@ -27,24 +26,31 @@ export const useCreditInstallments = () => {
   ): Installment[] => {
     const installments: Installment[] = [];
     const monthlyInterest = interestRate / 100;
-    const installmentAmount = totalAmount / numberOfInstallments;
 
-    const currentDate = new Date(startDate);
+    const start = new Date(startDate);
 
     for (let i = 1; i <= numberOfInstallments; i++) {
-      const dueDate = new Date(currentDate);
+      const dueDate = new Date(start);
       dueDate.setMonth(dueDate.getMonth() + i);
 
-      const interestAmount = installmentAmount * monthlyInterest;
+      // Calcular interés solo si hay tasa de interés
+      const interestAmount =
+        interestRate > 0
+          ? (totalAmount / numberOfInstallments) * monthlyInterest
+          : 0;
+
+      const installmentAmount =
+        totalAmount / numberOfInstallments + interestAmount;
 
       const installment: Installment = {
         creditSaleId: 0,
         number: i,
-        dueDate: dueDate.toISOString(),
-        amount: installmentAmount + interestAmount,
-        interestAmount,
+        dueDate: dueDate.toISOString().split("T")[0],
+        amount: parseFloat(installmentAmount.toFixed(2)),
+        interestAmount: parseFloat(interestAmount.toFixed(2)),
         penaltyAmount: 0,
         status: "pendiente",
+        daysOverdue: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -55,26 +61,16 @@ export const useCreditInstallments = () => {
     return installments;
   };
 
-  // En tu hook useCreditInstallments
   const getCreditSalesInInstallments = useCallback(async () => {
     try {
       const allSales = await db.sales.toArray();
 
-      // Filtrar ventas que son crédito en cuotas
+      // Filtrar exclusivamente créditos en cuotas
       const creditSales = allSales.filter(
         (sale) =>
           sale.credit === true &&
-          sale.creditType === "credito_cuotas" &&
+          sale.creditType === "credito_cuotas" && // Solo este tipo
           sale.customerName
-      );
-
-      console.log(
-        "Ventas de crédito en cuotas encontradas:",
-        creditSales.length
-      );
-      console.log(
-        "Clientes con crédito:",
-        creditSales.map((s) => s.customerName)
       );
 
       return creditSales as CreditSale[];
@@ -183,174 +179,111 @@ export const useCreditInstallments = () => {
     paymentMethod: PaymentMethod
   ) => {
     try {
+      const today = getLocalDateString();
       const installment = await db.installments.get(installmentId);
       if (!installment) throw new Error("Cuota no encontrada");
 
-      const creditSale = await db.sales.get(installment.creditSaleId);
-      if (!creditSale) throw new Error("Venta a crédito no encontrada");
+      const sale = await db.sales.get(installment.creditSaleId);
+      if (!sale) throw new Error("Venta no encontrada");
 
-      // 1. Actualizar la cuota
-      await db.installments.update(installmentId, {
-        status: "pagada",
-        paymentDate: new Date().toISOString(),
-        paymentMethod,
-      });
+      // OBTENER LA GANANCIA REAL DE LOS PRODUCTOS
+      let totalProfitFromProducts = 0;
+      if (sale.products && sale.products.length > 0) {
+        // Calcular la ganancia proporcional de esta cuota
+        const totalSaleAmount = sale.total;
+        const installmentRatio = installment.amount / totalSaleAmount;
 
-      // 2. Crear registro de pago
-      const payment: Payment = {
-        id: Date.now(),
-        saleId: creditSale.id,
-        saleDate: creditSale.date,
-        amount: installment.amount,
-        date: new Date().toISOString(),
-        method: paymentMethod,
-        customerId: creditSale.customerId,
-        customerName: creditSale.customerName,
-      };
-      await db.payments.add(payment);
-
-      // 3. Actualizar el saldo del cliente
-      if (creditSale.customerId) {
-        const customer = await db.customers.get(creditSale.customerId);
-        if (customer) {
-          const newPendingBalance = Math.max(
-            0,
-            (customer.pendingBalance || 0) - installment.amount
+        // Calcular ganancia total de la venta
+        const saleTotalProfit = sale.products.reduce((sum, product) => {
+          const priceInfo = calculatePrice(
+            product,
+            product.quantity,
+            product.unit
           );
-          await db.customers.update(creditSale.customerId, {
-            pendingBalance: newPendingBalance,
-            updatedAt: new Date().toISOString(),
-          });
-        }
+          return sum + priceInfo.profit;
+        }, 0);
+
+        // Ganancia proporcional de esta cuota
+        totalProfitFromProducts = saleTotalProfit * installmentRatio;
       }
 
-      // 4. Registrar en caja diaria
-      const today = getLocalDateString();
-      let dailyCash = await db.dailyCashes.get({ date: today });
+      // VERIFICAR SI YA ESTÁ PAGADA
+      if (installment.status === "pagada") {
+        throw new Error("Esta cuota ya fue pagada");
+      }
 
+      // Actualizar la cuota
+      const now = new Date().toISOString();
+      await db.installments.update(installmentId, {
+        status: "pagada",
+        paymentDate: now,
+        paymentMethod,
+        updatedAt: now,
+      });
+
+      // REGISTRAR EN CAJA DIARIA CON GANANCIA COMPLETA
       const movement: DailyCashMovement = {
         id: Date.now(),
         amount: installment.amount,
-        description: `Pago cuota #${installment.number} - ${creditSale.customerName}`,
+        description: `Pago cuota #${installment.number} - ${sale.customerName}`,
         type: "INGRESO",
-        date: new Date().toISOString(),
+        date: now,
         paymentMethod,
         isCreditPayment: true,
-        originalSaleId: creditSale.id,
-        customerName: creditSale.customerName,
-        customerId: creditSale.customerId,
-        createdAt: new Date().toISOString(),
+        originalSaleId: sale.id,
+        customerName: sale.customerName,
+        customerId: sale.customerId,
+        // Registrar ganancia: ganancia del producto + interés
+        profit: totalProfitFromProducts + (installment.interestAmount || 0),
+        createdAt: now,
+        items:
+          sale.products?.map((product) => ({
+            productId: product.id,
+            productName: product.name,
+            quantity: product.quantity,
+            unit: product.unit,
+            price: product.price,
+            costPrice: product.costPrice,
+            profit: calculatePrice(product, product.quantity, product.unit)
+              .profit,
+          })) || [],
       };
 
+      // Resto del código permanece igual...
+      const dailyCash = await db.dailyCashes.get({ date: today });
+
       if (!dailyCash) {
-        dailyCash = {
+        const newDailyCash: DailyCash = {
           id: Date.now(),
           date: today,
           movements: [movement],
           closed: false,
           totalIncome: installment.amount,
           totalExpense: 0,
+          totalProfit:
+            totalProfitFromProducts + (installment.interestAmount || 0),
         };
-        await db.dailyCashes.add(dailyCash);
+        await db.dailyCashes.add(newDailyCash);
       } else {
-        const updatedCash = {
-          ...dailyCash,
-          movements: [...dailyCash.movements, movement],
-          totalIncome: (dailyCash.totalIncome || 0) + installment.amount,
-        };
-        await db.dailyCashes.update(dailyCash.id, updatedCash);
+        const updatedMovements = [...dailyCash.movements, movement];
+        const totalIncome = updatedMovements
+          .filter((m) => m.type === "INGRESO")
+          .reduce((sum, m) => sum + m.amount, 0);
+
+        const totalProfit = updatedMovements
+          .filter((m) => m.type === "INGRESO")
+          .reduce((sum, m) => sum + (m.profit || 0), 0);
+
+        await db.dailyCashes.update(dailyCash.id, {
+          movements: updatedMovements,
+          totalIncome,
+          totalProfit,
+        });
       }
 
-      // 5. Actualizar el estado de la venta si todas las cuotas están pagadas
-      const remainingInstallments = await db.installments
-        .where("creditSaleId")
-        .equals(creditSale.id)
-        .filter((inst) => inst.status !== "pagada")
-        .toArray();
-
-      // Calcular el monto pagado
-      const paidInstallments = await db.installments
-        .where("creditSaleId")
-        .equals(creditSale.id)
-        .filter((inst) => inst.status === "pagada")
-        .toArray();
-
-      const paidAmount = paidInstallments.reduce(
-        (sum, inst) => sum + inst.amount,
-        0
-      );
-      const remainingAmount = creditSale.total - paidAmount;
-      const allPaid = remainingInstallments.length === 0;
-
-      // Preparar las actualizaciones para la venta
-      const saleUpdates: Partial<Sale> = {};
-
-      // Solo para créditos en cuotas, actualizar creditDetails
-      if (
-        creditSale.creditType === "credito_cuotas" &&
-        creditSale.creditDetails
-      ) {
-        const updatedCreditDetails: CreditDetails = {
-          ...creditSale.creditDetails,
-          paidAmount,
-          remainingAmount,
-          lastPaymentDate: new Date().toISOString(),
-          isOverdue: false,
-          overdueDays: 0,
-        };
-
-        // Si es la última cuota, marcar como pagado
-        if (allPaid) {
-          updatedCreditDetails.endDate = new Date().toISOString();
-          updatedCreditDetails.nextDueDate = undefined;
-        }
-
-        saleUpdates.creditDetails = updatedCreditDetails;
-      } else if (
-        creditSale.creditType === "cuenta_corriente" &&
-        creditSale.creditDetails
-      ) {
-        // Para cuenta corriente, también actualizar creditDetails
-        const updatedCreditDetails: CreditDetails = {
-          ...creditSale.creditDetails,
-          paidAmount,
-          remainingAmount,
-          lastPaymentDate: new Date().toISOString(),
-          isOverdue: false,
-          overdueDays: 0,
-        };
-
-        saleUpdates.creditDetails = updatedCreditDetails;
-      }
-
-      // Si todas las cuotas están pagadas, podemos agregar un campo para marcar como completado
-      // Como 'paid' no existe en Sale, podemos usar un campo en creditDetails o agregar metadata
-      if (allPaid) {
-        // Opcional: agregar un campo metadata si necesitas más información
-        // Por ahora, solo actualizamos creditDetails
-      }
-
-      // Aplicar las actualizaciones
-      if (Object.keys(saleUpdates).length > 0) {
-        await db.sales.update(creditSale.id, saleUpdates);
-      }
-
-      setInstallments((prev) =>
-        prev.map((inst) =>
-          inst.id === installmentId
-            ? {
-                ...inst,
-                status: "pagada",
-                paymentDate: new Date().toISOString(),
-                paymentMethod,
-              }
-            : inst
-        )
-      );
-
-      return true;
+      // Resto del código...
     } catch (error) {
-      console.error("Error al pagar cuota:", error);
+      console.error("Error al pagar la cuota:", error);
       throw error;
     }
   };

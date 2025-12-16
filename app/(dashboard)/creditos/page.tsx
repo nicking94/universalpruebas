@@ -34,7 +34,6 @@ import {
   CreditSale,
   PaymentMethod,
   Payment,
-  DailyCashMovement,
   Rubro,
 } from "@/app/lib/types/types";
 import Button from "@/app/components/Button";
@@ -63,9 +62,10 @@ interface CustomerCreditSummary {
   nextDueDate?: string | null;
   installments: Installment[];
   creditSales: CreditSale[];
+  totalInterestAmount: number;
+  totalPrincipalAmount: number;
 }
 
-// Interfaz para las opciones del autocomplete
 interface CustomerOption {
   id: string;
   name: string;
@@ -114,6 +114,7 @@ const CreditosPage = () => {
     color: "primary.contrastText",
   };
 
+  // En calculateCustomerSummaries, corregir el cálculo:
   const calculateCustomerSummaries = async (): Promise<
     CustomerCreditSummary[]
   > => {
@@ -132,6 +133,8 @@ const CreditosPage = () => {
             customerName: sale.customerName,
             totalCreditAmount: 0,
             totalPaidAmount: 0,
+            totalPrincipalAmount: 0, // Nuevo: monto sin intereses
+            totalInterestAmount: 0, // Nuevo: total de intereses
             pendingAmount: 0,
             totalInstallments: 0,
             pendingInstallments: 0,
@@ -146,7 +149,13 @@ const CreditosPage = () => {
 
         const summary = customerMap.get(customerKey)!;
         summary.creditSales.push(sale);
-        summary.totalCreditAmount += sale.total;
+
+        const creditAmount = sale.creditDetails?.totalAmount || sale.total;
+        summary.totalCreditAmount += creditAmount;
+
+        const principalAmount =
+          sale.creditDetails?.principalAmount || sale.total;
+        summary.totalPrincipalAmount += principalAmount;
 
         // Obtener cuotas de esta venta
         const saleInstallments = await db.installments
@@ -166,12 +175,11 @@ const CreditosPage = () => {
           if (installment.status === "pagada") {
             summary.paidInstallments++;
 
-            // Sumar el monto TOTAL pagado (incluye intereses si los hubo)
-            const totalPaid =
-              installment.amount +
-              (installment.interestAmount || 0) +
-              (installment.penaltyAmount || 0);
-            summary.totalPaidAmount += totalPaid;
+            // Sumar el monto pagado (incluye intereses si aplica)
+            summary.totalPaidAmount += installment.amount;
+
+            // Sumar intereses pagados
+            summary.totalInterestAmount += installment.interestAmount || 0;
 
             // Actualizar última fecha de pago
             if (installment.paymentDate) {
@@ -200,7 +208,7 @@ const CreditosPage = () => {
           }
         });
 
-        // Actualizar próximo vencimiento si hay cuotas pendientes/vencidas
+        // Actualizar próximo vencimiento
         if (hasPendingInstallments && earliestDueDate) {
           summary.nextDueDate = earliestDueDate;
         }
@@ -208,29 +216,11 @@ const CreditosPage = () => {
 
       // Calcular montos pendientes CORRECTAMENTE
       for (const summary of customerMap.values()) {
-        // Calcular el monto TOTAL que debería pagar (suma de todas las cuotas)
-        const totalDueAmount = summary.installments.reduce(
-          (total, installment) => {
-            return (
-              total +
-              installment.amount +
-              (installment.interestAmount || 0) +
-              (installment.penaltyAmount || 0)
-            );
-          },
-          0
-        );
-
-        // El pendiente es lo que falta pagar del total debido
+        // El monto pendiente es: total crédito - total pagado
         summary.pendingAmount = Math.max(
           0,
-          totalDueAmount - summary.totalPaidAmount
+          summary.totalCreditAmount - summary.totalPaidAmount
         );
-
-        // Si ya pagó todo, asegurarnos que sea 0
-        if (summary.pendingInstallments === 0) {
-          summary.pendingAmount = 0;
-        }
       }
 
       return Array.from(customerMap.values());
@@ -251,77 +241,6 @@ const CreditosPage = () => {
     } catch (error) {
       console.error("Error cargando pagos del cliente:", error);
       setCustomerPayments([]);
-    }
-  };
-
-  const addPaymentToDailyCash = async (movement: DailyCashMovement) => {
-    try {
-      const today = getLocalDateString();
-      let dailyCash = await db.dailyCashes.get({ date: today });
-
-      // VERIFICAR SI EL MOVIMIENTO YA EXISTE
-      if (dailyCash) {
-        const existingMovement = dailyCash.movements.find(
-          (m) =>
-            m.description === movement.description &&
-            m.amount === movement.amount &&
-            m.customerId === movement.customerId &&
-            m.createdAt &&
-            movement.createdAt &&
-            Math.abs(
-              new Date(m.createdAt).getTime() -
-                new Date(movement.createdAt).getTime()
-            ) < 60000 // Menos de 1 minuto de diferencia
-        );
-
-        if (existingMovement) {
-          console.log("Movimiento ya existe, evitando duplicado");
-          return true; // Ya existe, no duplicar
-        }
-      }
-
-      if (!dailyCash) {
-        dailyCash = {
-          id: Date.now(),
-          date: today,
-          movements: [movement],
-          closed: false,
-          totalIncome: movement.amount,
-          totalExpense: 0,
-          totalProfit: 0,
-        };
-        await db.dailyCashes.add(dailyCash);
-      } else {
-        const currentMovements = dailyCash.movements || [];
-        const updatedMovements = [...currentMovements, movement];
-
-        const totalIncome = updatedMovements
-          .filter((m) => m.type === "INGRESO")
-          .reduce((sum, m) => sum + (m.amount || 0), 0);
-
-        const totalExpense = updatedMovements
-          .filter((m) => m.type === "EGRESO")
-          .reduce((sum, m) => sum + (m.amount || 0), 0);
-
-        const totalProfit = updatedMovements
-          .filter((m) => m.type === "INGRESO")
-          .reduce((sum, m) => sum + (m.profit || 0), 0);
-
-        const updatedCash = {
-          ...dailyCash,
-          movements: updatedMovements,
-          totalIncome,
-          totalExpense,
-          totalProfit,
-        };
-
-        await db.dailyCashes.update(dailyCash.id, updatedCash);
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error al registrar pago en caja:", error);
-      throw error;
     }
   };
 
@@ -421,7 +340,6 @@ const CreditosPage = () => {
     ...customers,
   ];
 
-  // Reemplaza la función handlePayInstallment actual con esta versión corregida:
   const handlePayInstallment = async () => {
     if (!selectedInstallment) return;
 
@@ -436,39 +354,51 @@ const CreditosPage = () => {
         return;
       }
 
-      // 2. Crear el movimiento de caja ANTES de pagar la cuota
-      const movement: DailyCashMovement = {
-        id: Date.now(),
-        amount: selectedInstallment.amount,
-        description: `Pago cuota #${selectedInstallment.number} - ${creditSale.customerName}`,
-        type: "INGRESO",
-        date: new Date().toISOString(),
-        paymentMethod,
-        isCreditPayment: true,
-        originalSaleId: creditSale.id,
-        customerName: creditSale.customerName,
-        customerId: creditSale.customerId,
-        profit: 0,
-        createdAt: new Date().toISOString(),
-      };
+      // 2. VERIFICAR SI EL PAGO YA FUE REGISTRADO
+      const today = getLocalDateString();
+      const dailyCash = await db.dailyCashes.get({ date: today });
 
-      // 3. Registrar el pago en la caja diaria (esta función ahora no duplica)
-      await addPaymentToDailyCash(movement);
+      if (dailyCash) {
+        const existingPayment = dailyCash.movements.find(
+          (m) =>
+            m.description?.includes(
+              `Pago cuota #${selectedInstallment.number}`
+            ) &&
+            m.customerId === creditSale.customerId &&
+            m.amount === selectedInstallment.amount &&
+            m.type === "INGRESO"
+        );
 
-      // 4. Pagar la cuota (esto ya no debería crear otro movimiento)
+        if (existingPayment) {
+          showNotification("Esta cuota ya fue pagada", "error");
+          return;
+        }
+      }
+
+      // 3. Pagar la cuota (ESTA FUNCIÓN DEBE SER LA ÚNICA QUE REGISTRA EN CAJA)
       await payInstallment(selectedInstallment.id!, paymentMethod);
 
-      // 5. Actualizar el saldo pendiente del cliente
+      // 4. Actualizar el saldo pendiente del cliente
       if (creditSale.customerId) {
         const customer = await db.customers.get(creditSale.customerId);
         if (customer) {
-          const newPendingBalance = Math.max(
-            0,
-            (customer.pendingBalance || 0) - selectedInstallment.amount
+          // Calcular el nuevo saldo pendiente basado en cuotas no pagadas
+          const customerInstallments = await db.installments
+            .where("creditSaleId")
+            .equals(creditSale.id)
+            .toArray();
+
+          const pendingInstallments = customerInstallments.filter(
+            (inst) => inst.status === "pendiente" || inst.status === "vencida"
+          );
+
+          const remainingAmount = pendingInstallments.reduce(
+            (sum, inst) => sum + inst.amount,
+            0
           );
 
           await db.customers.update(creditSale.customerId, {
-            pendingBalance: newPendingBalance,
+            pendingBalance: remainingAmount,
             updatedAt: new Date().toISOString(),
           });
         }
@@ -477,11 +407,11 @@ const CreditosPage = () => {
       showNotification("Cuota pagada correctamente", "success");
       setPaymentModalOpen(false);
 
-      // 6. Recargar datos
+      // 5. Recargar datos
       await fetchInstallments();
       await checkOverdueInstallments();
 
-      // 7. Recalcular resúmenes
+      // 6. Recalcular resúmenes
       const summaries = await calculateCustomerSummaries();
       setCustomerSummaries(summaries);
     } catch (error) {
@@ -489,7 +419,6 @@ const CreditosPage = () => {
       showNotification("Error al pagar la cuota", "error");
     }
   };
-
   // Filtrar resúmenes de clientes
   const filteredCustomerSummaries = customerSummaries.filter((summary) => {
     if (filterStatus !== "todos") {

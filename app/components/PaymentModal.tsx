@@ -287,7 +287,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   autoFocus
                   capitalize={false}
                 />
-                <Box sx={{ display: "flex", gap: 2 }}>
+                <Box sx={{ minWidth: 200, display: "flex", gap: 2 }}>
                   <Button
                     variant="outlined"
                     color="success"

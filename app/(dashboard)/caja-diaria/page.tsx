@@ -135,11 +135,6 @@ const CajaDiariaPage = () => {
           setCurrentDailyCash(updatedCash);
         }
       }
-
-      showNotification(
-        `Se cerraron ${openPreviousCashes.length} caja(s) de días anteriores automáticamente.`,
-        "info"
-      );
     } catch (error) {
       console.error("Error al cerrar cajas antiguas:", error);
       showNotification("Error al cerrar cajas de días anteriores", "error");
@@ -275,6 +270,7 @@ const CajaDiariaPage = () => {
 
         if (movement.type === "INGRESO") {
           summary[date].ingresos += amount;
+          // Sumar la ganancia completa (producto + interés)
           summary[date].gananciaNeta += Number(movement.profit) || 0;
         } else {
           summary[date].egresos += amount;
@@ -282,6 +278,7 @@ const CajaDiariaPage = () => {
         }
       });
 
+      // La ganancia bruta es ingresos - egresos
       summary[date].ganancia = summary[date].ingresos - summary[date].egresos;
     });
 

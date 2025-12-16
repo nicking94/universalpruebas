@@ -911,9 +911,7 @@ const ClientesPage = () => {
                     <TableCell sx={getTableHeaderStyle()} align="center">
                       Estado
                     </TableCell>
-                    <TableCell sx={getTableHeaderStyle()} align="center">
-                      Saldo Pendiente
-                    </TableCell>
+                    {/* ELIMINAR: Saldo Pendiente */}
                     <TableCell sx={getTableHeaderStyle()} align="center">
                       Fecha de Registro
                     </TableCell>
@@ -1011,18 +1009,7 @@ const ClientesPage = () => {
                               size="small"
                             />
                           </TableCell>
-                          <TableCell align="center">
-                            <Typography
-                              fontWeight="bold"
-                              color={
-                                hasPendingBalance
-                                  ? "error.main"
-                                  : "success.main"
-                              }
-                            >
-                              ${pendingBalance.toFixed(2)}
-                            </Typography>
-                          </TableCell>
+
                           <TableCell align="center">
                             {new Date(customer.createdAt).toLocaleDateString(
                               "es-AR"

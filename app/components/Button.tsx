@@ -167,7 +167,7 @@ const Button = forwardRef<HTMLButtonElement, CustomButtonProps>(
         title={title}
         {...buttonProps}
         sx={{
-          textTransform: "uppercase",
+          textTransform: "capitalize",
           fontWeight: 400,
           borderRadius: 1,
           transition: "all 0.3s ease",
@@ -187,16 +187,19 @@ const Button = forwardRef<HTMLButtonElement, CustomButtonProps>(
           },
 
           ...(size === "small" && {
-            fontSize: "0.70rem",
-            p: 1,
+            fontSize: "0.9rem",
+            px: 2,
+            py: 0.7,
           }),
           ...(size === "medium" && {
-            fontSize: "0.875rem",
-            p: 1,
+            fontSize: "1rem",
+            px: 2,
+            py: 0.7,
           }),
           ...(size === "large" && {
-            fontSize: "1rem",
-            p: 1,
+            fontSize: "1.2rem",
+            px: 2,
+            py: 0.7,
           }),
 
           ...(variant === "text" && {
