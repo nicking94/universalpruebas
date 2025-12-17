@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -10,18 +10,30 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Card,
   FormControl,
   Alert,
   useTheme,
   IconButton,
   Autocomplete,
+  Card,
+  CardContent,
+  Divider,
+  LinearProgress,
+  Tabs,
+  Tab,
+  Badge,
+  Avatar,
 } from "@mui/material";
 import {
   Payment as PaymentIcon,
   Warning,
   CheckCircle,
   Info,
+  ExpandMore,
+  Receipt as ReceiptIcon,
+  AccountCircle as AccountCircleIcon,
+  History as HistoryIcon,
+  ExpandLess,
 } from "@mui/icons-material";
 import { format, parseISO } from "date-fns";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
@@ -46,8 +58,8 @@ import { CustomerFinancialSummary } from "@/app/components/CustomerFinancialSumm
 import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 import Input from "@/app/components/Input";
+import { es } from "date-fns/locale";
 
-// Interface para el resumen por cliente
 interface CustomerCreditSummary {
   customerId: string;
   customerName: string;
@@ -72,6 +84,377 @@ interface CustomerOption {
   rubro?: Rubro;
 }
 
+interface CreditSummary {
+  saleId: number;
+  saleDate: string;
+  totalAmount: number;
+  principalAmount: number;
+  interestAmount: number;
+  numberOfInstallments: number;
+  interestRate: number;
+  paidAmount: number;
+  pendingAmount: number;
+  installments: Installment[];
+  nextDueDate?: string;
+  status: string;
+}
+
+const CreditSaleCard = ({
+  credit,
+  onPayment,
+  isExpanded,
+  onToggleExpand,
+}: {
+  credit: CreditSummary;
+  payments: Payment[];
+  onPayment: (credit: CreditSummary) => void;
+  isExpanded: boolean;
+  onToggleExpand: (saleId: number) => void;
+}) => {
+  const paymentProgress = (credit.paidAmount / credit.totalAmount) * 100;
+  const isPaid = credit.pendingAmount <= 0;
+
+  return (
+    <Card
+      sx={{
+        border: 2,
+        borderColor: isPaid
+          ? "success.main"
+          : credit.status === "Vencido"
+          ? "error.main"
+          : "warning.main",
+        bgcolor: isPaid
+          ? "success.50"
+          : credit.status === "Vencido"
+          ? "error.50"
+          : "warning.50",
+        transition: "all 0.3s ease",
+        "&:hover": {
+          boxShadow: 3,
+          transform: "translateY(-2px)",
+        },
+        overflow: "visible",
+        mb: 2,
+      }}
+    >
+      <CardContent sx={{ p: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 2,
+            cursor: "pointer",
+          }}
+          onClick={() => onToggleExpand(credit.saleId)}
+        >
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+              <ReceiptIcon color="primary" fontSize="small" />
+              <Typography
+                variant="subtitle1"
+                fontWeight="bold"
+                color="text.primary"
+              >
+                Venta #{credit.saleId}
+              </Typography>
+              <CustomChip
+                label={credit.status}
+                color={
+                  credit.status === "Pagado"
+                    ? "success"
+                    : credit.status === "Vencido"
+                    ? "error"
+                    : "warning"
+                }
+                size="small"
+              />
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {format(parseISO(credit.saleDate), "dd/MM/yyyy HH:mm", {
+                locale: es,
+              })}
+            </Typography>
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 2,
+                mt: 2,
+                mb: 2,
+              }}
+            >
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Total
+                </Typography>
+                <Typography variant="body2" fontWeight="bold">
+                  {credit.totalAmount.toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Pagado
+                </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                  color="success.main"
+                >
+                  {credit.paidAmount.toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Pendiente
+                </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                  color="warning.main"
+                >
+                  {credit.pendingAmount.toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 2,
+                mb: 2,
+              }}
+            >
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Tasa de interés
+                </Typography>
+                <Typography variant="body2">{credit.interestRate}%</Typography>
+              </Box>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Cuotas
+                </Typography>
+                <Typography variant="body2">
+                  {credit.numberOfInstallments}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Interés total
+                </Typography>
+                <Typography variant="body2">
+                  {credit.interestAmount.toLocaleString("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  })}
+                </Typography>
+              </Box>
+            </Box>
+
+            {!isPaid && (
+              <Box sx={{ mb: 2 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={paymentProgress}
+                  color={
+                    paymentProgress >= 100
+                      ? "success"
+                      : paymentProgress >= 50
+                      ? "primary"
+                      : "warning"
+                  }
+                  sx={{ height: 6, borderRadius: 3 }}
+                />
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 0.5, display: "block", textAlign: "center" }}
+                >
+                  {paymentProgress.toFixed(1)}% pagado
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {!isPaid && (
+              <Button
+                variant="contained"
+                size="small"
+                onClick={(e) => {
+                  e?.stopPropagation();
+                  onPayment(credit);
+                }}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Pagar Cuota
+              </Button>
+            )}
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand(credit.saleId);
+              }}
+            >
+              {isExpanded ? <ExpandLess /> : <ExpandMore />}
+            </IconButton>
+          </Box>
+        </Box>
+
+        {isExpanded && (
+          <Box sx={{ mt: 2 }}>
+            <Divider sx={{ mb: 2 }} />
+            <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
+              Detalle de Cuotas
+            </Typography>
+            <TableContainer component={Paper} sx={{ maxHeight: "200px" }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+                    >
+                      N° Cuota
+                    </TableCell>
+                    <TableCell
+                      sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+                      align="center"
+                    >
+                      Vencimiento
+                    </TableCell>
+                    <TableCell
+                      sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+                      align="center"
+                    >
+                      Monto
+                    </TableCell>
+                    <TableCell
+                      sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+                      align="center"
+                    >
+                      Interés
+                    </TableCell>
+                    <TableCell
+                      sx={{ fontWeight: "bold", bgcolor: "action.hover" }}
+                      align="center"
+                    >
+                      Estado
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {credit.installments.map((installment) => {
+                    const isOverdue = installment.status === "vencida";
+
+                    const isPaid = installment.status === "pagada";
+
+                    return (
+                      <TableRow key={installment.id} hover>
+                        <TableCell>{installment.number}</TableCell>
+                        <TableCell align="center">
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 0.5,
+                            }}
+                          >
+                            {format(
+                              parseISO(installment.dueDate),
+                              "dd/MM/yyyy"
+                            )}
+                            {isOverdue && (
+                              <CustomChip
+                                label={`+${installment.daysOverdue || 0}d`}
+                                size="small"
+                                color="error"
+                                sx={{ height: 20, fontSize: "0.7rem" }}
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">
+                          {installment.amount.toLocaleString("es-AR", {
+                            style: "currency",
+                            currency: "ARS",
+                          })}
+                        </TableCell>
+                        <TableCell align="center">
+                          {(installment.interestAmount || 0).toLocaleString(
+                            "es-AR",
+                            {
+                              style: "currency",
+                              currency: "ARS",
+                            }
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <CustomChip
+                            label={installment.status}
+                            color={
+                              isPaid
+                                ? "success"
+                                : isOverdue
+                                ? "error"
+                                : "warning"
+                            }
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const CreditosPage = () => {
   const theme = useTheme();
   const [selectedInstallment, setSelectedInstallment] =
@@ -82,7 +465,6 @@ const CreditosPage = () => {
   const [filterCustomer, setFilterCustomer] = useState<string>("");
   const [inputValue, setInputValue] = useState("");
 
-  // Nuevos estados
   const [customerSummaries, setCustomerSummaries] = useState<
     CustomerCreditSummary[]
   >([]);
@@ -92,6 +474,9 @@ const CreditosPage = () => {
     useState<CustomerOption | null>(null);
   const [customerDetailModalOpen, setCustomerDetailModalOpen] = useState(false);
   const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);
+  const [creditSummaries, setCreditSummaries] = useState<CreditSummary[]>([]);
+  const [expandedCreditId, setExpandedCreditId] = useState<number | null>(null);
+  const [infoModalTab, setInfoModalTab] = useState(0);
 
   const {
     overdueInstallments,
@@ -107,14 +492,74 @@ const CreditosPage = () => {
 
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
-  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   const tableHeaderStyle = {
     bgcolor: theme.palette.mode === "dark" ? "primary.dark" : "primary.main",
     color: "primary.contrastText",
   };
 
-  // En calculateCustomerSummaries, corregir el cálculo:
+  const calculateCreditSummaries = (
+    customerSummary: CustomerCreditSummary
+  ): CreditSummary[] => {
+    const summaries: CreditSummary[] = [];
+
+    customerSummary.creditSales.forEach((sale) => {
+      const saleInstallments = customerSummary.installments.filter(
+        (inst) => inst.creditSaleId === sale.id
+      );
+
+      const paidAmount = saleInstallments
+        .filter((inst) => inst.status === "pagada")
+        .reduce((sum, inst) => sum + inst.amount, 0);
+
+      const pendingAmount = saleInstallments
+        .filter(
+          (inst) => inst.status === "pendiente" || inst.status === "vencida"
+        )
+        .reduce((sum, inst) => sum + inst.amount, 0);
+
+      const interestAmount = saleInstallments.reduce(
+        (sum, inst) => sum + (inst.interestAmount || 0),
+        0
+      );
+
+      const nextDueDate = saleInstallments
+        .filter(
+          (inst) => inst.status === "pendiente" || inst.status === "vencida"
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        )[0]?.dueDate;
+
+      const status =
+        pendingAmount === 0
+          ? "Pagado"
+          : saleInstallments.some((inst) => inst.status === "vencida")
+          ? "Vencido"
+          : "Pendiente";
+
+      summaries.push({
+        saleId: sale.id,
+        saleDate: sale.date,
+        totalAmount: sale.total,
+        principalAmount: sale.total - interestAmount,
+        interestAmount: interestAmount,
+        numberOfInstallments: saleInstallments.length,
+        interestRate: sale.creditDetails?.interestRate || 0,
+        paidAmount: paidAmount,
+        pendingAmount: pendingAmount,
+        installments: saleInstallments,
+        nextDueDate: nextDueDate,
+        status: status,
+      });
+    });
+
+    return summaries.sort(
+      (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
+    );
+  };
+
   const calculateCustomerSummaries = async (): Promise<
     CustomerCreditSummary[]
   > => {
@@ -133,8 +578,8 @@ const CreditosPage = () => {
             customerName: sale.customerName,
             totalCreditAmount: 0,
             totalPaidAmount: 0,
-            totalPrincipalAmount: 0, // Nuevo: monto sin intereses
-            totalInterestAmount: 0, // Nuevo: total de intereses
+            totalPrincipalAmount: 0,
+            totalInterestAmount: 0,
             pendingAmount: 0,
             totalInstallments: 0,
             pendingInstallments: 0,
@@ -157,7 +602,6 @@ const CreditosPage = () => {
           sale.creditDetails?.principalAmount || sale.total;
         summary.totalPrincipalAmount += principalAmount;
 
-        // Obtener cuotas de esta venta
         const saleInstallments = await db.installments
           .where("creditSaleId")
           .equals(sale.id)
@@ -165,7 +609,6 @@ const CreditosPage = () => {
 
         summary.installments.push(...saleInstallments);
 
-        // Calcular estadísticas de cuotas
         let hasPendingInstallments = false;
         let earliestDueDate: string | null = null;
 
@@ -174,14 +617,9 @@ const CreditosPage = () => {
 
           if (installment.status === "pagada") {
             summary.paidInstallments++;
-
-            // Sumar el monto pagado (incluye intereses si aplica)
             summary.totalPaidAmount += installment.amount;
-
-            // Sumar intereses pagados
             summary.totalInterestAmount += installment.interestAmount || 0;
 
-            // Actualizar última fecha de pago
             if (installment.paymentDate) {
               const paymentDate = new Date(installment.paymentDate);
               if (
@@ -208,15 +646,12 @@ const CreditosPage = () => {
           }
         });
 
-        // Actualizar próximo vencimiento
         if (hasPendingInstallments && earliestDueDate) {
           summary.nextDueDate = earliestDueDate;
         }
       }
 
-      // Calcular montos pendientes CORRECTAMENTE
       for (const summary of customerMap.values()) {
-        // El monto pendiente es: total crédito - total pagado
         summary.pendingAmount = Math.max(
           0,
           summary.totalCreditAmount - summary.totalPaidAmount
@@ -230,7 +665,6 @@ const CreditosPage = () => {
     }
   };
 
-  // Cargar pagos del cliente
   const loadCustomerPayments = async (customerId: string) => {
     try {
       const payments = await db.payments
@@ -249,10 +683,7 @@ const CreditosPage = () => {
       await fetchInstallments();
       await checkOverdueInstallments();
 
-      // ✅ Obtener clientes directamente de las ventas a crédito en cuotas
       const sales = await getCreditSalesInInstallments();
-
-      // Crear lista única de clientes desde las ventas
       const customerMap = new Map<string, CustomerOption>();
       sales.forEach((sale) => {
         if (sale.customerName && !customerMap.has(sale.customerName)) {
@@ -264,8 +695,6 @@ const CreditosPage = () => {
       });
 
       const allCustomers = Array.from(customerMap.values());
-
-      // Aplicar filtro de rubro si es necesario
       const filteredCustomers = await applyRubroFilter(
         allCustomers,
         sales,
@@ -275,13 +704,8 @@ const CreditosPage = () => {
       setCustomers(filteredCustomers);
       setCreditSales(sales);
 
-      // Calcular resúmenes por cliente
       const summaries = await calculateCustomerSummaries();
       setCustomerSummaries(summaries);
-
-      console.log("Clientes cargados para autocomplete:", filteredCustomers);
-      console.log("Ventas de crédito encontradas:", sales.length);
-      console.log("Resúmenes calculados:", summaries.length);
     };
 
     loadData();
@@ -295,7 +719,6 @@ const CreditosPage = () => {
     getCreditSalesInInstallments,
   ]);
 
-  // Función auxiliar para aplicar filtro de rubro
   const applyRubroFilter = async (
     customers: CustomerOption[],
     sales: CreditSale[],
@@ -305,14 +728,10 @@ const CreditosPage = () => {
       return customers;
     }
 
-    // Filtrar clientes cuyas ventas tengan productos del rubro
     const filteredCustomers = customers.filter((customer) => {
-      // Encontrar las ventas de este cliente
       const customerSales = sales.filter(
         (sale) => sale.customerName === customer.name
       );
-
-      // Verificar si alguna venta tiene productos del rubro
       return customerSales.some((sale) =>
         sale.products?.some((product) => product.rubro === currentRubro)
       );
@@ -334,7 +753,6 @@ const CreditosPage = () => {
     { value: "vencida", label: "Vencidas" },
   ];
 
-  // Crear opciones para el autocomplete de clientes
   const customerOptions = [
     { id: "", name: "Todos los clientes" },
     ...customers,
@@ -344,7 +762,6 @@ const CreditosPage = () => {
     if (!selectedInstallment) return;
 
     try {
-      // 1. Obtener la venta a crédito correspondiente
       const creditSale = creditSales.find(
         (s) => s.id === selectedInstallment.creditSaleId
       );
@@ -354,7 +771,6 @@ const CreditosPage = () => {
         return;
       }
 
-      // 2. VERIFICAR SI EL PAGO YA FUE REGISTRADO
       const today = getLocalDateString();
       const dailyCash = await db.dailyCashes.get({ date: today });
 
@@ -375,14 +791,11 @@ const CreditosPage = () => {
         }
       }
 
-      // 3. Pagar la cuota (ESTA FUNCIÓN DEBE SER LA ÚNICA QUE REGISTRA EN CAJA)
       await payInstallment(selectedInstallment.id!, paymentMethod);
 
-      // 4. Actualizar el saldo pendiente del cliente
       if (creditSale.customerId) {
         const customer = await db.customers.get(creditSale.customerId);
         if (customer) {
-          // Calcular el nuevo saldo pendiente basado en cuotas no pagadas
           const customerInstallments = await db.installments
             .where("creditSaleId")
             .equals(creditSale.id)
@@ -407,11 +820,9 @@ const CreditosPage = () => {
       showNotification("Cuota pagada correctamente", "success");
       setPaymentModalOpen(false);
 
-      // 5. Recargar datos
       await fetchInstallments();
       await checkOverdueInstallments();
 
-      // 6. Recalcular resúmenes
       const summaries = await calculateCustomerSummaries();
       setCustomerSummaries(summaries);
     } catch (error) {
@@ -419,7 +830,7 @@ const CreditosPage = () => {
       showNotification("Error al pagar la cuota", "error");
     }
   };
-  // Filtrar resúmenes de clientes
+
   const filteredCustomerSummaries = customerSummaries.filter((summary) => {
     if (filterStatus !== "todos") {
       if (filterStatus === "pendiente" && summary.pendingInstallments === 0)
@@ -430,14 +841,10 @@ const CreditosPage = () => {
         return false;
     }
 
-    if (filterCustomer) {
-      // Si se seleccionó un cliente específico
-      if (summary.customerId !== filterCustomer) {
-        return false;
-      }
+    if (filterCustomer && summary.customerId !== filterCustomer) {
+      return false;
     }
 
-    // Filtrar por rubro
     if (rubro !== "Todos los rubros") {
       const hasRubroProduct = summary.creditSales.some((sale) =>
         sale.products?.some((product) => product.rubro === rubro)
@@ -455,19 +862,6 @@ const CreditosPage = () => {
     indexOfLastItem
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pagada":
-        return "success";
-      case "pendiente":
-        return "warning";
-      case "vencida":
-        return "error";
-      default:
-        return "default";
-    }
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
@@ -478,20 +872,42 @@ const CreditosPage = () => {
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "N/A";
-    return format(parseISO(dateString), "dd/MM/yyyy");
+    return format(parseISO(dateString), "dd/MM/yyyy", { locale: es });
   };
 
   const handleOpenCustomerDetail = async (summary: CustomerCreditSummary) => {
     setSelectedCustomerSummary(summary);
+    const summaries = calculateCreditSummaries(summary);
+    setCreditSummaries(summaries);
     await loadCustomerPayments(summary.customerId);
     setCustomerDetailModalOpen(true);
+    setExpandedCreditId(null);
+    setInfoModalTab(0);
   };
 
   const handleCloseCustomerDetail = () => {
     setCustomerDetailModalOpen(false);
     setSelectedCustomerSummary(null);
     setCustomerPayments([]);
+    setCreditSummaries([]);
+    setExpandedCreditId(null);
   };
+
+  const handleExpandCredit = (saleId: number) => {
+    setExpandedCreditId(expandedCreditId === saleId ? null : saleId);
+  };
+
+  const handleTabChange = (newValue: number) => {
+    setInfoModalTab(newValue);
+  };
+
+  const creditosPendientes = useMemo(() => {
+    return creditSummaries.filter((credit) => credit.pendingAmount > 0);
+  }, [creditSummaries]);
+
+  const creditosPagados = useMemo(() => {
+    return creditSummaries.filter((credit) => credit.pendingAmount <= 0);
+  }, [creditSummaries]);
 
   return (
     <ProtectedRoute>
@@ -507,7 +923,6 @@ const CreditosPage = () => {
           Créditos
         </Typography>
 
-        {/* Alertas de cuotas vencidas */}
         {overdueInstallments.length > 0 && (
           <Alert severity="error" sx={{ mb: 3 }}>
             <Typography variant="h6">
@@ -526,7 +941,6 @@ const CreditosPage = () => {
           </Alert>
         )}
 
-        {/* Filtros y acciones */}
         <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <Select
@@ -543,7 +957,6 @@ const CreditosPage = () => {
               value={selectedCustomerOption}
               onChange={(event, newValue) => {
                 if (typeof newValue === "string") {
-                  // El usuario escribió algo
                   const newOption: CustomerOption = {
                     id: `custom-${Date.now()}`,
                     name: newValue,
@@ -552,12 +965,10 @@ const CreditosPage = () => {
                   setFilterCustomer(newOption.id);
                   setInputValue(newValue);
                 } else if (newValue && typeof newValue === "object") {
-                  // El usuario seleccionó una opción existente
                   setSelectedCustomerOption(newValue);
                   setFilterCustomer(newValue.id);
                   setInputValue(newValue.name);
                 } else {
-                  // Se limpió la selección
                   setSelectedCustomerOption(null);
                   setFilterCustomer("");
                   setInputValue("");
@@ -566,7 +977,6 @@ const CreditosPage = () => {
               inputValue={inputValue}
               onInputChange={(event, newInputValue) => {
                 setInputValue(newInputValue);
-                // Si se limpia el input, también limpiar el filtro
                 if (newInputValue === "") {
                   setFilterCustomer("");
                 }
@@ -592,8 +1002,6 @@ const CreditosPage = () => {
                   option.name.toLowerCase().includes(inputValue.toLowerCase())
                 );
 
-                // Si el usuario escribe algo que no está en las opciones,
-                // crear un objeto CustomerOption temporal
                 if (
                   inputValue !== "" &&
                   !filtered.some((option) => option.name === inputValue)
@@ -611,7 +1019,6 @@ const CreditosPage = () => {
           </FormControl>
         </Box>
 
-        {/* Tabla de clientes con créditos */}
         <Box sx={{ flex: 1, minHeight: "auto" }}>
           <TableContainer component={Paper} sx={{ maxHeight: "60vh", flex: 1 }}>
             <Table stickyHeader>
@@ -619,7 +1026,7 @@ const CreditosPage = () => {
                 <TableRow>
                   <TableCell sx={tableHeaderStyle}>Cliente</TableCell>
                   <TableCell sx={tableHeaderStyle} align="center">
-                    Monto Total Crédito
+                    Monto Total de Créditos
                   </TableCell>
                   <TableCell sx={tableHeaderStyle} align="center">
                     Pagado
@@ -642,152 +1049,140 @@ const CreditosPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {currentItems.map((summary) => {
-                  return (
-                    <TableRow
-                      key={summary.customerId}
-                      hover
-                      sx={{
-                        border: "1px solid",
-                        borderColor: "divider",
-                        "&:hover": { backgroundColor: "action.hover" },
-                        transition: "all 0.3s",
-                      }}
-                    >
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {summary.customerName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {summary.creditSales.length} venta(s)
-                          </Typography>
-                        </Box>
-                      </TableCell>
+                {currentItems.map((summary) => (
+                  <TableRow
+                    key={summary.customerId}
+                    hover
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      "&:hover": { backgroundColor: "action.hover" },
+                      transition: "all 0.3s",
+                    }}
+                  >
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {summary.customerName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        ({summary.creditSales.length} créditos)
+                      </Typography>
+                    </TableCell>
 
-                      <TableCell align="center">
-                        <Typography variant="body2" fontWeight="bold">
-                          {formatCurrency(summary.totalCreditAmount)}
-                        </Typography>
-                      </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2" fontWeight="bold">
+                        {formatCurrency(summary.totalCreditAmount)}
+                      </Typography>
+                    </TableCell>
 
-                      <TableCell align="center">
-                        <Typography
-                          variant="body2"
-                          color="success.main"
-                          fontWeight={"bold"}
-                        >
-                          {formatCurrency(summary.totalPaidAmount)}
-                        </Typography>
-                      </TableCell>
+                    <TableCell align="center">
+                      <Typography
+                        variant="body2"
+                        color="success.main"
+                        fontWeight={"bold"}
+                      >
+                        {formatCurrency(summary.totalPaidAmount)}
+                      </Typography>
+                    </TableCell>
 
-                      <TableCell align="center">
-                        <Typography
-                          variant="body2"
-                          fontWeight="bold"
-                          color={
-                            summary.pendingAmount > 0
-                              ? "warning.main"
-                              : "success.main"
-                          }
-                        >
-                          {summary.pendingAmount <= 0
-                            ? formatCurrency(0)
-                            : formatCurrency(summary.pendingAmount)}
-                        </Typography>
-                      </TableCell>
+                    <TableCell align="center">
+                      <Typography
+                        variant="body2"
+                        fontWeight="bold"
+                        color={
+                          summary.pendingAmount > 0
+                            ? "warning.main"
+                            : "success.main"
+                        }
+                      >
+                        {summary.pendingAmount <= 0
+                          ? formatCurrency(0)
+                          : formatCurrency(summary.pendingAmount)}
+                      </Typography>
+                    </TableCell>
 
-                      <TableCell align="center">
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 1,
-                          }}
-                        >
-                          {summary.nextDueDate ? (
-                            <Typography variant="body2">
-                              {formatDate(summary.nextDueDate)}
-                            </Typography>
-                          ) : summary.pendingInstallments === 0 ? (
-                            <CustomChip
-                              label="Al día"
-                              color="success"
-                              size="small"
-                              sx={{ fontSize: "0.75rem" }}
-                            />
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              Sin fecha
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-
-                      <TableCell align="center">
-                        <CustomChip
-                          label={
-                            summary.overdueInstallments > 0
-                              ? "Con vencimientos"
-                              : summary.pendingInstallments > 0
-                              ? "Pendiente"
-                              : "Al día"
-                          }
-                          color={
-                            summary.overdueInstallments > 0
-                              ? "error"
-                              : summary.pendingInstallments > 0
-                              ? "warning"
-                              : "success"
-                          }
-                          size="small"
-                        />
-                      </TableCell>
-
-                      <TableCell align="center">
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 0.5,
-                          }}
-                        >
+                    <TableCell align="center">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 1,
+                        }}
+                      >
+                        {summary.nextDueDate ? (
                           <Typography variant="body2">
-                            {summary.totalInstallments}
+                            {formatDate(summary.nextDueDate)}
                           </Typography>
-                        </Box>
-                      </TableCell>
+                        ) : summary.pendingInstallments === 0 ? (
+                          <CustomChip
+                            label="Al día"
+                            color="success"
+                            size="small"
+                            sx={{ fontSize: "0.75rem" }}
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Sin fecha
+                          </Typography>
+                        )}
+                      </Box>
+                    </TableCell>
 
-                      <TableCell align="center">
-                        <Box
-                          sx={{
-                            display: "flex",
-                            gap: 1,
-                            justifyContent: "center",
-                          }}
-                        >
-                          <CustomGlobalTooltip title="Ver detalles">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenCustomerDetail(summary)}
-                              sx={{
-                                borderRadius: "4px",
-                                color: "text.secondary",
-                                "&:hover": {
-                                  backgroundColor: "primary.main",
-                                  color: "white",
-                                },
-                              }}
-                            >
-                              <Info fontSize="small" />
-                            </IconButton>
-                          </CustomGlobalTooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    <TableCell align="center">
+                      <CustomChip
+                        label={
+                          summary.overdueInstallments > 0
+                            ? "Con vencimientos"
+                            : summary.pendingInstallments > 0
+                            ? "Pendiente"
+                            : "Al día"
+                        }
+                        color={
+                          summary.overdueInstallments > 0
+                            ? "error"
+                            : summary.pendingInstallments > 0
+                            ? "warning"
+                            : "success"
+                        }
+                        size="small"
+                      />
+                    </TableCell>
+
+                    <TableCell align="center">
+                      <Typography variant="body2">
+                        {summary.totalInstallments}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell align="center">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          justifyContent: "center",
+                        }}
+                      >
+                        <CustomGlobalTooltip title="Ver detalles">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenCustomerDetail(summary)}
+                            sx={{
+                              borderRadius: "4px",
+                              color: "text.secondary",
+                              "&:hover": {
+                                backgroundColor: "primary.main",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            <Info fontSize="small" />
+                          </IconButton>
+                        </CustomGlobalTooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -801,7 +1196,6 @@ const CreditosPage = () => {
           />
         )}
 
-        {/* Modal de pago de cuota */}
         <Modal
           isOpen={paymentModalOpen}
           onClose={() => setPaymentModalOpen(false)}
@@ -853,19 +1247,7 @@ const CreditosPage = () => {
                 Monto total:{" "}
                 <strong>{formatCurrency(selectedInstallment.amount)}</strong>
               </Typography>
-              <Typography gutterBottom variant="body1">
-                Interés:{" "}
-                <strong>
-                  {selectedInstallment.interestAmount > 0 && (
-                    <Typography gutterBottom variant="body1">
-                      Interés:{" "}
-                      <strong>
-                        {formatCurrency(selectedInstallment.interestAmount)}
-                      </strong>
-                    </Typography>
-                  )}
-                </strong>
-              </Typography>
+
               {selectedInstallment.penaltyAmount > 0 && (
                 <Typography gutterBottom variant="body1" color="error">
                   Penalización:{" "}
@@ -887,7 +1269,7 @@ const CreditosPage = () => {
           )}
         </Modal>
 
-        {/* Modal de detalle del cliente - Reemplazado por tu componente Modal */}
+        {/* Modal de detalle del cliente refactorizado */}
         <Modal
           isOpen={customerDetailModalOpen}
           onClose={handleCloseCustomerDetail}
@@ -917,8 +1299,20 @@ const CreditosPage = () => {
           }
         >
           {selectedCustomerSummary && (
-            <Box sx={{ maxHeight: "70vh", overflow: "auto" }}>
-              {/* Resumen financiero */}
+            <Box sx={{ width: "100%" }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}
+              >
+                <Avatar sx={{ bgcolor: "primary.main" }}>
+                  <AccountCircleIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">
+                    {selectedCustomerSummary.customerName}
+                  </Typography>
+                </Box>
+              </Box>
+
               <CustomerFinancialSummary
                 customerInfo={{
                   name: selectedCustomerSummary.customerName,
@@ -928,169 +1322,177 @@ const CreditosPage = () => {
                 payments={customerPayments}
               />
 
-              {/* Detalle de cuotas */}
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Cuotas del Cliente
-                </Typography>
-                <TableContainer component={Paper} sx={{ maxHeight: "300px" }}>
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Venta</TableCell>
-                        <TableCell align="center">N° Cuota</TableCell>
-                        <TableCell align="center">Vencimiento</TableCell>
-                        <TableCell align="center">Monto</TableCell>
-                        <TableCell align="center">Estado</TableCell>
-                        <TableCell align="center">Acción</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedCustomerSummary.installments.map(
-                        (installment) => {
-                          const sale = creditSales.find(
-                            (s) => s.id === installment.creditSaleId
-                          );
-                          const saleNumber = sale ? `Venta #${sale.id}` : "N/A";
-                          const isOverdue = installment.status === "vencida";
-                          const isPending = installment.status === "pendiente";
+              <Card sx={{ mb: 2 }}>
+                <Tabs
+                  value={infoModalTab}
+                  onChange={(_, newValue) => handleTabChange(newValue)}
+                  sx={{
+                    borderBottom: 1,
+                    borderColor: "divider",
+                    "& .MuiTab-root": {
+                      textTransform: "none",
+                      fontWeight: "medium",
+                      minHeight: 48,
+                    },
+                  }}
+                >
+                  <Tab
+                    icon={<ReceiptIcon />}
+                    iconPosition="start"
+                    label={
+                      <Badge
+                        badgeContent={creditSummaries.length}
+                        color="primary"
+                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                      >
+                        Todos los Créditos
+                      </Badge>
+                    }
+                  />
+                  <Tab
+                    icon={<PaymentIcon />}
+                    iconPosition="start"
+                    label={
+                      <Badge
+                        badgeContent={creditosPendientes.length}
+                        color="warning"
+                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                      >
+                        Pendientes
+                      </Badge>
+                    }
+                  />
+                  <Tab
+                    icon={<CheckCircle />}
+                    iconPosition="start"
+                    label={
+                      <Badge
+                        badgeContent={creditosPagados.length}
+                        color="success"
+                        sx={{ "& .MuiBadge-badge": { right: -8 } }}
+                      >
+                        Pagados
+                      </Badge>
+                    }
+                  />
+                </Tabs>
+              </Card>
 
-                          return (
-                            <TableRow key={installment.id}>
-                              <TableCell>
-                                <Typography variant="body2" fontSize="0.75rem">
-                                  {saleNumber}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                {installment.number}
-                              </TableCell>
-                              <TableCell align="center">
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  {formatDate(installment.dueDate)}
-                                  {isOverdue && (
-                                    <CustomChip
-                                      label={`+${installment.daysOverdue}d`}
-                                      size="small"
-                                      color="error"
-                                      sx={{
-                                        height: 20,
-                                        fontSize: "0.7rem",
-                                      }}
-                                    />
-                                  )}
-                                </Box>
-                              </TableCell>
-                              <TableCell align="center">
-                                {formatCurrency(installment.amount)}
-                              </TableCell>
-                              <TableCell align="center">
-                                <CustomChip
-                                  label={installment.status}
-                                  color={getStatusColor(installment.status)}
-                                  size="small"
-                                />
-                              </TableCell>
-                              <TableCell align="center">
-                                {isPending || isOverdue ? (
-                                  <Button
-                                    variant="contained"
-                                    size="small"
-                                    startIcon={<PaymentIcon fontSize="small" />}
-                                    onClick={() => {
-                                      setSelectedInstallment(installment);
-                                      setPaymentModalOpen(true);
-                                      handleCloseCustomerDetail();
-                                    }}
-                                  >
-                                    Pagar
-                                  </Button>
-                                ) : (
-                                  <Typography
-                                    variant="caption"
-                                    color="textSecondary"
-                                  >
-                                    Pagada:{" "}
-                                    {formatDate(installment.paymentDate)}
-                                  </Typography>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        }
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-
-              {/* Historial de ventas */}
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Historial de Ventas a Crédito
-                </Typography>
-                {selectedCustomerSummary.creditSales.map((sale) => (
-                  <Card key={sale.id} sx={{ mb: 2, p: 2 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          Venta #{sale.id}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDate(sale.date)}
+              <Box sx={{ maxHeight: "60vh", overflow: "auto" }}>
+                {infoModalTab === 0 && (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {creditSummaries.length === 0 ? (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <ReceiptIcon
+                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                        />
+                        <Typography color="text.secondary">
+                          No hay créditos registrados
                         </Typography>
                       </Box>
-                      <Typography variant="body1" fontWeight="bold">
-                        {formatCurrency(sale.total)}
-                      </Typography>
-                    </Box>
-                    {sale.products && (
-                      <Typography variant="caption" color="text.secondary">
-                        Productos: {sale.products.map((p) => p.name).join(", ")}
-                      </Typography>
+                    ) : (
+                      creditSummaries.map((credit) => (
+                        <CreditSaleCard
+                          key={credit.saleId}
+                          credit={credit}
+                          payments={customerPayments.filter(
+                            (p) => p.saleId === credit.saleId
+                          )}
+                          onPayment={(credit) => {
+                            // Lógica para pagar una cuota específica
+                            const pendingInstallment = credit.installments.find(
+                              (inst) =>
+                                inst.status === "pendiente" ||
+                                inst.status === "vencida"
+                            );
+                            if (pendingInstallment) {
+                              setSelectedInstallment(pendingInstallment);
+                              setPaymentModalOpen(true);
+                            }
+                          }}
+                          isExpanded={expandedCreditId === credit.saleId}
+                          onToggleExpand={handleExpandCredit}
+                        />
+                      ))
                     )}
-                  </Card>
-                ))}
+                  </Box>
+                )}
+
+                {infoModalTab === 1 && (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {creditosPendientes.length === 0 ? (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <CheckCircle
+                          sx={{ fontSize: 64, color: "success.main", mb: 2 }}
+                        />
+                        <Typography color="text.secondary">
+                          No hay créditos pendientes
+                        </Typography>
+                      </Box>
+                    ) : (
+                      creditosPendientes.map((credit) => (
+                        <CreditSaleCard
+                          key={credit.saleId}
+                          credit={credit}
+                          payments={customerPayments.filter(
+                            (p) => p.saleId === credit.saleId
+                          )}
+                          onPayment={(credit) => {
+                            const pendingInstallment = credit.installments.find(
+                              (inst) =>
+                                inst.status === "pendiente" ||
+                                inst.status === "vencida"
+                            );
+                            if (pendingInstallment) {
+                              setSelectedInstallment(pendingInstallment);
+                              setPaymentModalOpen(true);
+                            }
+                          }}
+                          isExpanded={expandedCreditId === credit.saleId}
+                          onToggleExpand={handleExpandCredit}
+                        />
+                      ))
+                    )}
+                  </Box>
+                )}
+
+                {infoModalTab === 2 && (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {creditosPagados.length === 0 ? (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <HistoryIcon
+                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                        />
+                        <Typography color="text.secondary">
+                          No hay créditos completamente pagados
+                        </Typography>
+                      </Box>
+                    ) : (
+                      creditosPagados.map((credit) => (
+                        <CreditSaleCard
+                          key={credit.saleId}
+                          credit={credit}
+                          payments={customerPayments.filter(
+                            (p) => p.saleId === credit.saleId
+                          )}
+                          onPayment={() => {}}
+                          isExpanded={expandedCreditId === credit.saleId}
+                          onToggleExpand={handleExpandCredit}
+                        />
+                      ))
+                    )}
+                  </Box>
+                )}
               </Box>
             </Box>
           )}
         </Modal>
-
-        {/* Modal de reporte */}
-        <Modal
-          isOpen={reportModalOpen}
-          onClose={() => setReportModalOpen(false)}
-          title="Reporte de Créditos"
-          bgColor="bg-white dark:bg-gray_b"
-          buttons={
-            <Button
-              variant="text"
-              onClick={() => setReportModalOpen(false)}
-              sx={{
-                color: "text.secondary",
-                borderColor: "text.secondary",
-                "&:hover": {
-                  backgroundColor: "action.hover",
-                  borderColor: "text.primary",
-                },
-              }}
-            >
-              Cerrar
-            </Button>
-          }
-        ></Modal>
       </Box>
     </ProtectedRoute>
   );

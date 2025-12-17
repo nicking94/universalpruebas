@@ -1,4 +1,3 @@
-// app/components/CreditInstallmentModal.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -25,6 +24,7 @@ import CustomGlobalTooltip from "./CustomTooltipGlobal";
 import { formatCurrency } from "@/app/lib/utils/currency";
 import { parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { CreditInstallmentDetails } from "@/app/lib/types/types";
 
 interface CustomerOption {
   value: string;
@@ -36,19 +36,9 @@ interface CreditInstallmentModalProps {
   onClose: () => void;
   total: number;
   isCreditCuotasSelected?: boolean;
-  creditInstallmentDetails: {
-    numberOfInstallments: number;
-    interestRate: number;
-    penaltyRate: number;
-    startDate: string;
-  };
+  creditInstallmentDetails: CreditInstallmentDetails;
   setCreditInstallmentDetails: React.Dispatch<
-    React.SetStateAction<{
-      numberOfInstallments: number;
-      interestRate: number;
-      penaltyRate: number;
-      startDate: string;
-    }>
+    React.SetStateAction<CreditInstallmentDetails>
   >;
   selectedCustomer: CustomerOption | null;
   setSelectedCustomer: React.Dispatch<
@@ -67,6 +57,30 @@ const addMonths = (date: Date, months: number): Date => {
   const result = new Date(date);
   result.setMonth(result.getMonth() + months);
   return result;
+};
+
+// Función para calcular automáticamente la cuota actual basada en la fecha de inicio
+const calculateCurrentInstallment = (startDate: string): number => {
+  try {
+    const today = new Date();
+    const start = new Date(startDate);
+
+    // Si la fecha de inicio es hoy o en el futuro, es la cuota 1
+    if (today <= start) {
+      return 1;
+    }
+
+    // Calcular cuántos meses han pasado desde la fecha de inicio
+    const monthsDiff =
+      (today.getFullYear() - start.getFullYear()) * 12 +
+      (today.getMonth() - start.getMonth());
+
+    // La cuota actual es el número de meses + 1 (porque se empieza con la cuota 1)
+    return Math.max(1, monthsDiff + 1);
+  } catch (error) {
+    console.error("Error calculando cuota actual:", error);
+    return 1; // Valor por defecto
+  }
 };
 
 const CreditInstallmentModal = ({
@@ -157,6 +171,28 @@ const CreditInstallmentModal = ({
     setInstallmentSummary(calculateSummary);
   }, [calculateSummary]);
 
+  // Cuando cambia la fecha de inicio, recalcular la cuota actual automáticamente
+  useEffect(() => {
+    if (isOpen) {
+      const currentInstallment = calculateCurrentInstallment(
+        creditInstallmentDetails.startDate
+      );
+
+      // Solo actualizar si es diferente al valor actual
+      if (currentInstallment !== creditInstallmentDetails.currentInstallment) {
+        setCreditInstallmentDetails((prev) => ({
+          ...prev,
+          currentInstallment: currentInstallment,
+        }));
+      }
+    }
+  }, [
+    creditInstallmentDetails.startDate,
+    isOpen,
+    setCreditInstallmentDetails,
+    creditInstallmentDetails.currentInstallment,
+  ]);
+
   useEffect(() => {
     // Limpiar campos de nuevo cliente cuando se selecciona un cliente existente
     if (isOpen && selectedCustomer) {
@@ -196,6 +232,16 @@ const CreditInstallmentModal = ({
       errors.push("La tasa de interés no puede exceder el 50%");
     }
 
+    // Validar que la cuota actual no sea mayor al número de cuotas
+    if (
+      creditInstallmentDetails.currentInstallment >
+      creditInstallmentDetails.numberOfInstallments
+    ) {
+      errors.push(
+        "La cuota actual no puede ser mayor al número total de cuotas"
+      );
+    }
+
     setValidationErrors(errors);
   }, [
     selectedCustomer,
@@ -207,7 +253,7 @@ const CreditInstallmentModal = ({
   ]);
 
   const handleNumberChange = (
-    field: keyof typeof creditInstallmentDetails,
+    field: keyof CreditInstallmentDetails,
     value: string
   ) => {
     const numValue = parseInt(value) || 0;
@@ -221,6 +267,13 @@ const CreditInstallmentModal = ({
       case "penaltyRate":
         clampedValue = Math.max(0, Math.min(100, numValue));
         break;
+      case "currentInstallment":
+        // La cuota actual no puede ser mayor al número de cuotas
+        clampedValue = Math.max(
+          1,
+          Math.min(creditInstallmentDetails.numberOfInstallments, numValue)
+        );
+        break;
       default:
         break;
     }
@@ -232,9 +285,12 @@ const CreditInstallmentModal = ({
   };
 
   const handleDateChange = (value: string) => {
+    const currentInstallment = calculateCurrentInstallment(value);
+
     setCreditInstallmentDetails((prev) => ({
       ...prev,
       startDate: value,
+      currentInstallment: currentInstallment,
     }));
   };
 
@@ -461,27 +517,6 @@ const CreditInstallmentModal = ({
                 fullWidth
                 size="small"
                 placeholder="Ej: 5%"
-                icon={<Typography fontSize="small">%</Typography>}
-              />
-            </Box>
-
-            <Box>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mb: 0.5, display: "block" }}
-              >
-                Penalización por atraso %
-              </Typography>
-              <Input
-                type="number"
-                value={creditInstallmentDetails.penaltyRate}
-                onRawChange={(e) =>
-                  handleNumberChange("penaltyRate", e.target.value)
-                }
-                fullWidth
-                size="small"
-                placeholder="Ej: 2%"
                 icon={<Typography fontSize="small">%</Typography>}
               />
             </Box>

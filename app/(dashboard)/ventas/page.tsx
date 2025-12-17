@@ -71,6 +71,7 @@ import {
   ProductOption,
   EditMode,
   PriceList,
+  CreditInstallmentDetails,
 } from "@/app/lib/types/types";
 import Select from "@/app/components/Select";
 import { Settings } from "@mui/icons-material";
@@ -117,12 +118,14 @@ const VentasPage = () => {
 
   const router = useRouter();
   const ticketRef = useRef<PrintableTicketHandle>(null);
-  const [creditInstallmentDetails, setCreditInstallmentDetails] = useState({
-    numberOfInstallments: 1,
-    interestRate: 0,
-    penaltyRate: 0,
-    startDate: new Date().toISOString().split("T")[0],
-  });
+  const [creditInstallmentDetails, setCreditInstallmentDetails] =
+    useState<CreditInstallmentDetails>({
+      numberOfInstallments: 1,
+      interestRate: 0,
+      penaltyRate: 0,
+      startDate: new Date().toISOString().split("T")[0],
+      currentInstallment: 1,
+    });
 
   const {
     isNotificationOpen,
@@ -531,6 +534,7 @@ const VentasPage = () => {
         interestRate: 0,
         penaltyRate: 0,
         startDate: new Date().toISOString().split("T")[0],
+        currentInstallment: 1,
       });
 
       // 4. Cerrar modal
@@ -1560,7 +1564,9 @@ const VentasPage = () => {
         saleToSave.creditDetails = {
           type: "credito_cuotas",
           totalAmount: totalWithInterest,
-          numberOfInstallments: creditInstallmentDetails.numberOfInstallments,
+          currentInstallment: creditInstallmentDetails.currentInstallment || 1,
+          numberOfInstallments:
+            creditInstallmentDetails.numberOfInstallments || 1,
           interestRate: creditInstallmentDetails.interestRate,
           penaltyRate: creditInstallmentDetails.penaltyRate,
           startDate: creditInstallmentDetails.startDate,
@@ -1700,6 +1706,7 @@ const VentasPage = () => {
           interestRate: 0,
           penaltyRate: 0,
           startDate: new Date().toISOString().split("T")[0],
+          currentInstallment: 1,
         });
       }
 
@@ -2082,6 +2089,7 @@ const VentasPage = () => {
           interestRate: 0,
           penaltyRate: 0,
           startDate: new Date().toISOString().split("T")[0],
+          currentInstallment: 1,
         });
       }
 
@@ -2308,6 +2316,7 @@ const VentasPage = () => {
       interestRate: 0,
       penaltyRate: 0,
       startDate: new Date().toISOString().split("T")[0],
+      currentInstallment: 1,
     });
 
     // Cerrar todos los modales
@@ -4223,7 +4232,6 @@ const VentasPage = () => {
                   <Input
                     label="Teléfono del cliente"
                     placeholder="Teléfono del cliente"
-                    disabled={!!selectedCustomer}
                     value={customerPhone}
                     onRawChange={(e) => setCustomerPhone(e.target.value)}
                     fullWidth

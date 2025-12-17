@@ -37,6 +37,8 @@ import Pagination from "@/app/components/Pagination";
 import CustomChip from "@/app/components/CustomChip";
 import DailyCashDetailModal from "@/app/components/DailyCashDetailModal";
 import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
+import { useBackup } from "@/app/hooks/useBackup";
+import BackupConfirmationModal from "@/app/components/BackupConfirmationModal"; // AÑADE ESTA IMPORTACIÓN
 
 const CajaDiariaPage = () => {
   const { rubro } = useRubro();
@@ -44,6 +46,14 @@ const CajaDiariaPage = () => {
   const [currentDailyCash, setCurrentDailyCash] = useState<DailyCash | null>(
     null
   );
+
+  const {
+    isBackupModalOpen,
+    initiateBackup,
+    confirmBackup,
+    cancelBackup,
+    setPendingBackup,
+  } = useBackup();
 
   const {
     isNotificationOpen,
@@ -155,6 +165,9 @@ const CajaDiariaPage = () => {
 
     try {
       if (currentDailyCash?.closed) {
+        // Marcar que hay una caja reabierta que podría cerrarse nuevamente
+        setPendingBackup(true);
+
         const updatedCash = {
           ...currentDailyCash,
           closed: false,
@@ -193,7 +206,28 @@ const CajaDiariaPage = () => {
       console.error("Error al abrir/reabrir caja:", error);
       showNotification("Error al abrir/reabrir caja", "error");
     }
-  }, [currentDailyCash, checkAndCloseOldCashes, showNotification]);
+  }, [
+    currentDailyCash,
+    checkAndCloseOldCashes,
+    showNotification,
+    setPendingBackup,
+  ]);
+
+  // Función wrapper para manejar el backup después del cierre
+  const handleConfirmBackup = useCallback(async () => {
+    const success = await confirmBackup();
+    if (success) {
+      showNotification(
+        "Caja cerrada y backup exportado correctamente",
+        "success"
+      );
+    } else {
+      showNotification(
+        "Caja cerrada, pero hubo un error al exportar el backup",
+        "warning"
+      );
+    }
+  }, [confirmBackup, showNotification]);
 
   const closeCash = useCallback(async () => {
     try {
@@ -227,13 +261,17 @@ const CajaDiariaPage = () => {
           prev.map((dc) => (dc.id === dailyCash.id ? updatedCash : dc))
         );
         setCurrentDailyCash(updatedCash);
-        showNotification("Caja cerrada correctamente", "success");
+
+        // Mostrar modal de backup después de cerrar la caja
+        setTimeout(() => {
+          initiateBackup();
+        }, 500);
       }
     } catch (error) {
       console.error("Error al cerrar caja:", error);
       showNotification("Error al cerrar caja", "error");
     }
-  }, [showNotification]);
+  }, [showNotification, initiateBackup]);
 
   const getDailySummary = useCallback(() => {
     const summary: Record<
@@ -270,7 +308,6 @@ const CajaDiariaPage = () => {
 
         if (movement.type === "INGRESO") {
           summary[date].ingresos += amount;
-          // Sumar la ganancia completa (producto + interés)
           summary[date].gananciaNeta += Number(movement.profit) || 0;
         } else {
           summary[date].egresos += amount;
@@ -278,7 +315,6 @@ const CajaDiariaPage = () => {
         }
       });
 
-      // La ganancia bruta es ingresos - egresos
       summary[date].ganancia = summary[date].ingresos - summary[date].egresos;
     });
 
@@ -297,11 +333,9 @@ const CajaDiariaPage = () => {
       try {
         const storedDailyCashes = await db.dailyCashes.toArray();
 
-        // Eliminar movimientos duplicados
         const cleanedCashes = storedDailyCashes.map((cash) => {
           const uniqueMovements = cash.movements.filter(
             (movement, index, self) => {
-              // Asegurarse de que createdAt tenga un valor por defecto
               const movementCreatedAt =
                 movement.createdAt || new Date().toISOString();
 
@@ -329,7 +363,7 @@ const CajaDiariaPage = () => {
             movements: uniqueMovements.map((m) => ({
               ...m,
               amount: Number(m.amount) || 0,
-              createdAt: m.createdAt || new Date().toISOString(), // Asegurar valor por defecto
+              createdAt: m.createdAt || new Date().toISOString(),
             })),
           };
         });
@@ -671,7 +705,14 @@ const CajaDiariaPage = () => {
           )}
         </Box>
 
-        {/* Modal Reutilizable */}
+        {/* Modal de Confirmación de Backup - AÑADE ESTE COMPONENTE */}
+        <BackupConfirmationModal
+          isOpen={isBackupModalOpen}
+          onConfirm={handleConfirmBackup}
+          onCancel={cancelBackup}
+        />
+
+        {/* Modal de Detalles de Caja Diaria */}
         <DailyCashDetailModal
           isOpen={isDetailModalOpen}
           onClose={closeDetailModal}

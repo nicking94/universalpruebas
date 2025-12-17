@@ -106,33 +106,40 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
         };
       });
 
-      // Si es venta a crédito con cuotas, calcular el interés
+      // Si es venta a crédito con cuotas, calcular el interés total
       if (
         isCreditSale &&
         sale.creditType === "credito_cuotas" &&
-        sale.creditDetails?.interestRate
+        sale.creditDetails?.totalAmount
       ) {
-        const interestRate = sale.creditDetails.interestRate / 100;
+        const totalWithInterest = sale.creditDetails.totalAmount;
+        const totalInterest = totalWithInterest - subtotalSinInteres;
+        const interestRate = sale.creditDetails.interestRate || 0;
+
+        // Calcular el interés por cuota (solo para mostrar en el ticket)
+        const interestPerInstallment =
+          totalInterest / (sale.creditDetails.numberOfInstallments || 1);
 
         return items.map((item) => {
           // Calcular la proporción de este ítem en el subtotal total
           const proportion =
             subtotalSinInteres > 0 ? item.subtotal / subtotalSinInteres : 0;
 
-          // Calcular el interés correspondiente a este ítem
-          const interestAmount = item.subtotal * interestRate * proportion;
+          // Calcular el interés total correspondiente a este ítem
+          const interestAmount = totalInterest * proportion;
 
           return {
             ...item,
             subtotal: item.subtotal + interestAmount,
             interestIncluded: interestAmount,
+            interestRate: interestRate, // Guardar tasa de interés para mostrar
+            interestPerInstallment: interestPerInstallment * proportion, // Interés por cuota
           };
         });
       }
 
       return items;
     };
-
     const invoiceItems = getInvoiceItems();
 
     const shouldShowCustomerInfo = (): boolean => {
@@ -1039,8 +1046,8 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
                     sale.creditDetails && (
                       <>
                         <p className="footer-text" style={styles.footerText}>
-                          Cuota:{" "}
-                          {sale.creditDetails.totalNumberOfInstallments || 1} de{" "}
+                          Cuota(s) pagada(s):{" "}
+                          {sale.creditDetails.currentInstallment || 1} de{" "}
                           {sale.creditDetails.numberOfInstallments || 1}
                         </p>
                       </>

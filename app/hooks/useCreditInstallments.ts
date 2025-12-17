@@ -280,8 +280,6 @@ export const useCreditInstallments = () => {
           totalProfit,
         });
       }
-
-      // Resto del código...
     } catch (error) {
       console.error("Error al pagar la cuota:", error);
       throw error;

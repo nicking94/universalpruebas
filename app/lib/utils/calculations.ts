@@ -208,7 +208,7 @@ export const calculateInstallments = (
   const installments: Installment[] = [];
   const monthlyInterest = interestRate / 100;
 
-  // Fórmula de amortización francesa (interés compuesto)
+  // Usar el método francés para calcular cuotas constantes
   const cuota =
     (totalAmount *
       (monthlyInterest * Math.pow(1 + monthlyInterest, numberOfInstallments))) /

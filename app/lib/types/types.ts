@@ -340,6 +340,7 @@ export interface CreditDetails {
   type: CreditType;
   principalAmount: number;
   totalAmount: number;
+  currentInstallment: number;
   totalNumberOfInstallments: number;
   numberOfInstallments?: number;
   interestRate?: number;
@@ -355,6 +356,14 @@ export interface CreditDetails {
   isOverdue?: boolean;
   overdueDays?: number;
 }
+
+export type CreditInstallmentDetails = {
+  numberOfInstallments: number;
+  interestRate: number;
+  penaltyRate: number;
+  startDate: string;
+  currentInstallment: number;
+};
 export type PaymentSplit = {
   method: PaymentMethod;
   amount: number;
