@@ -38,7 +38,7 @@ import CustomChip from "@/app/components/CustomChip";
 import DailyCashDetailModal from "@/app/components/DailyCashDetailModal";
 import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
 import { useBackup } from "@/app/hooks/useBackup";
-import BackupConfirmationModal from "@/app/components/BackupConfirmationModal"; // AÑADE ESTA IMPORTACIÓN
+import BackupConfirmationModal from "@/app/components/BackupConfirmationModal";
 
 const CajaDiariaPage = () => {
   const { rubro } = useRubro();
@@ -678,11 +678,7 @@ const CajaDiariaPage = () => {
                           }}
                         >
                           <PointOfSale
-                            sx={{
-                              marginBottom: 2,
-                              color: "#9CA3AF",
-                              fontSize: 64,
-                            }}
+                            sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                           />
                           <Typography>
                             No hay registros para el período seleccionado.

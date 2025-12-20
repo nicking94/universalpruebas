@@ -700,7 +700,7 @@ const ProveedoresPage = () => {
                           }}
                         >
                           <LocalShipping
-                            sx={{ fontSize: 64, mb: 2, color: "#9CA3AF" }}
+                            sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                           />
                           <Typography>
                             {searchQuery

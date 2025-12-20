@@ -375,11 +375,17 @@ const VentasPage = () => {
   };
 
   const getPriceListName = (priceListId: number | undefined): string => {
-    if (!priceListId) return "Precio General";
-    const list = priceLists.find((p) => p.id === priceListId);
-    return list ? list.name : "Precio General";
-  };
+    if (!priceListId) {
+      // Buscar la lista "General" en el rubro actual
+      const generalList = priceLists.find(
+        (list) => list.name === "General" && list.rubro === rubro
+      );
+      return generalList ? generalList.name : "General";
+    }
 
+    const list = priceLists.find((p) => p.id === priceListId);
+    return list ? list.name : "General";
+  };
   const canEditSale = (sale: Sale): boolean => {
     const saleDate = new Date(sale.date);
     const today = new Date();
@@ -1513,7 +1519,6 @@ const VentasPage = () => {
         finalCustomerName = "CLIENTE OCASIONAL";
       }
 
-      // Crear objeto saleToSave
       const saleToSave: Sale = {
         id: Date.now(),
         products: newSale.products,
@@ -1525,6 +1530,7 @@ const VentasPage = () => {
         manualAmount: newSale.manualAmount || 0,
         manualProfitPercentage: newSale.manualProfitPercentage || 0,
         credit: isCredit || hasCreditMethod,
+        // CORRECCIÓN: Simplificar la asignación de creditType
         creditType: hasCreditMethod
           ? "credito_cuotas"
           : isCredit
@@ -1546,8 +1552,6 @@ const VentasPage = () => {
         saleToSave.credit = true;
         saleToSave.creditType = "credito_cuotas";
         saleToSave.paid = false;
-
-        // Calcular cuotas
         const installments = calculateInstallments(
           saleToSave.total,
           creditInstallmentDetails.numberOfInstallments,
@@ -1555,7 +1559,16 @@ const VentasPage = () => {
           creditInstallmentDetails.startDate
         );
 
-        const totalWithInterest = installments.reduce(
+        // Verificar que las cuotas no contengan NaN
+        const validInstallments = installments.map((inst) => ({
+          ...inst,
+          amount: isNaN(inst.amount)
+            ? saleToSave.total / creditInstallmentDetails.numberOfInstallments
+            : inst.amount,
+          interestAmount: isNaN(inst.interestAmount) ? 0 : inst.interestAmount,
+        }));
+
+        const totalWithInterest = validInstallments.reduce(
           (sum, inst) => sum + inst.amount,
           0
         );
@@ -2471,12 +2484,50 @@ const VentasPage = () => {
     const loadPriceLists = async () => {
       if (rubro !== "Todos los rubros") {
         try {
+          // Cargar solo listas activas
           const lists = await db.priceLists
             .where("rubro")
             .equals(rubro)
+            .and((list) => list.isActive !== false)
             .toArray();
-          setPriceLists(lists);
-          setAvailablePriceLists(lists);
+
+          // Verificar si existe la lista "General"
+          const generalListExists = lists.some(
+            (list) => list.name === "General"
+          );
+
+          if (!generalListExists) {
+            // Crear lista "General" automáticamente
+            const generalList: PriceList = {
+              id: Date.now(),
+              name: "General",
+              rubro,
+              isDefault: true,
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            await db.priceLists.add(generalList);
+            lists.push(generalList);
+          }
+
+          // Ordenar y eliminar duplicados por nombre
+          const uniqueLists = Array.from(
+            new Map(lists.map((list) => [list.name, list])).values()
+          ).sort((a, b) => {
+            if (a.isDefault && !b.isDefault) return -1;
+            if (!a.isDefault && b.isDefault) return 1;
+            return a.name.localeCompare(b.name);
+          });
+
+          setPriceLists(uniqueLists);
+
+          // Seleccionar la lista por defecto si existe
+          const defaultList = uniqueLists.find((list) => list.isDefault);
+          if (defaultList && !selectedPriceListId) {
+            setSelectedPriceListId(defaultList.id);
+          }
         } catch (error) {
           console.error("Error loading price lists:", error);
         }
@@ -3053,23 +3104,22 @@ const VentasPage = () => {
                           <TableCell align="center">
                             {sale.credit ? (
                               <Box>
-                                {sale.creditType === "cuenta_corriente" ? (
-                                  <CustomChip
-                                    label="Cuenta corriente"
-                                    color="warning"
-                                    size="small"
-                                  />
-                                ) : sale.creditType === "credito_cuotas" ? (
+                                {sale.creditType === "credito_cuotas" ? (
                                   <CustomChip
                                     label="Crédito en cuotas"
                                     color="primary"
                                     size="small"
                                   />
-                                ) : (
+                                ) : sale.chequeInfo ? (
                                   <CustomChip
-                                    label={
-                                      sale.chequeInfo ? "Cheque" : "Crédito"
-                                    }
+                                    label="Cheque"
+                                    color="warning"
+                                    size="small"
+                                  />
+                                ) : (
+                                  // Default a "Cuenta corriente" para cualquier otro tipo de crédito
+                                  <CustomChip
+                                    label="Cuenta corriente"
                                     color="warning"
                                     size="small"
                                   />
@@ -3209,11 +3259,7 @@ const VentasPage = () => {
                           }}
                         >
                           <ShoppingCart
-                            sx={{
-                              marginBottom: 2,
-                              color: "#9CA3AF",
-                              fontSize: 64,
-                            }}
+                            sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                           />
                           <Typography>Todavía no hay ventas.</Typography>
                         </Box>

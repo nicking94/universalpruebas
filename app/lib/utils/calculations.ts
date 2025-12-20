@@ -208,11 +208,19 @@ export const calculateInstallments = (
   const installments: Installment[] = [];
   const monthlyInterest = interestRate / 100;
 
-  // Usar el método francés para calcular cuotas constantes
-  const cuota =
-    (totalAmount *
-      (monthlyInterest * Math.pow(1 + monthlyInterest, numberOfInstallments))) /
-    (Math.pow(1 + monthlyInterest, numberOfInstallments) - 1);
+  let cuota: number;
+
+  // Manejar el caso especial cuando la tasa de interés es 0%
+  if (monthlyInterest === 0) {
+    cuota = totalAmount / numberOfInstallments;
+  } else {
+    // Usar el método francés para calcular cuotas constantes
+    cuota =
+      (totalAmount *
+        (monthlyInterest *
+          Math.pow(1 + monthlyInterest, numberOfInstallments))) /
+      (Math.pow(1 + monthlyInterest, numberOfInstallments) - 1);
+  }
 
   const start = new Date(startDate);
   let saldo = totalAmount;
@@ -221,16 +229,29 @@ export const calculateInstallments = (
     const dueDate = new Date(start);
     dueDate.setMonth(dueDate.getMonth() + i);
 
-    const interestAmount = saldo * monthlyInterest;
-    const principalAmount = cuota - interestAmount;
-    saldo -= principalAmount;
+    let interestAmount = 0;
+    let principalAmount = cuota;
+
+    if (monthlyInterest > 0) {
+      interestAmount = saldo * monthlyInterest;
+      principalAmount = cuota - interestAmount;
+      saldo -= principalAmount;
+    } else {
+      // Sin interés: cada cuota reduce el saldo uniformemente
+      saldo -= principalAmount;
+    }
+
+    // Asegurar que no haya valores NaN
+    const installmentAmount = isNaN(cuota)
+      ? totalAmount / numberOfInstallments
+      : cuota;
 
     const installment: Installment = {
       creditSaleId: 0,
       number: i,
       dueDate: dueDate.toISOString().split("T")[0],
-      amount: parseFloat(cuota.toFixed(2)),
-      interestAmount: parseFloat(interestAmount.toFixed(2)),
+      amount: parseFloat(installmentAmount.toFixed(2)),
+      interestAmount: parseFloat((interestAmount || 0).toFixed(2)),
       penaltyAmount: 0,
       status: "pendiente",
       daysOverdue: 0,

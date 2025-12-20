@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -32,8 +32,8 @@ import {
   ExpandMore,
   Receipt as ReceiptIcon,
   AccountCircle as AccountCircleIcon,
-  History as HistoryIcon,
   ExpandLess,
+  CreditCard,
 } from "@mui/icons-material";
 import { format, parseISO } from "date-fns";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
@@ -56,7 +56,6 @@ import CustomChip from "@/app/components/CustomChip";
 import { useRubro } from "@/app/context/RubroContext";
 import { CustomerFinancialSummary } from "@/app/components/CustomerFinancialSummary";
 import CustomGlobalTooltip from "@/app/components/CustomTooltipGlobal";
-import { getLocalDateString } from "@/app/lib/utils/getLocalDate";
 import Input from "@/app/components/Input";
 import { es } from "date-fns/locale";
 
@@ -97,22 +96,31 @@ interface CreditSummary {
   installments: Installment[];
   nextDueDate?: string;
   status: string;
+  customerName: string;
+}
+
+interface CreditSaleCardProps {
+  credit: CreditSummary;
+  onPayment: (credit: CreditSummary) => void;
+  onPayAll: (credit: CreditSummary) => void;
+  onPaymentSuccess?: () => void;
+  isExpanded: boolean;
+  onToggleExpand: (saleId: number) => void;
 }
 
 const CreditSaleCard = ({
   credit,
   onPayment,
+  onPayAll,
   isExpanded,
   onToggleExpand,
-}: {
-  credit: CreditSummary;
-  payments: Payment[];
-  onPayment: (credit: CreditSummary) => void;
-  isExpanded: boolean;
-  onToggleExpand: (saleId: number) => void;
-}) => {
+}: CreditSaleCardProps) => {
   const paymentProgress = (credit.paidAmount / credit.totalAmount) * 100;
   const isPaid = credit.pendingAmount <= 0;
+  const pendingInstallments = credit.installments.filter(
+    (inst) => inst.status === "pendiente" || inst.status === "vencida"
+  );
+  const hasMultiplePending = pendingInstallments.length > 1;
 
   return (
     <Card
@@ -312,22 +320,47 @@ const CreditSaleCard = ({
             )}
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {!isPaid && (
-              <Button
-                variant="contained"
-                size="small"
-                onClick={(e) => {
-                  e?.stopPropagation();
-                  onPayment(credit);
-                }}
-                sx={{
-                  bgcolor: "primary.main",
-                  "&:hover": { bgcolor: "primary.dark" },
-                }}
-              >
-                Pagar Cuota
-              </Button>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={(e) => {
+                    e?.stopPropagation();
+                    onPayment(credit);
+                  }}
+                  sx={{
+                    bgcolor: "primary.main",
+                    "&:hover": { bgcolor: "primary.dark" },
+                    whiteSpace: "nowrap",
+                    minWidth: "120px",
+                  }}
+                >
+                  Pagar Cuota
+                </Button>
+
+                {hasMultiplePending && (
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={(e) => {
+                      e?.stopPropagation();
+                      onPayAll(credit);
+                    }}
+                    sx={{
+                      color: "text.secondary",
+                      borderColor: "text.secondary",
+                      "&:hover": {
+                        backgroundColor: "action.hover",
+                        borderColor: "text.primary",
+                      },
+                    }}
+                  >
+                    Pagar Todas ({pendingInstallments.length})
+                  </Button>
+                )}
+              </Box>
             )}
             <IconButton
               size="small"
@@ -385,7 +418,6 @@ const CreditSaleCard = ({
                 <TableBody>
                   {credit.installments.map((installment) => {
                     const isOverdue = installment.status === "vencida";
-
                     const isPaid = installment.status === "pagada";
 
                     return (
@@ -464,6 +496,7 @@ const CreditosPage = () => {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [filterCustomer, setFilterCustomer] = useState<string>("");
   const [inputValue, setInputValue] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const [customerSummaries, setCustomerSummaries] = useState<
     CustomerCreditSummary[]
@@ -477,13 +510,18 @@ const CreditosPage = () => {
   const [creditSummaries, setCreditSummaries] = useState<CreditSummary[]>([]);
   const [expandedCreditId, setExpandedCreditId] = useState<number | null>(null);
   const [infoModalTab, setInfoModalTab] = useState(0);
+  const [selectedCreditForAllPayments, setSelectedCreditForAllPayments] =
+    useState<CreditSummary | null>(null);
+  const [allPaymentsModalOpen, setAllPaymentsModalOpen] = useState(false);
 
   const {
     overdueInstallments,
     fetchInstallments,
     payInstallment,
+    payAllInstallments,
     checkOverdueInstallments,
     getCreditSalesInInstallments,
+    setInstallments,
   } = useCreditInstallments();
 
   const { currentPage, itemsPerPage } = usePagination();
@@ -552,6 +590,7 @@ const CreditosPage = () => {
         installments: saleInstallments,
         nextDueDate: nextDueDate,
         status: status,
+        customerName: sale.customerName || customerSummary.customerName,
       });
     });
 
@@ -566,6 +605,7 @@ const CreditosPage = () => {
     try {
       const creditSales = await getCreditSalesInInstallments();
       const customerMap = new Map<string, CustomerCreditSummary>();
+      const allInstallments = await db.installments.toArray();
 
       for (const sale of creditSales) {
         const customerKey = sale.customerId || sale.customerName;
@@ -602,10 +642,9 @@ const CreditosPage = () => {
           sale.creditDetails?.principalAmount || sale.total;
         summary.totalPrincipalAmount += principalAmount;
 
-        const saleInstallments = await db.installments
-          .where("creditSaleId")
-          .equals(sale.id)
-          .toArray();
+        const saleInstallments = allInstallments.filter(
+          (inst) => inst.creditSaleId === sale.id
+        );
 
         summary.installments.push(...saleInstallments);
 
@@ -678,46 +717,107 @@ const CreditosPage = () => {
     }
   };
 
+  const reloadAllData = useCallback(
+    async (forceReload = false) => {
+      try {
+        if (forceReload) {
+          setCustomerSummaries([]);
+          setCreditSummaries([]);
+        }
+
+        await fetchInstallments();
+        await checkOverdueInstallments();
+        const sales = await getCreditSalesInInstallments();
+        setCreditSales(sales);
+        const customerMap = new Map<string, CustomerOption>();
+        sales.forEach((sale) => {
+          if (sale.customerName && !customerMap.has(sale.customerName)) {
+            customerMap.set(sale.customerName, {
+              id: sale.customerId || `temp-${sale.customerName}`,
+              name: sale.customerName,
+            });
+          }
+        });
+
+        const allCustomers = Array.from(customerMap.values());
+        const filteredCustomers = await applyRubroFilter(
+          allCustomers,
+          sales,
+          rubro
+        );
+
+        setCustomers(filteredCustomers);
+        const summaries = await calculateCustomerSummaries();
+        setCustomerSummaries(summaries);
+        if (selectedCustomerSummary) {
+          const currentSummary = summaries.find(
+            (s) => s.customerId === selectedCustomerSummary.customerId
+          );
+          if (currentSummary) {
+            setSelectedCustomerSummary(currentSummary);
+            const creditSummaries = calculateCreditSummaries(currentSummary);
+            setCreditSummaries(creditSummaries);
+            await loadCustomerPayments(currentSummary.customerId);
+          }
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error al recargar datos:", error);
+        return false;
+      }
+    },
+    [
+      rubro,
+      selectedCustomerSummary,
+      fetchInstallments,
+      checkOverdueInstallments,
+      getCreditSalesInInstallments,
+    ]
+  );
+
   useEffect(() => {
     const loadData = async () => {
-      await fetchInstallments();
-      await checkOverdueInstallments();
-
-      const sales = await getCreditSalesInInstallments();
-      const customerMap = new Map<string, CustomerOption>();
-      sales.forEach((sale) => {
-        if (sale.customerName && !customerMap.has(sale.customerName)) {
-          customerMap.set(sale.customerName, {
-            id: sale.customerId || `temp-${sale.customerName}`,
-            name: sale.customerName,
-          });
-        }
-      });
-
-      const allCustomers = Array.from(customerMap.values());
-      const filteredCustomers = await applyRubroFilter(
-        allCustomers,
-        sales,
-        rubro
-      );
-
-      setCustomers(filteredCustomers);
-      setCreditSales(sales);
-
-      const summaries = await calculateCustomerSummaries();
-      setCustomerSummaries(summaries);
+      await reloadAllData();
     };
 
     loadData();
 
     const interval = setInterval(checkOverdueInstallments, 24 * 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [
-    fetchInstallments,
-    checkOverdueInstallments,
-    rubro,
-    getCreditSalesInInstallments,
-  ]);
+  }, [reloadAllData, checkOverdueInstallments]);
+
+  useEffect(() => {
+    if (!paymentModalOpen) {
+      setSelectedInstallment(null);
+      setPaymentError(null);
+    }
+    if (!allPaymentsModalOpen) {
+      setSelectedCreditForAllPayments(null);
+      setPaymentError(null);
+    }
+  }, [paymentModalOpen, allPaymentsModalOpen]);
+
+  useEffect(() => {
+    if (!customerDetailModalOpen) {
+      // Solo limpiar si no estamos en medio de un pago
+      if (!paymentModalOpen && !allPaymentsModalOpen) {
+        setSelectedCustomerSummary(null);
+        setCreditSummaries([]);
+        setCustomerPayments([]);
+        setExpandedCreditId(null);
+        setInfoModalTab(0);
+      }
+    }
+  }, [customerDetailModalOpen, paymentModalOpen, allPaymentsModalOpen]);
+
+  // Y este para el modal de pagar todas
+  useEffect(() => {
+    if (!allPaymentsModalOpen) {
+      setSelectedCreditForAllPayments(null);
+      setPaymentError(null);
+    }
+  }, [allPaymentsModalOpen]);
 
   const applyRubroFilter = async (
     customers: CustomerOption[],
@@ -762,6 +862,8 @@ const CreditosPage = () => {
     if (!selectedInstallment) return;
 
     try {
+      setPaymentError(null);
+
       const creditSale = creditSales.find(
         (s) => s.id === selectedInstallment.creditSaleId
       );
@@ -771,65 +873,127 @@ const CreditosPage = () => {
         return;
       }
 
-      const today = getLocalDateString();
-      const dailyCash = await db.dailyCashes.get({ date: today });
+      // Verificar si la cuota ya está pagada
+      const installmentInDB = await db.installments.get(
+        selectedInstallment.id!
+      );
 
-      if (dailyCash) {
-        const existingPayment = dailyCash.movements.find(
-          (m) =>
-            m.description?.includes(
-              `Pago cuota #${selectedInstallment.number}`
-            ) &&
-            m.customerId === creditSale.customerId &&
-            m.amount === selectedInstallment.amount &&
-            m.type === "INGRESO"
-        );
-
-        if (existingPayment) {
-          showNotification("Esta cuota ya fue pagada", "error");
-          return;
-        }
+      if (installmentInDB?.status === "pagada") {
+        showNotification("Esta cuota ya fue pagada anteriormente", "error");
+        return;
       }
 
-      await payInstallment(selectedInstallment.id!, paymentMethod);
+      // PAGAR LA CUOTA
+      const result = await payInstallment(
+        selectedInstallment.id!,
+        paymentMethod
+      );
 
-      if (creditSale.customerId) {
-        const customer = await db.customers.get(creditSale.customerId);
-        if (customer) {
-          const customerInstallments = await db.installments
-            .where("creditSaleId")
-            .equals(creditSale.id)
-            .toArray();
-
-          const pendingInstallments = customerInstallments.filter(
-            (inst) => inst.status === "pendiente" || inst.status === "vencida"
-          );
-
-          const remainingAmount = pendingInstallments.reduce(
-            (sum, inst) => sum + inst.amount,
-            0
-          );
-
-          await db.customers.update(creditSale.customerId, {
-            pendingBalance: remainingAmount,
-            updatedAt: new Date().toISOString(),
-          });
-        }
+      if (!result.success) {
+        throw new Error("Error al procesar el pago");
       }
 
       showNotification("Cuota pagada correctamente", "success");
+
+      // CERRAR TODOS LOS MODALES
       setPaymentModalOpen(false);
+      setSelectedInstallment(null);
+      setCustomerDetailModalOpen(false); // ✅ CERRAR MODAL DE DETALLE
 
-      await fetchInstallments();
-      await checkOverdueInstallments();
-
-      const summaries = await calculateCustomerSummaries();
-      setCustomerSummaries(summaries);
+      // LUEGO RECARGAR LOS DATOS
+      await reloadAllData(true);
     } catch (error) {
       console.error("Error al procesar el pago:", error);
-      showNotification("Error al pagar la cuota", "error");
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al pagar la cuota";
+      setPaymentError(errorMessage);
+      showNotification(errorMessage, "error");
     }
   };
+
+  const handlePayAllInstallments = async () => {
+    if (!selectedCreditForAllPayments) return;
+
+    try {
+      setPaymentError(null);
+
+      const creditSale = creditSales.find(
+        (s) => s.id === selectedCreditForAllPayments.saleId
+      );
+
+      if (!creditSale) {
+        showNotification("No se encontró la venta a crédito", "error");
+        return;
+      }
+
+      const pendingInstallments = await db.installments
+        .where("creditSaleId")
+        .equals(selectedCreditForAllPayments.saleId)
+        .and((inst) => inst.status === "pendiente" || inst.status === "vencida")
+        .toArray();
+
+      if (pendingInstallments.length === 0) {
+        showNotification("Este crédito ya está completamente pagado", "error");
+        return;
+      }
+
+      const result = await payAllInstallments(
+        selectedCreditForAllPayments.saleId,
+        paymentMethod
+      );
+
+      if (!result.success) {
+        throw new Error("Error al procesar el pago total");
+      }
+
+      // Actualizar el estado local de cuotas
+      if (result.updatedInstallments) {
+        setInstallments((prev) =>
+          prev.map((inst) => {
+            const updated = result.updatedInstallments?.find(
+              (u) => u.id === inst.id
+            );
+            return updated ? updated : inst;
+          })
+        );
+      }
+
+      showNotification(`Todas las cuotas pagadas correctamente`, "success");
+
+      // CERRAR TODOS LOS MODALES
+      setAllPaymentsModalOpen(false);
+      setSelectedCreditForAllPayments(null);
+      setCustomerDetailModalOpen(false); // ✅ CERRAR MODAL DE DETALLE
+
+      // LUEGO RECARGAR LOS DATOS
+      await reloadAllData(true);
+    } catch (error) {
+      console.error("Error al procesar el pago total:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Error al pagar todas las cuotas";
+      setPaymentError(errorMessage);
+      showNotification(errorMessage, "error");
+    }
+  };
+
+  useEffect(() => {
+    if (customerDetailModalOpen && selectedCustomerSummary) {
+      const syncData = async () => {
+        const summaries = await calculateCustomerSummaries();
+        const currentSummary = summaries.find(
+          (s) => s.customerId === selectedCustomerSummary.customerId
+        );
+        if (currentSummary) {
+          setSelectedCustomerSummary(currentSummary);
+          const creditSummaries = calculateCreditSummaries(currentSummary);
+          setCreditSummaries(creditSummaries);
+        }
+      };
+      syncData();
+    }
+  }, [customerDetailModalOpen, selectedCustomerSummary]);
 
   const filteredCustomerSummaries = customerSummaries.filter((summary) => {
     if (filterStatus !== "todos") {
@@ -1049,140 +1213,165 @@ const CreditosPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {currentItems.map((summary) => (
-                  <TableRow
-                    key={summary.customerId}
-                    hover
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      "&:hover": { backgroundColor: "action.hover" },
-                      transition: "all 0.3s",
-                    }}
-                  >
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="medium">
-                        {summary.customerName}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        ({summary.creditSales.length} créditos)
-                      </Typography>
-                    </TableCell>
+                {currentItems.length > 0 ? (
+                  currentItems.map((summary) => (
+                    <TableRow
+                      key={summary.customerId}
+                      hover
+                      sx={{
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": { backgroundColor: "action.hover" },
+                        transition: "all 0.3s",
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {summary.customerName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          ({summary.creditSales.length} créditos)
+                        </Typography>
+                      </TableCell>
 
-                    <TableCell align="center">
-                      <Typography variant="body2" fontWeight="bold">
-                        {formatCurrency(summary.totalCreditAmount)}
-                      </Typography>
-                    </TableCell>
+                      <TableCell align="center">
+                        <Typography variant="body2" fontWeight="bold">
+                          {formatCurrency(summary.totalCreditAmount)}
+                        </Typography>
+                      </TableCell>
 
-                    <TableCell align="center">
-                      <Typography
-                        variant="body2"
-                        color="success.main"
-                        fontWeight={"bold"}
-                      >
-                        {formatCurrency(summary.totalPaidAmount)}
-                      </Typography>
-                    </TableCell>
+                      <TableCell align="center">
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          fontWeight={"bold"}
+                        >
+                          {formatCurrency(summary.totalPaidAmount)}
+                        </Typography>
+                      </TableCell>
 
-                    <TableCell align="center">
-                      <Typography
-                        variant="body2"
-                        fontWeight="bold"
-                        color={
-                          summary.pendingAmount > 0
-                            ? "warning.main"
-                            : "success.main"
-                        }
-                      >
-                        {summary.pendingAmount <= 0
-                          ? formatCurrency(0)
-                          : formatCurrency(summary.pendingAmount)}
-                      </Typography>
-                    </TableCell>
+                      <TableCell align="center">
+                        <Typography
+                          variant="body2"
+                          fontWeight="bold"
+                          color={
+                            summary.pendingAmount > 0
+                              ? "warning.main"
+                              : "success.main"
+                          }
+                        >
+                          {summary.pendingAmount <= 0
+                            ? formatCurrency(0)
+                            : formatCurrency(summary.pendingAmount)}
+                        </Typography>
+                      </TableCell>
 
-                    <TableCell align="center">
+                      <TableCell align="center">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 1,
+                          }}
+                        >
+                          {summary.nextDueDate ? (
+                            <Typography variant="body2">
+                              {formatDate(summary.nextDueDate)}
+                            </Typography>
+                          ) : summary.pendingInstallments === 0 ? (
+                            <CustomChip
+                              label="Al día"
+                              color="success"
+                              size="small"
+                              sx={{ fontSize: "0.75rem" }}
+                            />
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              Sin fecha
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+
+                      <TableCell align="center">
+                        <CustomChip
+                          label={
+                            summary.overdueInstallments > 0
+                              ? "Con vencimientos"
+                              : summary.pendingInstallments > 0
+                              ? "Pendiente"
+                              : "Al día"
+                          }
+                          color={
+                            summary.overdueInstallments > 0
+                              ? "error"
+                              : summary.pendingInstallments > 0
+                              ? "warning"
+                              : "success"
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+
+                      <TableCell align="center">
+                        <Typography variant="body2">
+                          {summary.totalInstallments}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell align="center">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            justifyContent: "center",
+                          }}
+                        >
+                          <CustomGlobalTooltip title="Ver detalles">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenCustomerDetail(summary)}
+                              sx={{
+                                borderRadius: "4px",
+                                color: "text.secondary",
+                                "&:hover": {
+                                  backgroundColor: "primary.main",
+                                  color: "white",
+                                },
+                              }}
+                            >
+                              <Info fontSize="small" />
+                            </IconButton>
+                          </CustomGlobalTooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} sx={{ py: 4, textAlign: "center" }}>
                       <Box
                         sx={{
                           display: "flex",
+                          flexDirection: "column",
                           alignItems: "center",
-                          justifyContent: "center",
-                          gap: 1,
+                          color: "text.secondary",
+                          py: 4,
                         }}
                       >
-                        {summary.nextDueDate ? (
-                          <Typography variant="body2">
-                            {formatDate(summary.nextDueDate)}
-                          </Typography>
-                        ) : summary.pendingInstallments === 0 ? (
-                          <CustomChip
-                            label="Al día"
-                            color="success"
-                            size="small"
-                            sx={{ fontSize: "0.75rem" }}
-                          />
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            Sin fecha
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-
-                    <TableCell align="center">
-                      <CustomChip
-                        label={
-                          summary.overdueInstallments > 0
-                            ? "Con vencimientos"
-                            : summary.pendingInstallments > 0
-                            ? "Pendiente"
-                            : "Al día"
-                        }
-                        color={
-                          summary.overdueInstallments > 0
-                            ? "error"
-                            : summary.pendingInstallments > 0
-                            ? "warning"
-                            : "success"
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-
-                    <TableCell align="center">
-                      <Typography variant="body2">
-                        {summary.totalInstallments}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell align="center">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          justifyContent: "center",
-                        }}
-                      >
-                        <CustomGlobalTooltip title="Ver detalles">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenCustomerDetail(summary)}
-                            sx={{
-                              borderRadius: "4px",
-                              color: "text.secondary",
-                              "&:hover": {
-                                backgroundColor: "primary.main",
-                                color: "white",
-                              },
-                            }}
-                          >
-                            <Info fontSize="small" />
-                          </IconButton>
-                        </CustomGlobalTooltip>
+                        <CreditCard
+                          sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
+                        />
+                        <Typography>
+                          {filterCustomer || filterStatus !== "todos"
+                            ? "No se encontraron créditos con los filtros seleccionados."
+                            : "No hay créditos registrados."}
+                        </Typography>
                       </Box>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -1196,6 +1385,7 @@ const CreditosPage = () => {
           />
         )}
 
+        {/* Modal para pagar cuota individual */}
         <Modal
           isOpen={paymentModalOpen}
           onClose={() => setPaymentModalOpen(false)}
@@ -1233,6 +1423,11 @@ const CreditosPage = () => {
         >
           {selectedInstallment && (
             <Box>
+              {paymentError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {paymentError}
+                </Alert>
+              )}
               <Typography gutterBottom variant="body1">
                 Cliente:{" "}
                 <strong>
@@ -1256,6 +1451,161 @@ const CreditosPage = () => {
                   </strong>
                 </Typography>
               )}
+
+              <FormControl fullWidth sx={{ mt: 3 }}>
+                <Select
+                  value={paymentMethod}
+                  onChange={(value) => setPaymentMethod(value as PaymentMethod)}
+                  label="Método de pago"
+                  options={paymentMethodOptions}
+                />
+              </FormControl>
+            </Box>
+          )}
+        </Modal>
+
+        {/* Modal para pagar todas las cuotas */}
+        <Modal
+          isOpen={allPaymentsModalOpen}
+          onClose={() => setAllPaymentsModalOpen(false)}
+          title={`Pagar todas las cuotas pendientes`}
+          bgColor="bg-white dark:bg-gray_b"
+          buttons={
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+              <Button
+                onClick={() => setAllPaymentsModalOpen(false)}
+                variant="text"
+                sx={{
+                  color: "text.secondary",
+                  borderColor: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                    borderColor: "text.primary",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handlePayAllInstallments}
+                startIcon={<CheckCircle />}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  "&:disabled": {
+                    bgcolor: "action.disabledBackground",
+                    color: "action.disabled",
+                  },
+                  boxShadow: theme.shadows[2],
+                  minWidth: 140,
+                }}
+              >
+                Confirmar Pago
+              </Button>
+            </Box>
+          }
+        >
+          {selectedCreditForAllPayments && (
+            <Box>
+              {paymentError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {paymentError}
+                </Alert>
+              )}
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  Se pagarán todas las cuotas pendientes de este crédito en una
+                  sola transacción.
+                </Typography>
+              </Alert>
+
+              <Typography gutterBottom variant="body1">
+                Crédito:{" "}
+                <strong>Venta #{selectedCreditForAllPayments.saleId}</strong>
+              </Typography>
+              <Typography gutterBottom variant="body1">
+                Cliente:{" "}
+                <strong>{selectedCreditForAllPayments.customerName}</strong>
+              </Typography>
+
+              <Box sx={{ my: 2, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
+                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                  Resumen de cuotas a pagar:
+                </Typography>
+                {selectedCreditForAllPayments.installments
+                  .filter(
+                    (inst) =>
+                      inst.status === "pendiente" || inst.status === "vencida"
+                  )
+                  .map((installment) => (
+                    <Box
+                      key={installment.id}
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 1,
+                        p: 1,
+                        bgcolor: "white",
+                        borderRadius: 1,
+                      }}
+                    >
+                      <Typography variant="body2">
+                        Cuota {installment.number} -
+                        {format(parseISO(installment.dueDate), "dd/MM/yyyy")}
+                        {installment.status === "vencida" && (
+                          <CustomChip
+                            label="Vencida"
+                            color="error"
+                            size="small"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {formatCurrency(installment.amount)}
+                        {installment.interestAmount > 0 && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ ml: 1 }}
+                          >
+                            (Int: {formatCurrency(installment.interestAmount)})
+                          </Typography>
+                        )}
+                      </Typography>
+                    </Box>
+                  ))}
+
+                <Divider sx={{ my: 1 }} />
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mt: 2,
+                  }}
+                >
+                  <Typography variant="body1" fontWeight="bold">
+                    Total a pagar:
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    fontWeight="bold"
+                    color="primary.main"
+                  >
+                    {formatCurrency(
+                      selectedCreditForAllPayments.installments
+                        .filter(
+                          (inst) =>
+                            inst.status === "pendiente" ||
+                            inst.status === "vencida"
+                        )
+                        .reduce((sum, inst) => sum + inst.amount, 0)
+                    )}
+                  </Typography>
+                </Box>
+              </Box>
 
               <FormControl fullWidth sx={{ mt: 3 }}>
                 <Select
@@ -1384,9 +1734,17 @@ const CreditosPage = () => {
                     sx={{ display: "flex", flexDirection: "column", gap: 2 }}
                   >
                     {creditSummaries.length === 0 ? (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <ReceiptIcon
-                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          color: "text.secondary",
+                          py: 4,
+                        }}
+                      >
+                        <CreditCard
+                          sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                         />
                         <Typography color="text.secondary">
                           No hay créditos registrados
@@ -1397,11 +1755,7 @@ const CreditosPage = () => {
                         <CreditSaleCard
                           key={credit.saleId}
                           credit={credit}
-                          payments={customerPayments.filter(
-                            (p) => p.saleId === credit.saleId
-                          )}
                           onPayment={(credit) => {
-                            // Lógica para pagar una cuota específica
                             const pendingInstallment = credit.installments.find(
                               (inst) =>
                                 inst.status === "pendiente" ||
@@ -1412,6 +1766,11 @@ const CreditosPage = () => {
                               setPaymentModalOpen(true);
                             }
                           }}
+                          onPayAll={(credit) => {
+                            setSelectedCreditForAllPayments(credit);
+                            setAllPaymentsModalOpen(true);
+                          }}
+                          onPaymentSuccess={() => reloadAllData(true)}
                           isExpanded={expandedCreditId === credit.saleId}
                           onToggleExpand={handleExpandCredit}
                         />
@@ -1425,9 +1784,17 @@ const CreditosPage = () => {
                     sx={{ display: "flex", flexDirection: "column", gap: 2 }}
                   >
                     {creditosPendientes.length === 0 ? (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <CheckCircle
-                          sx={{ fontSize: 64, color: "success.main", mb: 2 }}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          color: "text.secondary",
+                          py: 4,
+                        }}
+                      >
+                        <CreditCard
+                          sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                         />
                         <Typography color="text.secondary">
                           No hay créditos pendientes
@@ -1438,9 +1805,6 @@ const CreditosPage = () => {
                         <CreditSaleCard
                           key={credit.saleId}
                           credit={credit}
-                          payments={customerPayments.filter(
-                            (p) => p.saleId === credit.saleId
-                          )}
                           onPayment={(credit) => {
                             const pendingInstallment = credit.installments.find(
                               (inst) =>
@@ -1452,6 +1816,11 @@ const CreditosPage = () => {
                               setPaymentModalOpen(true);
                             }
                           }}
+                          onPayAll={(credit) => {
+                            setSelectedCreditForAllPayments(credit);
+                            setAllPaymentsModalOpen(true);
+                          }}
+                          onPaymentSuccess={() => reloadAllData(true)}
                           isExpanded={expandedCreditId === credit.saleId}
                           onToggleExpand={handleExpandCredit}
                         />
@@ -1465,9 +1834,17 @@ const CreditosPage = () => {
                     sx={{ display: "flex", flexDirection: "column", gap: 2 }}
                   >
                     {creditosPagados.length === 0 ? (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <HistoryIcon
-                          sx={{ fontSize: 64, color: "text.disabled", mb: 2 }}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          color: "text.secondary",
+                          py: 4,
+                        }}
+                      >
+                        <CreditCard
+                          sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                         />
                         <Typography color="text.secondary">
                           No hay créditos completamente pagados
@@ -1478,10 +1855,9 @@ const CreditosPage = () => {
                         <CreditSaleCard
                           key={credit.saleId}
                           credit={credit}
-                          payments={customerPayments.filter(
-                            (p) => p.saleId === credit.saleId
-                          )}
                           onPayment={() => {}}
+                          onPayAll={() => {}}
+                          onPaymentSuccess={() => reloadAllData(true)}
                           isExpanded={expandedCreditId === credit.saleId}
                           onToggleExpand={handleExpandCredit}
                         />

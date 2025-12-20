@@ -1046,8 +1046,7 @@ const PrintableTicket = forwardRef<PrintableTicketHandle, PrintableTicketProps>(
                     sale.creditDetails && (
                       <>
                         <p className="footer-text" style={styles.footerText}>
-                          Cuota(s) pagada(s):{" "}
-                          {sale.creditDetails.currentInstallment || 1} de{" "}
+                          Cuota(s):{" "}
                           {sale.creditDetails.numberOfInstallments || 1}
                         </p>
                       </>

@@ -1,3 +1,4 @@
+"use client";
 import { useState, useCallback } from "react";
 import { db } from "@/app/database/db";
 import {
@@ -6,6 +7,7 @@ import {
   PaymentMethod,
   DailyCashMovement,
   DailyCash,
+  InstallmentStatus,
 } from "@/app/lib/types/types";
 import { differenceInDays, isBefore } from "date-fns";
 import { getLocalDateString } from "../lib/utils/getLocalDate";
@@ -32,8 +34,6 @@ export const useCreditInstallments = () => {
     for (let i = 1; i <= numberOfInstallments; i++) {
       const dueDate = new Date(start);
       dueDate.setMonth(dueDate.getMonth() + i);
-
-      // Calcular interés solo si hay tasa de interés
       const interestAmount =
         interestRate > 0
           ? (totalAmount / numberOfInstallments) * monthlyInterest
@@ -64,12 +64,10 @@ export const useCreditInstallments = () => {
   const getCreditSalesInInstallments = useCallback(async () => {
     try {
       const allSales = await db.sales.toArray();
-
-      // Filtrar exclusivamente créditos en cuotas
       const creditSales = allSales.filter(
         (sale) =>
           sale.credit === true &&
-          sale.creditType === "credito_cuotas" && // Solo este tipo
+          sale.creditType === "credito_cuotas" &&
           sale.customerName
       );
 
@@ -83,8 +81,6 @@ export const useCreditInstallments = () => {
   const checkOverdueInstallments = useCallback(async () => {
     try {
       const today = new Date();
-
-      // Primero obtenemos solo las ventas que son créditos en cuotas
       const creditSales = await getCreditSalesInInstallments();
       const creditSaleIds = creditSales.map((sale) => sale.id);
 
@@ -93,7 +89,6 @@ export const useCreditInstallments = () => {
         return [];
       }
 
-      // Luego obtenemos las cuotas solo de esos créditos
       const pendingInstallments = await db.installments
         .where("status")
         .equals("pendiente")
@@ -105,25 +100,32 @@ export const useCreditInstallments = () => {
         return isBefore(dueDate, today);
       });
 
-      // Actualizar estado a vencido
-      overdue.forEach(async (installment) => {
+      // Actualizar cuotas vencidas en la base de datos
+      for (const installment of overdue) {
         const daysOverdue = differenceInDays(
           today,
           new Date(installment.dueDate)
         );
-        const penaltyRate = 0.05; // 5% de penalización por día de atraso
+        const penaltyRate = 0.05;
         const penaltyAmount = installment.amount * penaltyRate * daysOverdue;
 
         await db.installments.update(installment.id!, {
-          status: "vencida",
+          status: "vencida" as InstallmentStatus,
           penaltyAmount,
           daysOverdue,
           updatedAt: new Date().toISOString(),
         });
-      });
+      }
 
-      setOverdueInstallments(overdue);
-      return overdue;
+      // Obtener las cuotas vencidas actualizadas
+      const updatedOverdue = await db.installments
+        .where("status")
+        .equals("vencida")
+        .and((installment) => creditSaleIds.includes(installment.creditSaleId))
+        .toArray();
+
+      setOverdueInstallments(updatedOverdue);
+      return updatedOverdue;
     } catch (error) {
       console.error("Error checking overdue installments:", error);
       return [];
@@ -137,7 +139,6 @@ export const useCreditInstallments = () => {
         let installmentsData: Installment[];
 
         if (creditSaleId) {
-          // Si se especifica un ID, verificar que sea un crédito en cuotas
           const sale = await db.sales.get(creditSaleId);
           if (sale && sale.creditType === "credito_cuotas") {
             installmentsData = await db.installments
@@ -148,7 +149,7 @@ export const useCreditInstallments = () => {
             installmentsData = [];
           }
         } else {
-          // Obtener solo cuotas de créditos en cuotas
+          // Recargar TODO desde la base de datos
           const creditSales = await getCreditSalesInInstallments();
           const creditSaleIds = creditSales.map((sale) => sale.id);
 
@@ -177,7 +178,7 @@ export const useCreditInstallments = () => {
   const payInstallment = async (
     installmentId: number,
     paymentMethod: PaymentMethod
-  ) => {
+  ): Promise<{ success: boolean; updatedInstallment?: Installment }> => {
     try {
       const today = getLocalDateString();
       const installment = await db.installments.get(installmentId);
@@ -186,14 +187,15 @@ export const useCreditInstallments = () => {
       const sale = await db.sales.get(installment.creditSaleId);
       if (!sale) throw new Error("Venta no encontrada");
 
-      // OBTENER LA GANANCIA REAL DE LOS PRODUCTOS
+      // Verificar si ya está pagada
+      if (installment.status === "pagada") {
+        throw new Error("Esta cuota ya fue pagada");
+      }
+
       let totalProfitFromProducts = 0;
       if (sale.products && sale.products.length > 0) {
-        // Calcular la ganancia proporcional de esta cuota
         const totalSaleAmount = sale.total;
         const installmentRatio = installment.amount / totalSaleAmount;
-
-        // Calcular ganancia total de la venta
         const saleTotalProfit = sale.products.reduce((sum, product) => {
           const priceInfo = calculatePrice(
             product,
@@ -202,26 +204,12 @@ export const useCreditInstallments = () => {
           );
           return sum + priceInfo.profit;
         }, 0);
-
-        // Ganancia proporcional de esta cuota
         totalProfitFromProducts = saleTotalProfit * installmentRatio;
       }
 
-      // VERIFICAR SI YA ESTÁ PAGADA
-      if (installment.status === "pagada") {
-        throw new Error("Esta cuota ya fue pagada");
-      }
-
-      // Actualizar la cuota
       const now = new Date().toISOString();
-      await db.installments.update(installmentId, {
-        status: "pagada",
-        paymentDate: now,
-        paymentMethod,
-        updatedAt: now,
-      });
 
-      // REGISTRAR EN CAJA DIARIA CON GANANCIA COMPLETA
+      // Crear movimiento de caja
       const movement: DailyCashMovement = {
         id: Date.now(),
         amount: installment.amount,
@@ -233,7 +221,6 @@ export const useCreditInstallments = () => {
         originalSaleId: sale.id,
         customerName: sale.customerName,
         customerId: sale.customerId,
-        // Registrar ganancia: ganancia del producto + interés
         profit: totalProfitFromProducts + (installment.interestAmount || 0),
         createdAt: now,
         items:
@@ -249,7 +236,7 @@ export const useCreditInstallments = () => {
           })) || [],
       };
 
-      // Resto del código permanece igual...
+      // Actualizar caja diaria
       const dailyCash = await db.dailyCashes.get({ date: today });
 
       if (!dailyCash) {
@@ -280,8 +267,246 @@ export const useCreditInstallments = () => {
           totalProfit,
         });
       }
+
+      // Crear objeto actualizado de la cuota
+      const updatedInstallment: Installment = {
+        ...installment,
+        status: "pagada" as InstallmentStatus,
+        paymentDate: now,
+        paymentMethod,
+        updatedAt: now,
+      };
+
+      // Actualizar en la base de datos
+      await db.installments.update(installmentId, updatedInstallment);
+
+      // Actualizar el estado local del hook
+      setInstallments((prev) =>
+        prev.map((inst) =>
+          inst.id === installmentId ? updatedInstallment : inst
+        )
+      );
+
+      // Actualizar estado de cuotas vencidas si es necesario
+      if (installment.status === "vencida") {
+        setOverdueInstallments((prev) =>
+          prev.filter((inst) => inst.id !== installmentId)
+        );
+      }
+
+      // Actualizar saldo pendiente del cliente
+      if (sale.customerId) {
+        const customer = await db.customers.get(sale.customerId);
+        if (customer) {
+          const allCustomerCredits = await db.sales
+            .where("customerId")
+            .equals(sale.customerId)
+            .and((s) => s.credit === true)
+            .toArray();
+
+          let totalPending = 0;
+          for (const creditSale of allCustomerCredits) {
+            const saleInstallments = await db.installments
+              .where("creditSaleId")
+              .equals(creditSale.id)
+              .toArray();
+
+            const pendingAmount = saleInstallments
+              .filter(
+                (inst) =>
+                  inst.status === "pendiente" || inst.status === "vencida"
+              )
+              .reduce((sum, inst) => sum + inst.amount, 0);
+
+            totalPending += pendingAmount;
+          }
+
+          await db.customers.update(sale.customerId, {
+            pendingBalance: totalPending,
+            updatedAt: now,
+          });
+        }
+      }
+
+      return { success: true, updatedInstallment };
     } catch (error) {
       console.error("Error al pagar la cuota:", error);
+      throw error;
+    }
+  };
+
+  const payAllInstallments = async (
+    creditSaleId: number,
+    paymentMethod: PaymentMethod
+  ): Promise<{ success: boolean; updatedInstallments: Installment[] }> => {
+    try {
+      const today = getLocalDateString();
+      const sale = await db.sales.get(creditSaleId);
+      if (!sale) throw new Error("Venta a crédito no encontrada");
+
+      const pendingInstallments = await db.installments
+        .where("creditSaleId")
+        .equals(creditSaleId)
+        .and((inst) => inst.status === "pendiente" || inst.status === "vencida")
+        .toArray();
+
+      if (pendingInstallments.length === 0) {
+        throw new Error("No hay cuotas pendientes para pagar");
+      }
+
+      const totalAmount = pendingInstallments.reduce(
+        (sum, inst) => sum + inst.amount,
+        0
+      );
+
+      let totalProfitFromProducts = 0;
+      if (sale.products && sale.products.length > 0) {
+        const saleTotalProfit = sale.products.reduce((sum, product) => {
+          const priceInfo = calculatePrice(
+            product,
+            product.quantity,
+            product.unit
+          );
+          return sum + priceInfo.profit;
+        }, 0);
+
+        const totalSaleAmount = sale.total;
+        const paymentRatio = totalAmount / totalSaleAmount;
+        totalProfitFromProducts = saleTotalProfit * paymentRatio;
+      }
+
+      const totalInterest = pendingInstallments.reduce(
+        (sum, inst) => sum + (inst.interestAmount || 0),
+        0
+      );
+
+      const now = new Date().toISOString();
+      const updatedInstallments: Installment[] = [];
+
+      // Actualizar cada cuota
+      for (const installment of pendingInstallments) {
+        const updatedInstallment: Installment = {
+          ...installment,
+          status: "pagada" as InstallmentStatus,
+          paymentDate: now,
+          paymentMethod,
+          updatedAt: now,
+        };
+
+        await db.installments.update(installment.id!, updatedInstallment);
+        updatedInstallments.push(updatedInstallment);
+      }
+
+      // Crear movimiento de caja para el pago total
+      const movement: DailyCashMovement = {
+        id: Date.now(),
+        amount: totalAmount,
+        description: `Pago total de ${pendingInstallments.length} cuotas - ${sale.customerName}`,
+        type: "INGRESO",
+        date: now,
+        paymentMethod,
+        isCreditPayment: true,
+        originalSaleId: sale.id,
+        customerName: sale.customerName,
+        customerId: sale.customerId,
+        profit: totalProfitFromProducts + totalInterest,
+        createdAt: now,
+        items:
+          sale.products?.map((product) => ({
+            productId: product.id,
+            productName: product.name,
+            quantity: product.quantity,
+            unit: product.unit,
+            price: product.price,
+            costPrice: product.costPrice,
+            profit: calculatePrice(product, product.quantity, product.unit)
+              .profit,
+          })) || [],
+      };
+
+      // Actualizar caja diaria
+      const dailyCash = await db.dailyCashes.get({ date: today });
+
+      if (!dailyCash) {
+        const newDailyCash: DailyCash = {
+          id: Date.now(),
+          date: today,
+          movements: [movement],
+          closed: false,
+          totalIncome: totalAmount,
+          totalExpense: 0,
+          totalProfit: totalProfitFromProducts + totalInterest,
+        };
+        await db.dailyCashes.add(newDailyCash);
+      } else {
+        const updatedMovements = [...dailyCash.movements, movement];
+        const totalIncome = updatedMovements
+          .filter((m) => m.type === "INGRESO")
+          .reduce((sum, m) => sum + m.amount, 0);
+
+        const totalProfit = updatedMovements
+          .filter((m) => m.type === "INGRESO")
+          .reduce((sum, m) => sum + (m.profit || 0), 0);
+
+        await db.dailyCashes.update(dailyCash.id, {
+          movements: updatedMovements,
+          totalIncome,
+          totalProfit,
+        });
+      }
+
+      // Actualizar el estado local del hook
+      setInstallments((prev) =>
+        prev.map((inst) => {
+          const updated = updatedInstallments.find((u) => u.id === inst.id);
+          return updated ? updated : inst;
+        })
+      );
+
+      // Actualizar cuotas vencidas
+      setOverdueInstallments((prev) =>
+        prev.filter(
+          (inst) => !updatedInstallments.some((u) => u.id === inst.id)
+        )
+      );
+
+      // Actualizar saldo pendiente del cliente
+      if (sale.customerId) {
+        const customer = await db.customers.get(sale.customerId);
+        if (customer) {
+          const allCustomerCredits = await db.sales
+            .where("customerId")
+            .equals(sale.customerId)
+            .and((s) => s.credit === true)
+            .toArray();
+
+          let totalPending = 0;
+          for (const creditSale of allCustomerCredits) {
+            const saleInstallments = await db.installments
+              .where("creditSaleId")
+              .equals(creditSale.id)
+              .toArray();
+
+            const pendingAmount = saleInstallments
+              .filter(
+                (inst) =>
+                  inst.status === "pendiente" || inst.status === "vencida"
+              )
+              .reduce((sum, inst) => sum + inst.amount, 0);
+
+            totalPending += pendingAmount;
+          }
+
+          await db.customers.update(sale.customerId, {
+            pendingBalance: totalPending,
+            updatedAt: now,
+          });
+        }
+      }
+
+      return { success: true, updatedInstallments };
+    } catch (error) {
+      console.error("Error al pagar todas las cuotas:", error);
       throw error;
     }
   };
@@ -289,13 +514,11 @@ export const useCreditInstallments = () => {
   const generateCreditReport = useCallback(
     async (startDate: string, endDate: string) => {
       try {
-        // Obtener solo créditos en cuotas
         const creditSalesData = (await db.sales
           .where("creditType")
           .equals("credito_cuotas")
           .toArray()) as CreditSale[];
 
-        // Obtener cuotas dentro del período para estos créditos
         const creditSaleIds = creditSalesData.map((sale) => sale.id);
         let allInstallments: Installment[] = [];
 
@@ -356,6 +579,7 @@ export const useCreditInstallments = () => {
     checkOverdueInstallments,
     fetchInstallments,
     payInstallment,
+    payAllInstallments,
     generateCreditReport,
     setInstallments,
     getCreditSalesInInstallments,

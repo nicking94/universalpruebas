@@ -2650,11 +2650,7 @@ const CuentasCorrientesPage = () => {
                           }}
                         >
                           <WalletIcon
-                            sx={{
-                              marginBottom: 2,
-                              color: "#9CA3AF",
-                              fontSize: 64,
-                            }}
+                        sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                           />
                           <Typography>
                             No hay cuentas corrientes registradas.

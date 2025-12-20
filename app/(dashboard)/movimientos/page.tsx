@@ -1156,15 +1156,12 @@ const MovimientosPage = () => {
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
-                            color: "text.disabled",
+                            color: "text.secondary",
+                            py: 4,
                           }}
                         >
                           <InsertDriveFile
-                            sx={{
-                              fontSize: 64,
-                              mb: 2,
-                              color: theme.palette.text.disabled,
-                            }}
+                            sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                           />
                           <Typography>
                             No hay movimientos registrados.

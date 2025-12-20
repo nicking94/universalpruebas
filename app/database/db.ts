@@ -71,8 +71,10 @@ class MyDatabase extends Dexie {
         products:
           "++id, name, barcode, stock, rubro, hasIvaIncluded, priceWithIva, costPriceWithIva, updatedAt",
         returns: "++id, productId, date",
-        priceLists: "++id, name, rubro, isDefault",
-        productPrices: "[productId+priceListId], productId, priceListId",
+        priceLists:
+          "++id, name, rubro, isDefault, isActive, createdAt, updatedAt",
+        productPrices:
+          "[productId+priceListId], productId, priceListId, isActive",
         users: "id, username",
         auth: "id, userId",
         sales:
@@ -109,18 +111,6 @@ class MyDatabase extends Dexie {
       })
       .upgrade(async (trans) => {
         if (trans.db.verno === 34) {
-          const rubros = ["comercio", "indumentaria"];
-
-          for (const rubro of rubros) {
-            await trans.table("priceLists").add({
-              id: Date.now() + Math.random(),
-              name: "Precio General",
-              rubro: rubro as Rubro,
-              isDefault: true,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          }
           await trans
             .table("products")
             .toCollection()
@@ -133,8 +123,6 @@ class MyDatabase extends Dexie {
                 product.createdAt = new Date().toISOString();
               }
             });
-
-          console.log("Migración de productos completada");
         }
 
         await trans

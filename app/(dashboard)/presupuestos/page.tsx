@@ -1471,14 +1471,11 @@ const PresupuestosPage = () => {
                             flexDirection: "column",
                             alignItems: "center",
                             color: "text.secondary",
+                            py: 4,
                           }}
                         >
                           <Description
-                            sx={{
-                              fontSize: 64,
-                              mb: 2,
-                              color: "text.disabled",
-                            }}
+                            sx={{ fontSize: 64, color: "grey.400", mb: 2 }}
                           />
                           <Typography>
                             {searchQuery
