@@ -13,7 +13,6 @@ import { Assignment } from "@mui/icons-material";
 import { Sale, Customer } from "@/app/lib/types/types";
 import Modal from "@/app/components/Modal";
 import Button from "@/app/components/Button";
-import CustomChip from "./CustomChip";
 
 interface ClientSalesModalProps {
   isOpen: boolean;
@@ -71,12 +70,6 @@ const ClientSalesModal = ({
                   >
                     Total
                   </TableCell>
-                  <TableCell
-                    sx={{ bgcolor: "primary.main", color: "white" }}
-                    align="center"
-                  >
-                    Estado
-                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -94,13 +87,6 @@ const ClientSalesModal = ({
                     </TableCell>
                     <TableCell align="center">
                       ${sale.total.toFixed(2)}
-                    </TableCell>
-                    <TableCell align="center">
-                      <CustomChip
-                        label={sale.paid ? "Pagado" : "Pendiente"}
-                        color={sale.paid ? "success" : "warning"}
-                        size="small"
-                      />
                     </TableCell>
                   </TableRow>
                 ))}

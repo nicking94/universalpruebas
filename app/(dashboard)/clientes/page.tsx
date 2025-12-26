@@ -730,12 +730,6 @@ const ClientesPage = () => {
                   >
                     Total
                   </TableCell>
-                  <TableCell
-                    sx={{ bgcolor: "primary.main", color: "white" }}
-                    align="center"
-                  >
-                    Estado
-                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -753,13 +747,6 @@ const ClientesPage = () => {
                     </TableCell>
                     <TableCell align="center">
                       ${sale.total.toFixed(2)}
-                    </TableCell>
-                    <TableCell align="center">
-                      <CustomChip
-                        label={sale.paid ? "Pagado" : "Pendiente"}
-                        color={sale.paid ? "success" : "warning"}
-                        size="small"
-                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1112,7 +1099,7 @@ const ClientesPage = () => {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={rubro !== "Todos los rubros" ? 6 : 5}
+                        colSpan={rubro !== "Todos los rubros" ? 5 : 4}
                         align="center"
                       >
                         <Box

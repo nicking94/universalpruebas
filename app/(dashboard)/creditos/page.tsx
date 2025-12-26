@@ -34,6 +34,7 @@ import {
   AccountCircle as AccountCircleIcon,
   ExpandLess,
   CreditCard,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { format, parseISO } from "date-fns";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
@@ -103,17 +104,21 @@ interface CreditSaleCardProps {
   credit: CreditSummary;
   onPayment: (credit: CreditSummary) => void;
   onPayAll: (credit: CreditSummary) => void;
+  onDelete?: (credit: CreditSummary) => void;
   onPaymentSuccess?: () => void;
   isExpanded: boolean;
   onToggleExpand: (saleId: number) => void;
+  showDeleteButton?: boolean;
 }
 
 const CreditSaleCard = ({
   credit,
   onPayment,
   onPayAll,
+  onDelete,
   isExpanded,
   onToggleExpand,
+  showDeleteButton = false,
 }: CreditSaleCardProps) => {
   const paymentProgress = (credit.paidAmount / credit.totalAmount) * 100;
   const isPaid = credit.pendingAmount <= 0;
@@ -362,6 +367,28 @@ const CreditSaleCard = ({
                 )}
               </Box>
             )}
+
+            {/* Botón de eliminar (solo si está completamente pagado y se muestra) */}
+            {showDeleteButton && isPaid && onDelete && (
+              <CustomGlobalTooltip title="Eliminar crédito">
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(credit);
+                  }}
+                  sx={{
+                    color: "error.main",
+                    "&:hover": {
+                      backgroundColor: "error.50",
+                    },
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </CustomGlobalTooltip>
+            )}
+
             <IconButton
               size="small"
               onClick={(e) => {
@@ -487,6 +514,17 @@ const CreditSaleCard = ({
   );
 };
 
+const debounce = <Args extends unknown[]>(
+  func: (...args: Args) => void,
+  wait: number
+): ((...args: Args) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 const CreditosPage = () => {
   const theme = useTheme();
   const [selectedInstallment, setSelectedInstallment] =
@@ -514,14 +552,29 @@ const CreditosPage = () => {
     useState<CreditSummary | null>(null);
   const [allPaymentsModalOpen, setAllPaymentsModalOpen] = useState(false);
 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [creditToDelete, setCreditToDelete] = useState<CreditSummary | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [selectedCustomerForDeletion, setSelectedCustomerForDeletion] =
+    useState<CustomerCreditSummary | null>(null);
+
+  // Cache de datos
+  const [cachedSummaries, setCachedSummaries] = useState<
+    Map<string, CustomerCreditSummary>
+  >(new Map());
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+
   const {
     overdueInstallments,
-    fetchInstallments,
     payInstallment,
     payAllInstallments,
     checkOverdueInstallments,
     getCreditSalesInInstallments,
-    setInstallments,
   } = useCreditInstallments();
 
   const { currentPage, itemsPerPage } = usePagination();
@@ -536,76 +589,144 @@ const CreditosPage = () => {
     color: "primary.contrastText",
   };
 
-  const calculateCreditSummaries = (
-    customerSummary: CustomerCreditSummary
-  ): CreditSummary[] => {
-    const summaries: CreditSummary[] = [];
+  // Función para eliminar crédito (añade esta función)
+  const deleteCreditSale = async (
+    creditSaleId: number
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const sale = await db.sales.get(creditSaleId);
+      if (!sale) {
+        throw new Error("Venta a crédito no encontrada");
+      }
 
-    customerSummary.creditSales.forEach((sale) => {
-      const saleInstallments = customerSummary.installments.filter(
-        (inst) => inst.creditSaleId === sale.id
-      );
+      // Verificar si hay cuotas pendientes
+      const pendingInstallments = await db.installments
+        .where("creditSaleId")
+        .equals(creditSaleId)
+        .and((inst) => inst.status === "pendiente" || inst.status === "vencida")
+        .toArray();
 
-      const paidAmount = saleInstallments
-        .filter((inst) => inst.status === "pagada")
-        .reduce((sum, inst) => sum + inst.amount, 0);
+      if (pendingInstallments.length > 0) {
+        throw new Error(
+          `No se puede eliminar. Hay ${pendingInstallments.length} cuotas pendientes.`
+        );
+      }
 
-      const pendingAmount = saleInstallments
-        .filter(
-          (inst) => inst.status === "pendiente" || inst.status === "vencida"
-        )
-        .reduce((sum, inst) => sum + inst.amount, 0);
+      // Eliminar todas las cuotas asociadas
+      await db.installments.where("creditSaleId").equals(creditSaleId).delete();
 
-      const interestAmount = saleInstallments.reduce(
-        (sum, inst) => sum + (inst.interestAmount || 0),
-        0
-      );
+      // Eliminar la venta
+      await db.sales.delete(creditSaleId);
 
-      const nextDueDate = saleInstallments
-        .filter(
-          (inst) => inst.status === "pendiente" || inst.status === "vencida"
-        )
-        .sort(
-          (a, b) =>
-            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-        )[0]?.dueDate;
+      // Actualizar movimientos de caja relacionados si existen
+      const dailyCashes = await db.dailyCashes.toArray();
+      for (const dailyCash of dailyCashes) {
+        const updatedMovements = dailyCash.movements.filter(
+          (movement) => movement.originalSaleId !== creditSaleId
+        );
 
-      const status =
-        pendingAmount === 0
-          ? "Pagado"
-          : saleInstallments.some((inst) => inst.status === "vencida")
-          ? "Vencido"
-          : "Pendiente";
+        if (updatedMovements.length !== dailyCash.movements.length) {
+          await db.dailyCashes.update(dailyCash.id, {
+            movements: updatedMovements,
+          });
+        }
+      }
 
-      summaries.push({
-        saleId: sale.id,
-        saleDate: sale.date,
-        totalAmount: sale.total,
-        principalAmount: sale.total - interestAmount,
-        interestAmount: interestAmount,
-        numberOfInstallments: saleInstallments.length,
-        interestRate: sale.creditDetails?.interestRate || 0,
-        paidAmount: paidAmount,
-        pendingAmount: pendingAmount,
-        installments: saleInstallments,
-        nextDueDate: nextDueDate,
-        status: status,
-        customerName: sale.customerName || customerSummary.customerName,
-      });
-    });
-
-    return summaries.sort(
-      (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
-    );
+      return {
+        success: true,
+        message: "Crédito eliminado correctamente",
+      };
+    } catch (error) {
+      console.error("Error al eliminar el crédito:", error);
+      throw error;
+    }
   };
 
-  const calculateCustomerSummaries = async (): Promise<
+  // Optimizar calculateCreditSummaries con useMemo
+  const calculateCreditSummaries = useCallback(
+    (customerSummary: CustomerCreditSummary): CreditSummary[] => {
+      const summaries: CreditSummary[] = [];
+
+      customerSummary.creditSales.forEach((sale) => {
+        const saleInstallments = customerSummary.installments.filter(
+          (inst) => inst.creditSaleId === sale.id
+        );
+
+        // Calcular montos de manera eficiente
+        let paidAmount = 0;
+        let pendingAmount = 0;
+        let interestAmount = 0;
+        let earliestDueDate: string | null = null;
+        let hasVencidas = false;
+
+        for (const inst of saleInstallments) {
+          interestAmount += inst.interestAmount || 0;
+
+          if (inst.status === "pagada") {
+            paidAmount += inst.amount;
+          } else if (inst.status === "pendiente" || inst.status === "vencida") {
+            pendingAmount += inst.amount;
+            if (inst.status === "vencida") {
+              hasVencidas = true;
+            }
+            if (!earliestDueDate || inst.dueDate < earliestDueDate) {
+              earliestDueDate = inst.dueDate;
+            }
+          }
+        }
+
+        const status =
+          pendingAmount === 0
+            ? "Pagado"
+            : hasVencidas
+            ? "Vencido"
+            : "Pendiente";
+
+        summaries.push({
+          saleId: sale.id,
+          saleDate: sale.date,
+          totalAmount: sale.total,
+          principalAmount: sale.total - interestAmount,
+          interestAmount: interestAmount,
+          numberOfInstallments: saleInstallments.length,
+          interestRate: sale.creditDetails?.interestRate || 0,
+          paidAmount: paidAmount,
+          pendingAmount: pendingAmount,
+          installments: saleInstallments,
+          nextDueDate: earliestDueDate || undefined,
+          status: status,
+          customerName: sale.customerName || customerSummary.customerName,
+        });
+      });
+
+      return summaries.sort(
+        (a, b) =>
+          new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()
+      );
+    },
+    []
+  );
+
+  // Optimizar calculateCustomerSummaries
+  const calculateCustomerSummaries = useCallback(async (): Promise<
     CustomerCreditSummary[]
   > => {
     try {
-      const creditSales = await getCreditSalesInInstallments();
+      const [creditSales, allInstallments] = await Promise.all([
+        getCreditSalesInInstallments(),
+        db.installments.toArray(),
+      ]);
+
       const customerMap = new Map<string, CustomerCreditSummary>();
-      const allInstallments = await db.installments.toArray();
+      const installmentsBySale = new Map<number, Installment[]>();
+
+      // Pre-procesar cuotas por venta
+      allInstallments.forEach((inst) => {
+        if (!installmentsBySale.has(inst.creditSaleId)) {
+          installmentsBySale.set(inst.creditSaleId, []);
+        }
+        installmentsBySale.get(inst.creditSaleId)!.push(inst);
+      });
 
       for (const sale of creditSales) {
         const customerKey = sale.customerId || sale.customerName;
@@ -642,16 +763,12 @@ const CreditosPage = () => {
           sale.creditDetails?.principalAmount || sale.total;
         summary.totalPrincipalAmount += principalAmount;
 
-        const saleInstallments = allInstallments.filter(
-          (inst) => inst.creditSaleId === sale.id
-        );
-
+        const saleInstallments = installmentsBySale.get(sale.id) || [];
         summary.installments.push(...saleInstallments);
 
-        let hasPendingInstallments = false;
         let earliestDueDate: string | null = null;
 
-        saleInstallments.forEach((installment) => {
+        for (const installment of saleInstallments) {
           summary.totalInstallments++;
 
           if (installment.status === "pagada") {
@@ -677,19 +794,21 @@ const CreditosPage = () => {
             }
 
             summary.pendingInstallments++;
-            hasPendingInstallments = true;
-
             if (!earliestDueDate || installment.dueDate < earliestDueDate) {
               earliestDueDate = installment.dueDate;
             }
           }
-        });
+        }
 
-        if (hasPendingInstallments && earliestDueDate) {
+        if (
+          earliestDueDate &&
+          (!summary.nextDueDate || earliestDueDate < summary.nextDueDate)
+        ) {
           summary.nextDueDate = earliestDueDate;
         }
       }
 
+      // Calcular montos pendientes
       for (const summary of customerMap.values()) {
         summary.pendingAmount = Math.max(
           0,
@@ -702,7 +821,7 @@ const CreditosPage = () => {
       console.error("Error calculando resúmenes por cliente:", error);
       return [];
     }
-  };
+  }, [getCreditSalesInInstallments]);
 
   const loadCustomerPayments = async (customerId: string) => {
     try {
@@ -717,107 +836,192 @@ const CreditosPage = () => {
     }
   };
 
-  const reloadAllData = useCallback(
-    async (forceReload = false) => {
+  // Función optimizada para actualizar cache de un cliente específico
+  const updateCustomerSummary = useCallback(
+    async (customerId: string) => {
       try {
-        if (forceReload) {
-          setCustomerSummaries([]);
-          setCreditSummaries([]);
-        }
-
-        await fetchInstallments();
-        await checkOverdueInstallments();
-        const sales = await getCreditSalesInInstallments();
-        setCreditSales(sales);
-        const customerMap = new Map<string, CustomerOption>();
-        sales.forEach((sale) => {
-          if (sale.customerName && !customerMap.has(sale.customerName)) {
-            customerMap.set(sale.customerName, {
-              id: sale.customerId || `temp-${sale.customerName}`,
-              name: sale.customerName,
-            });
-          }
-        });
-
-        const allCustomers = Array.from(customerMap.values());
-        const filteredCustomers = await applyRubroFilter(
-          allCustomers,
-          sales,
-          rubro
+        const summaries = await calculateCustomerSummaries();
+        const currentSummary = summaries.find(
+          (s) => s.customerId === customerId
         );
 
-        setCustomers(filteredCustomers);
-        const summaries = await calculateCustomerSummaries();
-        setCustomerSummaries(summaries);
-        if (selectedCustomerSummary) {
-          const currentSummary = summaries.find(
-            (s) => s.customerId === selectedCustomerSummary.customerId
-          );
-          if (currentSummary) {
+        if (currentSummary) {
+          // Actualizar cache
+          setCachedSummaries((prev) => {
+            const newCache = new Map(prev);
+            newCache.set(customerId, currentSummary);
+            return newCache;
+          });
+
+          // Si es el cliente seleccionado, actualizar estado
+          if (selectedCustomerSummary?.customerId === customerId) {
             setSelectedCustomerSummary(currentSummary);
             const creditSummaries = calculateCreditSummaries(currentSummary);
             setCreditSummaries(creditSummaries);
-            await loadCustomerPayments(currentSummary.customerId);
           }
         }
-
-        return true;
       } catch (error) {
-        console.error("Error al recargar datos:", error);
-        return false;
+        console.error("Error actualizando resumen del cliente:", error);
       }
     },
     [
-      rubro,
+      calculateCustomerSummaries,
+      calculateCreditSummaries,
       selectedCustomerSummary,
-      fetchInstallments,
-      checkOverdueInstallments,
-      getCreditSalesInInstallments,
     ]
   );
 
+  // Cargar datos iniciales (solo críticos)
+  const loadInitialData = useCallback(async () => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      // Cargar datos críticos en paralelo
+      const [sales] = await Promise.all([
+        getCreditSalesInInstallments(),
+        checkOverdueInstallments(),
+      ]);
+
+      setCreditSales(sales);
+
+      // Procesar clientes
+      const customerMap = new Map<string, CustomerOption>();
+      sales.forEach((sale) => {
+        if (sale.customerName && !customerMap.has(sale.customerName)) {
+          customerMap.set(sale.customerName, {
+            id: sale.customerId || `temp-${sale.customerName}`,
+            name: sale.customerName,
+          });
+        }
+      });
+
+      const allCustomers = Array.from(customerMap.values());
+      const filteredCustomers = await applyRubroFilter(
+        allCustomers,
+        sales,
+        rubro
+      );
+
+      setCustomers(filteredCustomers);
+      setInitialDataLoaded(true);
+
+      // Cargar resúmenes en segundo plano
+      setTimeout(async () => {
+        try {
+          const summaries = await calculateCustomerSummaries();
+
+          // Actualizar cache
+          const newCache = new Map();
+          summaries.forEach((summary) => {
+            newCache.set(summary.customerId, summary);
+          });
+          setCachedSummaries(newCache);
+          setLastRefresh(new Date());
+
+          setCustomerSummaries(summaries);
+        } catch (error) {
+          console.error("Error cargando resúmenes en segundo plano:", error);
+        }
+      }, 100);
+    } catch (error) {
+      console.error("Error al cargar datos iniciales:", error);
+      showNotification("Error al cargar datos", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    rubro,
+    isLoading,
+    getCreditSalesInInstallments,
+    checkOverdueInstallments,
+    calculateCustomerSummaries,
+    showNotification,
+  ]);
+
+  // Cargar datos completos (con cache)
+  const loadData = useCallback(
+    async (forceRefresh = false) => {
+      if (isLoading && !forceRefresh) return;
+
+      const now = new Date();
+      const shouldRefresh =
+        forceRefresh ||
+        !lastRefresh ||
+        now.getTime() - lastRefresh.getTime() > 60000; // Refrescar cada minuto
+
+      if (!shouldRefresh && cachedSummaries.size > 0) {
+        // Usar cache
+        setCustomerSummaries(Array.from(cachedSummaries.values()));
+
+        // Si hay un cliente seleccionado, actualizar sus datos
+        if (selectedCustomerSummary) {
+          const cachedSummary = cachedSummaries.get(
+            selectedCustomerSummary.customerId
+          );
+          if (cachedSummary) {
+            setSelectedCustomerSummary(cachedSummary);
+            const creditSummaries = calculateCreditSummaries(cachedSummary);
+            setCreditSummaries(creditSummaries);
+          }
+        }
+        return;
+      }
+
+      await loadInitialData();
+    },
+    [
+      isLoading,
+      lastRefresh,
+      cachedSummaries,
+      selectedCustomerSummary,
+      calculateCreditSummaries,
+      loadInitialData,
+    ]
+  );
+
+  // Efecto principal para carga inicial
   useEffect(() => {
-    const loadData = async () => {
-      await reloadAllData();
-    };
-
     loadData();
+  }, [loadData]);
 
-    const interval = setInterval(checkOverdueInstallments, 24 * 60 * 60 * 1000);
+  // Intervalo optimizado para revisar cuotas vencidas
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkOverdueInstallments();
+    }, 5 * 60 * 1000); // Revisar cada 5 minutos
+
     return () => clearInterval(interval);
-  }, [reloadAllData, checkOverdueInstallments]);
+  }, [checkOverdueInstallments]);
 
+  // Limpiar estados cuando se cierran modales
   useEffect(() => {
     if (!paymentModalOpen) {
       setSelectedInstallment(null);
       setPaymentError(null);
     }
+
     if (!allPaymentsModalOpen) {
       setSelectedCreditForAllPayments(null);
       setPaymentError(null);
     }
-  }, [paymentModalOpen, allPaymentsModalOpen]);
+
+    if (!deleteModalOpen) {
+      setCreditToDelete(null);
+      setSelectedCustomerForDeletion(null);
+      setDeleteError(null);
+    }
+  }, [paymentModalOpen, allPaymentsModalOpen, deleteModalOpen]);
 
   useEffect(() => {
     if (!customerDetailModalOpen) {
-      // Solo limpiar si no estamos en medio de un pago
-      if (!paymentModalOpen && !allPaymentsModalOpen) {
-        setSelectedCustomerSummary(null);
-        setCreditSummaries([]);
-        setCustomerPayments([]);
-        setExpandedCreditId(null);
-        setInfoModalTab(0);
-      }
+      setSelectedCustomerSummary(null);
+      setCreditSummaries([]);
+      setCustomerPayments([]);
+      setExpandedCreditId(null);
+      setInfoModalTab(0);
     }
-  }, [customerDetailModalOpen, paymentModalOpen, allPaymentsModalOpen]);
-
-  // Y este para el modal de pagar todas
-  useEffect(() => {
-    if (!allPaymentsModalOpen) {
-      setSelectedCreditForAllPayments(null);
-      setPaymentError(null);
-    }
-  }, [allPaymentsModalOpen]);
+  }, [customerDetailModalOpen]);
 
   const applyRubroFilter = async (
     customers: CustomerOption[],
@@ -828,13 +1032,21 @@ const CreditosPage = () => {
       return customers;
     }
 
+    // Optimizar filtro con cache de productos por venta
     const filteredCustomers = customers.filter((customer) => {
       const customerSales = sales.filter(
         (sale) => sale.customerName === customer.name
       );
-      return customerSales.some((sale) =>
-        sale.products?.some((product) => product.rubro === currentRubro)
-      );
+
+      return customerSales.some((sale) => {
+        if (!sale.products) return false;
+        for (const product of sale.products) {
+          if (product.rubro === currentRubro) {
+            return true;
+          }
+        }
+        return false;
+      });
     });
 
     return filteredCustomers;
@@ -858,11 +1070,13 @@ const CreditosPage = () => {
     ...customers,
   ];
 
+  // Función optimizada para pagar cuota
   const handlePayInstallment = async () => {
     if (!selectedInstallment) return;
 
     try {
       setPaymentError(null);
+      setPaymentModalOpen(false);
 
       const creditSale = creditSales.find(
         (s) => s.id === selectedInstallment.creditSaleId
@@ -895,27 +1109,147 @@ const CreditosPage = () => {
 
       showNotification("Cuota pagada correctamente", "success");
 
-      // CERRAR TODOS LOS MODALES
-      setPaymentModalOpen(false);
-      setSelectedInstallment(null);
-      setCustomerDetailModalOpen(false); // ✅ CERRAR MODAL DE DETALLE
+      // Actualizar solo el cliente afectado
+      if (creditSale.customerId) {
+        await updateCustomerSummary(creditSale.customerId);
+      }
 
-      // LUEGO RECARGAR LOS DATOS
-      await reloadAllData(true);
+      // Actualizar UI específica
+      if (selectedInstallment.status === "vencida") {
+        // Remover de la lista de vencidas
+        checkOverdueInstallments();
+      }
+
+      // Limpiar estados
+      setSelectedInstallment(null);
+      setPaymentError(null);
     } catch (error) {
       console.error("Error al procesar el pago:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Error al pagar la cuota";
       setPaymentError(errorMessage);
       showNotification(errorMessage, "error");
+      setPaymentModalOpen(true);
     }
   };
 
+  // Función para manejar eliminación de crédito
+  const handleDeleteCredit = async () => {
+    if (!creditToDelete) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const result = await deleteCreditSale(creditToDelete.saleId);
+
+      if (result.success) {
+        showNotification("Crédito eliminado correctamente", "success");
+
+        // Actualizar datos
+        await loadData(true);
+
+        // Si está en el modal de detalle del cliente, actualizar ese cliente específico
+        if (selectedCustomerSummary) {
+          await updateCustomerSummary(selectedCustomerSummary.customerId);
+        }
+
+        // Cerrar modales
+        setDeleteModalOpen(false);
+        setCreditToDelete(null);
+
+        // Si estamos en el modal de detalles, también cerrarlo si no quedan créditos
+        if (customerDetailModalOpen && creditSummaries.length <= 1) {
+          handleCloseCustomerDetail();
+        }
+      }
+    } catch (error) {
+      console.error("Error al eliminar el crédito:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al eliminar el crédito";
+      setDeleteError(errorMessage);
+      showNotification(errorMessage, "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Función para manejar eliminación de todos los créditos de un cliente
+  const handleDeleteAllCustomerCredits = async () => {
+    if (!selectedCustomerForDeletion) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      // Verificar que no haya cuotas pendientes
+      const hasPendingInstallments =
+        selectedCustomerForDeletion.installments.some(
+          (inst) => inst.status === "pendiente" || inst.status === "vencida"
+        );
+
+      if (hasPendingInstallments) {
+        throw new Error("No se puede eliminar. Hay cuotas pendientes.");
+      }
+
+      // Eliminar todas las ventas a crédito del cliente
+      const creditSaleIds = selectedCustomerForDeletion.creditSales.map(
+        (sale) => sale.id
+      );
+
+      // Eliminar cuotas primero
+      await db.installments.where("creditSaleId").anyOf(creditSaleIds).delete();
+
+      // Eliminar ventas
+      await db.sales.where("id").anyOf(creditSaleIds).delete();
+
+      showNotification(
+        "Todos los créditos del cliente eliminados correctamente",
+        "success"
+      );
+
+      // Actualizar datos
+      await loadData(true);
+
+      // Cerrar modales
+      setDeleteModalOpen(false);
+      setSelectedCustomerForDeletion(null);
+
+      if (customerDetailModalOpen) {
+        handleCloseCustomerDetail();
+      }
+    } catch (error) {
+      console.error("Error al eliminar los créditos:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Error al eliminar los créditos";
+      setDeleteError(errorMessage);
+      showNotification(errorMessage, "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Función para confirmar eliminación
+  const confirmDeleteCredit = (
+    credit: CreditSummary,
+    customerSummary?: CustomerCreditSummary
+  ) => {
+    setCreditToDelete(credit);
+    if (customerSummary) {
+      setSelectedCustomerForDeletion(customerSummary);
+    }
+    setDeleteModalOpen(true);
+  };
+
+  // Función optimizada para pagar todas las cuotas
   const handlePayAllInstallments = async () => {
     if (!selectedCreditForAllPayments) return;
 
     try {
       setPaymentError(null);
+      setAllPaymentsModalOpen(false);
 
       const creditSale = creditSales.find(
         (s) => s.id === selectedCreditForAllPayments.saleId
@@ -946,27 +1280,19 @@ const CreditosPage = () => {
         throw new Error("Error al procesar el pago total");
       }
 
-      // Actualizar el estado local de cuotas
-      if (result.updatedInstallments) {
-        setInstallments((prev) =>
-          prev.map((inst) => {
-            const updated = result.updatedInstallments?.find(
-              (u) => u.id === inst.id
-            );
-            return updated ? updated : inst;
-          })
-        );
-      }
-
       showNotification(`Todas las cuotas pagadas correctamente`, "success");
 
-      // CERRAR TODOS LOS MODALES
-      setAllPaymentsModalOpen(false);
-      setSelectedCreditForAllPayments(null);
-      setCustomerDetailModalOpen(false); // ✅ CERRAR MODAL DE DETALLE
+      // Actualizar solo el cliente afectado
+      if (creditSale.customerId) {
+        await updateCustomerSummary(creditSale.customerId);
+      }
 
-      // LUEGO RECARGAR LOS DATOS
-      await reloadAllData(true);
+      // Actualizar cuotas vencidas
+      checkOverdueInstallments();
+
+      // Limpiar estados
+      setSelectedCreditForAllPayments(null);
+      setPaymentError(null);
     } catch (error) {
       console.error("Error al procesar el pago total:", error);
       const errorMessage =
@@ -975,49 +1301,51 @@ const CreditosPage = () => {
           : "Error al pagar todas las cuotas";
       setPaymentError(errorMessage);
       showNotification(errorMessage, "error");
+      setAllPaymentsModalOpen(true);
     }
   };
 
+  const handleSearchChange = useMemo(() => {
+    return debounce((value: string) => {
+      if (value === "") {
+        setFilterCustomer("");
+      }
+    }, 300);
+  }, []);
+
   useEffect(() => {
-    if (customerDetailModalOpen && selectedCustomerSummary) {
-      const syncData = async () => {
-        const summaries = await calculateCustomerSummaries();
-        const currentSummary = summaries.find(
-          (s) => s.customerId === selectedCustomerSummary.customerId
-        );
-        if (currentSummary) {
-          setSelectedCustomerSummary(currentSummary);
-          const creditSummaries = calculateCreditSummaries(currentSummary);
-          setCreditSummaries(creditSummaries);
-        }
-      };
-      syncData();
+    if (inputValue !== "") {
+      handleSearchChange(inputValue);
     }
-  }, [customerDetailModalOpen, selectedCustomerSummary]);
+  }, [inputValue, handleSearchChange]);
 
-  const filteredCustomerSummaries = customerSummaries.filter((summary) => {
-    if (filterStatus !== "todos") {
-      if (filterStatus === "pendiente" && summary.pendingInstallments === 0)
+  // Filtrar resúmenes con useMemo
+  const filteredCustomerSummaries = useMemo(() => {
+    return customerSummaries.filter((summary) => {
+      if (filterStatus !== "todos") {
+        if (filterStatus === "pendiente" && summary.pendingInstallments === 0)
+          return false;
+        if (filterStatus === "vencida" && summary.overdueInstallments === 0)
+          return false;
+        if (filterStatus === "pagada" && summary.paidInstallments === 0)
+          return false;
+      }
+
+      if (filterCustomer && summary.customerId !== filterCustomer) {
         return false;
-      if (filterStatus === "vencida" && summary.overdueInstallments === 0)
-        return false;
-      if (filterStatus === "pagada" && summary.paidInstallments === 0)
-        return false;
-    }
+      }
 
-    if (filterCustomer && summary.customerId !== filterCustomer) {
-      return false;
-    }
+      if (rubro !== "Todos los rubros") {
+        const hasRubroProduct = summary.creditSales.some((sale) => {
+          if (!sale.products) return false;
+          return sale.products.some((product) => product.rubro === rubro);
+        });
+        if (!hasRubroProduct) return false;
+      }
 
-    if (rubro !== "Todos los rubros") {
-      const hasRubroProduct = summary.creditSales.some((sale) =>
-        sale.products?.some((product) => product.rubro === rubro)
-      );
-      if (!hasRubroProduct) return false;
-    }
-
-    return true;
-  });
+      return true;
+    });
+  }, [customerSummaries, filterStatus, filterCustomer, rubro]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -1141,9 +1469,6 @@ const CreditosPage = () => {
               inputValue={inputValue}
               onInputChange={(event, newInputValue) => {
                 setInputValue(newInputValue);
-                if (newInputValue === "") {
-                  setFilterCustomer("");
-                }
               }}
               options={customerOptions}
               getOptionLabel={(option) => {
@@ -1162,13 +1487,17 @@ const CreditosPage = () => {
                 />
               )}
               filterOptions={(options, { inputValue }) => {
+                if (!inputValue) return options;
+
+                const searchTerm = inputValue.toLowerCase();
                 const filtered = options.filter((option) =>
-                  option.name.toLowerCase().includes(inputValue.toLowerCase())
+                  option.name.toLowerCase().includes(searchTerm)
                 );
 
                 if (
-                  inputValue !== "" &&
-                  !filtered.some((option) => option.name === inputValue)
+                  !filtered.some(
+                    (option) => option.name.toLowerCase() === searchTerm
+                  )
                 ) {
                   const customOption: CustomerOption = {
                     id: `custom-${Date.now()}`,
@@ -1179,6 +1508,7 @@ const CreditosPage = () => {
 
                 return filtered;
               }}
+              loading={!initialDataLoaded}
             />
           </FormControl>
         </Box>
@@ -1204,9 +1534,7 @@ const CreditosPage = () => {
                   <TableCell sx={tableHeaderStyle} align="center">
                     Estado
                   </TableCell>
-                  <TableCell sx={tableHeaderStyle} align="center">
-                    Cuotas
-                  </TableCell>
+
                   <TableCell sx={tableHeaderStyle} align="center">
                     Acciones
                   </TableCell>
@@ -1315,12 +1643,6 @@ const CreditosPage = () => {
                       </TableCell>
 
                       <TableCell align="center">
-                        <Typography variant="body2">
-                          {summary.totalInstallments}
-                        </Typography>
-                      </TableCell>
-
-                      <TableCell align="center">
                         <Box
                           sx={{
                             display: "flex",
@@ -1344,13 +1666,35 @@ const CreditosPage = () => {
                               <Info fontSize="small" />
                             </IconButton>
                           </CustomGlobalTooltip>
+
+                          {/* Botón para eliminar todos los créditos del cliente (solo si no tiene pendientes) */}
+                          {summary.pendingAmount <= 0 && (
+                            <CustomGlobalTooltip title="Eliminar todos los créditos">
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setSelectedCustomerForDeletion(summary);
+                                  setDeleteModalOpen(true);
+                                }}
+                                sx={{
+                                  borderRadius: "4px",
+                                  color: "error.main",
+                                  "&:hover": {
+                                    backgroundColor: "error.50",
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </CustomGlobalTooltip>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} sx={{ py: 4, textAlign: "center" }}>
+                    <TableCell colSpan={7} sx={{ py: 4, textAlign: "center" }}>
                       <Box
                         sx={{
                           display: "flex",
@@ -1388,7 +1732,9 @@ const CreditosPage = () => {
         {/* Modal para pagar cuota individual */}
         <Modal
           isOpen={paymentModalOpen}
-          onClose={() => setPaymentModalOpen(false)}
+          onClose={() => {
+            setPaymentModalOpen(false);
+          }}
           title={`Pagar Cuota ${selectedInstallment?.number}`}
           bgColor="bg-white dark:bg-gray_b"
           buttons={
@@ -1467,7 +1813,9 @@ const CreditosPage = () => {
         {/* Modal para pagar todas las cuotas */}
         <Modal
           isOpen={allPaymentsModalOpen}
-          onClose={() => setAllPaymentsModalOpen(false)}
+          onClose={() => {
+            setAllPaymentsModalOpen(false);
+          }}
           title={`Pagar todas las cuotas pendientes`}
           bgColor="bg-white dark:bg-gray_b"
           buttons={
@@ -1619,7 +1967,164 @@ const CreditosPage = () => {
           )}
         </Modal>
 
-        {/* Modal de detalle del cliente refactorizado */}
+        {/* Modal para eliminar crédito */}
+        <Modal
+          isOpen={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setCreditToDelete(null);
+            setSelectedCustomerForDeletion(null);
+            setDeleteError(null);
+          }}
+          title={
+            selectedCustomerForDeletion
+              ? "Eliminar Todos los Créditos"
+              : "Eliminar Crédito"
+          }
+          bgColor="bg-white dark:bg-gray_b"
+          buttons={
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+              <Button
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setCreditToDelete(null);
+                  setSelectedCustomerForDeletion(null);
+                  setDeleteError(null);
+                }}
+                variant="text"
+                disabled={isDeleting}
+                sx={{
+                  color: "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={
+                  selectedCustomerForDeletion
+                    ? handleDeleteAllCustomerCredits
+                    : handleDeleteCredit
+                }
+                disabled={isDeleting}
+                startIcon={<DeleteIcon />}
+                sx={{
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                  "&:disabled": {
+                    bgcolor: "action.disabledBackground",
+                  },
+                }}
+              >
+                {isDeleting ? "Eliminando..." : "Eliminar"}
+              </Button>
+            </Box>
+          }
+        >
+          {selectedCustomerForDeletion ? (
+            <Box>
+              {/* Contenido para eliminar todos los créditos del cliente */}
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                <Warning sx={{ mr: 1 }} />
+                Esta acción eliminará TODOS los créditos del cliente y no se
+                puede deshacer
+              </Alert>
+
+              <Typography gutterBottom variant="body1">
+                ¿Está seguro que desea eliminar todos los créditos de este
+                cliente?
+              </Typography>
+
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                  mt: 2,
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight="bold">
+                  Cliente: {selectedCustomerForDeletion.customerName}
+                </Typography>
+                <Typography variant="body2">
+                  Total de créditos:{" "}
+                  {selectedCustomerForDeletion.creditSales.length}
+                </Typography>
+                <Typography variant="body2">
+                  Monto total:{" "}
+                  {formatCurrency(
+                    selectedCustomerForDeletion.totalCreditAmount
+                  )}
+                </Typography>
+                <Typography variant="body2" color="success.main">
+                  Saldo pendiente:{" "}
+                  {formatCurrency(selectedCustomerForDeletion.pendingAmount)}
+                </Typography>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Nota: Solo se pueden eliminar créditos que estén completamente
+                pagados.
+              </Typography>
+            </Box>
+          ) : creditToDelete ? (
+            <Box>
+              {/* Contenido para eliminar un crédito específico */}
+              {deleteError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {deleteError}
+                </Alert>
+              )}
+
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                <Warning sx={{ mr: 1 }} />
+                Esta acción no se puede deshacer
+              </Alert>
+
+              <Typography gutterBottom variant="body1">
+                ¿Está seguro que desea eliminar el siguiente crédito?
+              </Typography>
+
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                  mt: 2,
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight="bold">
+                  Venta #{creditToDelete.saleId}
+                </Typography>
+                <Typography variant="body2">
+                  Cliente: {creditToDelete.customerName}
+                </Typography>
+                <Typography variant="body2">
+                  Fecha:{" "}
+                  {format(parseISO(creditToDelete.saleDate), "dd/MM/yyyy", {
+                    locale: es,
+                  })}
+                </Typography>
+                <Typography variant="body2">
+                  Monto total: {formatCurrency(creditToDelete.totalAmount)}
+                </Typography>
+                <Typography variant="body2" color="success.main">
+                  Estado: {creditToDelete.status}
+                </Typography>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Nota: Solo se pueden eliminar créditos que estén completamente
+                pagados.
+              </Typography>
+            </Box>
+          ) : null}
+        </Modal>
+
+        {/* Modal de detalle del cliente */}
         <Modal
           isOpen={customerDetailModalOpen}
           onClose={handleCloseCustomerDetail}
@@ -1770,9 +2275,15 @@ const CreditosPage = () => {
                             setSelectedCreditForAllPayments(credit);
                             setAllPaymentsModalOpen(true);
                           }}
-                          onPaymentSuccess={() => reloadAllData(true)}
+                          onDelete={(credit) => {
+                            confirmDeleteCredit(
+                              credit,
+                              selectedCustomerSummary || undefined
+                            );
+                          }}
                           isExpanded={expandedCreditId === credit.saleId}
                           onToggleExpand={handleExpandCredit}
+                          showDeleteButton={credit.status === "Pagado"}
                         />
                       ))
                     )}
@@ -1820,7 +2331,6 @@ const CreditosPage = () => {
                             setSelectedCreditForAllPayments(credit);
                             setAllPaymentsModalOpen(true);
                           }}
-                          onPaymentSuccess={() => reloadAllData(true)}
                           isExpanded={expandedCreditId === credit.saleId}
                           onToggleExpand={handleExpandCredit}
                         />
@@ -1857,9 +2367,15 @@ const CreditosPage = () => {
                           credit={credit}
                           onPayment={() => {}}
                           onPayAll={() => {}}
-                          onPaymentSuccess={() => reloadAllData(true)}
+                          onDelete={(credit) => {
+                            confirmDeleteCredit(
+                              credit,
+                              selectedCustomerSummary || undefined
+                            );
+                          }}
                           isExpanded={expandedCreditId === credit.saleId}
                           onToggleExpand={handleExpandCredit}
+                          showDeleteButton={true}
                         />
                       ))
                     )}

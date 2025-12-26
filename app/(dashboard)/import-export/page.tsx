@@ -241,6 +241,7 @@ export default function ImportExportPage() {
           stock: productData.stock || 0,
           costPrice: productData.costPrice || 0,
           price: productData.price || 0,
+          currentPrice: productData.price || 0,
           quantity: productData.stock || 0,
           unit: productData.unit || "Unid.",
           rubro: productData.rubro || "comercio",

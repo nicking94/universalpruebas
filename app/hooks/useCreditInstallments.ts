@@ -511,6 +511,58 @@ export const useCreditInstallments = () => {
     }
   };
 
+  const deleteCreditSale = async (
+    creditSaleId: number
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const sale = await db.sales.get(creditSaleId);
+      if (!sale) {
+        throw new Error("Venta a crédito no encontrada");
+      }
+
+      // Verificar si hay cuotas pendientes
+      const pendingInstallments = await db.installments
+        .where("creditSaleId")
+        .equals(creditSaleId)
+        .and((inst) => inst.status === "pendiente" || inst.status === "vencida")
+        .toArray();
+
+      if (pendingInstallments.length > 0) {
+        throw new Error(
+          `No se puede eliminar. Hay ${pendingInstallments.length} cuotas pendientes.`
+        );
+      }
+
+      // Eliminar todas las cuotas asociadas
+      await db.installments.where("creditSaleId").equals(creditSaleId).delete();
+
+      // Eliminar la venta
+      await db.sales.delete(creditSaleId);
+
+      // Actualizar movimientos de caja relacionados si existen
+      const dailyCashes = await db.dailyCashes.toArray();
+      for (const dailyCash of dailyCashes) {
+        const updatedMovements = dailyCash.movements.filter(
+          (movement) => movement.originalSaleId !== creditSaleId
+        );
+
+        if (updatedMovements.length !== dailyCash.movements.length) {
+          await db.dailyCashes.update(dailyCash.id, {
+            movements: updatedMovements,
+          });
+        }
+      }
+
+      return {
+        success: true,
+        message: "Crédito eliminado correctamente",
+      };
+    } catch (error) {
+      console.error("Error al eliminar el crédito:", error);
+      throw error;
+    }
+  };
+
   const generateCreditReport = useCallback(
     async (startDate: string, endDate: string) => {
       try {
@@ -583,5 +635,6 @@ export const useCreditInstallments = () => {
     generateCreditReport,
     setInstallments,
     getCreditSalesInInstallments,
+    deleteCreditSale,
   };
 };

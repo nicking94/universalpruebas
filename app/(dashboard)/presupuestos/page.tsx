@@ -467,6 +467,7 @@ const PresupuestosPage = () => {
           stock: 0,
           costPrice: item.basePrice || 0,
           price: item.price,
+          currentPrice: item.price,
           quantity: item.quantity,
           unit: item.unit,
           discount: item.discount || 0,

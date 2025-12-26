@@ -148,6 +148,7 @@ const getDefaultProduct = (rubro: Rubro): Product => ({
   stock: 0,
   costPrice: 0,
   price: 0,
+  currentPrice: 0,
   hasIvaIncluded: true,
   expiration: "",
   quantity: 0,

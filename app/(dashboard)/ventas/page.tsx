@@ -3579,6 +3579,7 @@ const VentasPage = () => {
                 <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
                   Productos*
                 </Typography>
+
                 <ProductSearchAutocomplete
                   products={products}
                   selectedProducts={newSale.products.map((p) => {
@@ -3609,24 +3610,12 @@ const VentasPage = () => {
                             };
                           }
 
-                          // Obtener precio según la lista seleccionada
-                          let price = option.product.price;
-                          if (selectedPriceListId) {
-                            try {
-                              const productPrice = await db.productPrices.get([
-                                option.product.id,
-                                selectedPriceListId,
-                              ]);
-                              if (productPrice) {
-                                price = productPrice.price;
-                              }
-                            } catch (error) {
-                              console.error(
-                                "Error getting product price:",
-                                error
-                              );
-                            }
-                          }
+                          // Usar el precio actualizado del producto (que ya viene del autocomplete)
+                          const price =
+                            option.product.price ||
+                            option.product.currentPrice ||
+                            option.product.basePrice ||
+                            0;
 
                           return {
                             ...option.product,
@@ -3661,6 +3650,7 @@ const VentasPage = () => {
                     console.log("Búsqueda de productos:", query);
                   }}
                   rubro={rubro}
+                  selectedPriceListId={selectedPriceListId} // ✅ Pasar la prop aquí
                   placeholder="Seleccionar productos"
                   maxDisplayed={50}
                 />
@@ -4189,23 +4179,6 @@ const VentasPage = () => {
               ) : null}
             </Box>
 
-            <Box sx={{ width: "100%" }}>
-              <Input
-                label="Concepto (Opcional)"
-                placeholder="Ingrese un concepto para esta venta..."
-                value={newSale.concept || ""}
-                onRawChange={(e) =>
-                  setNewSale((prev) => ({
-                    ...prev,
-                    concept: e.target.value,
-                  }))
-                }
-                multiline
-                rows={3}
-                inputProps={{ maxLength: 50 }}
-              />
-            </Box>
-
             {!isEditMode.isEditing && !isCreditCuotasSelected && (
               <Checkbox
                 label="Registrar Cuenta corriente"
@@ -4286,6 +4259,22 @@ const VentasPage = () => {
                 </Box>
               </Box>
             )}
+          </Box>
+          <Box sx={{ width: "100%" }}>
+            <Input
+              label="Concepto (Opcional)"
+              placeholder="Ingrese un concepto para esta venta..."
+              value={newSale.concept || ""}
+              onRawChange={(e) =>
+                setNewSale((prev) => ({
+                  ...prev,
+                  concept: e.target.value,
+                }))
+              }
+              multiline
+              rows={3}
+              inputProps={{ maxLength: 50 }}
+            />
           </Box>
         </Modal>
 
